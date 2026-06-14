@@ -23,6 +23,8 @@ const config: StorybookConfig = {
           'nativewind',
           'react-native-css-interop',
           'react-native-reanimated',
+          'phosphor-react-native',
+          'react-native-svg',
         ],
         babelPresets: ['nativewind/babel'],
       },

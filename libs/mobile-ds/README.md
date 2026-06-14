@@ -144,6 +144,38 @@ import {
 </Card>;
 ```
 
+## Toasts
+
+Le système de toasts repose sur un provider + un hook :
+
+```tsx
+import { ToastProvider, useToast } from '@justin-croyable/mobile-ds';
+
+// À la racine, sous ThemeProvider
+<ThemeProvider><ToastProvider><App /></ToastProvider></ThemeProvider>;
+
+// N'importe où dans l'arbre
+const { toast } = useToast();
+toast({ title: 'Enregistré', variant: 'success' });
+toast({ title: 'Erreur', description: '...', variant: 'destructive', duration: 5000 });
+```
+
+## Icônes (Phosphor)
+
+Le Design System embarque [Phosphor](https://phosphoricons.com/)
+(`phosphor-react-native`, rendu via `react-native-svg`).
+
+```tsx
+import { Icons, IconButton, Header } from '@justin-croyable/mobile-ds';
+import { Heart } from 'phosphor-react-native';
+
+<Icons.Heart size={24} weight="fill" />        // via le namespace ré-exporté
+<Heart size={24} />                              // ou en import direct (tree-shaking)
+
+// Bouton-icône (couleur = token `foreground` par défaut)
+<IconButton icon={Heart} accessibilityLabel="Favori" onPress={...} />
+```
+
 ## Visualiser les composants (Storybook)
 
 Chaque composant a ses stories colocalisées (`*.stories.tsx`). Elles sont

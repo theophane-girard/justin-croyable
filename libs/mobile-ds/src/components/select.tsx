@@ -1,96 +1,17 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import {
-  Animated,
-  Modal as RNModal,
-  Pressable,
-  ScrollView,
-  View,
-} from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Pressable, View } from 'react-native';
+import { CaretDown, Check } from 'phosphor-react-native';
 
 import { cn } from '../utils/cn';
 import { Text } from './text';
 import { Checkbox } from './checkbox';
-import { useThemeVars } from '../theme/theme-provider';
+import { BottomSheet } from './bottom-sheet';
+import { useTheme } from '../theme/theme-provider';
+import { channelsToRgb } from '../utils/color';
 
 export interface SelectOption {
   label: string;
   value: string;
-}
-
-/* -------------------------------------------------------------------------- */
-/* Feuille animée partagée (slide-up + fondu, montage/démontage propres)        */
-/* -------------------------------------------------------------------------- */
-
-interface SheetProps {
-  visible: boolean;
-  onClose: () => void;
-  title?: string;
-  children: ReactNode;
-}
-
-function Sheet({ visible, onClose, title, children }: SheetProps) {
-  const themeVars = useThemeVars();
-  const progress = useRef(new Animated.Value(0)).current;
-  const [mounted, setMounted] = useState(visible);
-
-  useEffect(() => {
-    if (visible) {
-      setMounted(true);
-      Animated.spring(progress, {
-        toValue: 1,
-        useNativeDriver: false,
-        friction: 9,
-        tension: 90,
-      }).start();
-    } else if (mounted) {
-      Animated.timing(progress, {
-        toValue: 0,
-        duration: 150,
-        useNativeDriver: false,
-      }).start((result) => {
-        if (result?.finished) setMounted(false);
-      });
-    }
-  }, [visible, mounted, progress]);
-
-  const translateY = progress.interpolate({
-    inputRange: [0, 1],
-    outputRange: [32, 0],
-  });
-
-  return (
-    <RNModal
-      visible={mounted}
-      transparent
-      animationType="none"
-      onRequestClose={onClose}
-    >
-      <View style={themeVars} className="flex-1">
-        <Animated.View style={{ flex: 1, opacity: progress }}>
-          <Pressable
-            className="flex-1 justify-end bg-black/50"
-            onPress={onClose}
-          >
-            <Animated.View style={{ transform: [{ translateY }] }}>
-              <Pressable
-                onPress={(e) => e.stopPropagation()}
-                className="max-h-[70%] rounded-t-2xl border-t border-border bg-card p-4 pb-8"
-              >
-                {title ? (
-                  <Text variant="h4" className="mb-2 text-card-foreground">
-                    {title}
-                  </Text>
-                ) : null}
-                <ScrollView showsVerticalScrollIndicator={false}>
-                  {children}
-                </ScrollView>
-              </Pressable>
-            </Animated.View>
-          </Pressable>
-        </Animated.View>
-      </View>
-    </RNModal>
-  );
 }
 
 /* -------------------------------------------------------------------------- */
@@ -116,6 +37,7 @@ function Trigger({
   className,
   onPress,
 }: TriggerProps) {
+  const { colors } = useTheme();
   const rotation = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -155,12 +77,9 @@ function Trigger({
         >
           {display ?? placeholder ?? 'Sélectionner…'}
         </Text>
-        <Animated.Text
-          style={{ transform: [{ rotate }] }}
-          className="text-muted-foreground"
-        >
-          ▾
-        </Animated.Text>
+        <Animated.View style={{ transform: [{ rotate }] }}>
+          <CaretDown size={18} color={channelsToRgb(colors.mutedForeground)} />
+        </Animated.View>
       </Pressable>
     </View>
   );
@@ -175,6 +94,7 @@ function OptionRow({
   selected: boolean;
   onPress: () => void;
 }) {
+  const { colors } = useTheme();
   return (
     <Pressable
       accessibilityRole="button"
@@ -189,7 +109,7 @@ function OptionRow({
         {label}
       </Text>
       {selected ? (
-        <Text className="text-base font-bold text-primary">✓</Text>
+        <Check size={18} weight="bold" color={channelsToRgb(colors.primary)} />
       ) : null}
     </Pressable>
   );
@@ -211,7 +131,7 @@ export interface SelectProps {
   className?: string;
 }
 
-/** Menu déroulant à choix unique, avec feuille animée (slide-up). */
+/** Menu déroulant à choix unique, ouvrant une feuille animée (slide-up). */
 export function Select({
   options,
   value,
@@ -236,7 +156,11 @@ export function Select({
         className={className}
         onPress={() => setOpen(true)}
       />
-      <Sheet visible={open} onClose={() => setOpen(false)} title={sheetTitle}>
+      <BottomSheet
+        visible={open}
+        onClose={() => setOpen(false)}
+        title={sheetTitle}
+      >
         {options.map((option) => (
           <OptionRow
             key={option.value}
@@ -248,7 +172,7 @@ export function Select({
             }}
           />
         ))}
-      </Sheet>
+      </BottomSheet>
     </>
   );
 }
@@ -310,7 +234,11 @@ export function MultiSelect({
         className={className}
         onPress={() => setOpen(true)}
       />
-      <Sheet visible={open} onClose={() => setOpen(false)} title={sheetTitle}>
+      <BottomSheet
+        visible={open}
+        onClose={() => setOpen(false)}
+        title={sheetTitle}
+      >
         {options.map((option) => (
           <Checkbox
             key={option.value}
@@ -320,7 +248,7 @@ export function MultiSelect({
             containerClassName="rounded-lg px-3 py-3"
           />
         ))}
-      </Sheet>
+      </BottomSheet>
     </>
   );
 }

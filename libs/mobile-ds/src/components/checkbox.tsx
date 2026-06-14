@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Animated, Pressable, type PressableProps } from 'react-native';
+import { Check } from 'phosphor-react-native';
 
 import { cn } from '../utils/cn';
 import { Text } from './text';
@@ -81,9 +82,11 @@ export function Checkbox({
         className={className}
       >
         <Animated.View style={{ opacity: progress, transform: [{ scale: progress }] }}>
-          <Text className="text-xs font-bold text-primary-foreground leading-none">
-            ✓
-          </Text>
+          <Check
+            size={14}
+            weight="bold"
+            color={channelsToRgb(colors.primaryForeground)}
+          />
         </Animated.View>
       </Animated.View>
       {label ? <Text variant="body">{label}</Text> : null}
