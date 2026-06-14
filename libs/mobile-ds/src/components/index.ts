@@ -7,3 +7,5 @@ export * from './switch';
 export * from './checkbox';
 export * from './modal';
 export * from './avatar';
+export * from './segment';
+export * from './select';

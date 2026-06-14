@@ -16,7 +16,10 @@ export interface CheckboxProps
   onCheckedChange?: (checked: boolean) => void;
   /** Libellé affiché à droite de la case. */
   label?: string;
+  /** Classes appliquées à la case elle-même. */
   className?: string;
+  /** Classes appliquées à la zone tactile (case + libellé). */
+  containerClassName?: string;
   disabled?: boolean;
 }
 
@@ -27,6 +30,7 @@ export function Checkbox({
   label,
   disabled = false,
   className,
+  containerClassName,
   ...props
 }: CheckboxProps) {
   const { colors } = useTheme();
@@ -56,7 +60,11 @@ export function Checkbox({
       accessibilityState={{ checked, disabled }}
       disabled={disabled}
       onPress={() => onCheckedChange?.(!checked)}
-      className={cn('flex-row items-center gap-2', disabled && 'opacity-50')}
+      className={cn(
+        'flex-row items-center gap-2',
+        disabled && 'opacity-50',
+        containerClassName
+      )}
       {...props}
     >
       <Animated.View
