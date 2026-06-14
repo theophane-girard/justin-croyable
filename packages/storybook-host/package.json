@@ -1,0 +1,33 @@
+{
+  "name": "@justin-croyable/storybook-host",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "storybook-generate": "sb-rn-get-stories --config-path .storybook",
+    "storybook-web": "storybook dev -c .storybook-web -p 6006",
+    "build-storybook-web": "storybook build -c .storybook-web -o ../../dist/storybook-web"
+  },
+  "dependencies": {
+    "@justin-croyable/mobile-ds": "*",
+    "@react-native-async-storage/async-storage": "*",
+    "@react-native/metro-config": "*",
+    "metro-config": "*",
+    "nativewind": "*",
+    "react": "*",
+    "react-native": "*",
+    "react-native-gesture-handler": "*",
+    "react-native-reanimated": "*",
+    "react-native-safe-area-context": "*",
+    "react-native-svg": "*",
+    "tailwindcss": "*"
+  },
+  "devDependencies": {
+    "@storybook/addon-ondevice-actions": "*",
+    "@storybook/addon-ondevice-controls": "*",
+    "@storybook/react": "*",
+    "@storybook/react-native": "*",
+    "@testing-library/react-native": "*",
+    "react-test-renderer": "*",
+    "storybook": "*"
+  }
+}

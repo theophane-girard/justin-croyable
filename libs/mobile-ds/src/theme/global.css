@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Valeurs de thème par défaut.
+ *
+ * Ces variables servent de repli : le `ThemeProvider` les surcharge au runtime
+ * (y compris pour le dark mode et le thème spécifique au projet). Importer ce
+ * fichier une seule fois à l'entrée de l'application après l'avoir branché dans
+ * la config Metro/Babel de NativeWind.
+ */
+@layer base {
+  :root {
+    --color-background: 255 255 255;
+    --color-foreground: 15 23 42;
+    --color-border: 226 232 240;
+    --color-input: 226 232 240;
+    --color-ring: 37 99 235;
+    --color-card: 255 255 255;
+    --color-card-foreground: 15 23 42;
+    --color-primary: 37 99 235;
+    --color-primary-foreground: 248 250 252;
+    --color-secondary: 241 245 249;
+    --color-secondary-foreground: 15 23 42;
+    --color-muted: 241 245 249;
+    --color-muted-foreground: 100 116 139;
+    --color-accent: 241 245 249;
+    --color-accent-foreground: 15 23 42;
+    --color-destructive: 220 38 38;
+    --color-destructive-foreground: 248 250 252;
+    --color-success: 22 163 74;
+    --color-success-foreground: 248 250 252;
+    --radius: 8px;
+  }
+
+  .dark:root {
+    --color-background: 2 6 23;
+    --color-foreground: 248 250 252;
+    --color-border: 30 41 59;
+    --color-input: 30 41 59;
+    --color-ring: 59 130 246;
+    --color-card: 15 23 42;
+    --color-card-foreground: 248 250 252;
+    --color-primary: 59 130 246;
+    --color-primary-foreground: 15 23 42;
+    --color-secondary: 30 41 59;
+    --color-secondary-foreground: 248 250 252;
+    --color-muted: 30 41 59;
+    --color-muted-foreground: 148 163 184;
+    --color-accent: 30 41 59;
+    --color-accent-foreground: 248 250 252;
+    --color-destructive: 239 68 68;
+    --color-destructive-foreground: 15 23 42;
+    --color-success: 34 197 94;
+    --color-success-foreground: 15 23 42;
+  }
+}

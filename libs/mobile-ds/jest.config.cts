@@ -21,7 +21,7 @@ module.exports = {
     ),
   },
   transformIgnorePatterns: [
-    'node_modules/(?!(.pnpm/.+/node_modules/)?(react-native|@react-native(-community)?)/)',
+    'node_modules/(?!(.pnpm/.+/node_modules/)?(react-native|@react-native(-community)?|nativewind|react-native-css-interop|react-native-reanimated|react-native-safe-area-context)/)',
   ],
   coverageDirectory: '../../coverage/libs/mobile-ds',
 };

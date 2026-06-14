@@ -5,6 +5,9 @@
   "references": [
     {
       "path": "./libs/mobile-ds"
+    },
+    {
+      "path": "./packages/storybook-host"
     }
   ]
 }

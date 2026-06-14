@@ -1,0 +1,14 @@
+{
+  "//": "Confort éditeur uniquement pour les fichiers .storybook. Hors du build/typecheck Nx : storybook.requires.ts est généré par Metro et n'émet pas de déclarations.",
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "declaration": false,
+    "jsx": "react-jsx",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "types": ["node"],
+    "noUnusedLocals": false
+  },
+  "include": ["**/*.ts", "**/*.tsx"]
+}

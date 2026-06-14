@@ -112,3 +112,4 @@ yarn-error.log
 # testing
 /coverage
 test-output
+vite.config.*.timestamp*

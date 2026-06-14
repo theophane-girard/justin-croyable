@@ -10,6 +10,13 @@ export default [
     rules: {},
   },
   {
+    // Les `render` de stories utilisent des hooks pour piloter l'état des démos.
+    files: ['**/*.stories.ts', '**/*.stories.tsx'],
+    rules: {
+      'react-hooks/rules-of-hooks': 'off',
+    },
+  },
+  {
     ignores: ['public', '.cache', 'node_modules'],
   },
 ];

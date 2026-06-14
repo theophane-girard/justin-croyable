@@ -1,0 +1,9 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Les valeurs de thème (couleurs, dark/light) sont injectées au runtime par le
+ * `ThemeProvider` du Design System. On ne déclare donc ici que les directives
+ * Tailwind. Voir le décorateur dans `.storybook/preview.tsx`.
+ */
