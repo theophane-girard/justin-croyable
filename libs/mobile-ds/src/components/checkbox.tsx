@@ -1,7 +1,12 @@
-import { Pressable, View, type PressableProps } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { Animated, Pressable, type PressableProps } from 'react-native';
 
 import { cn } from '../utils/cn';
 import { Text } from './text';
+import { useTheme } from '../theme/theme-provider';
+import { channelsToRgb } from '../utils/color';
+
+const BOX_SIZE = 20;
 
 export interface CheckboxProps
   extends Omit<PressableProps, 'onPress' | 'children'> {
@@ -15,7 +20,7 @@ export interface CheckboxProps
   disabled?: boolean;
 }
 
-/** Case à cocher contrôlée, avec libellé optionnel. */
+/** Case à cocher contrôlée et animée (le ✓ apparaît en pop, la couleur transitionne). */
 export function Checkbox({
   checked,
   onCheckedChange,
@@ -24,6 +29,27 @@ export function Checkbox({
   className,
   ...props
 }: CheckboxProps) {
+  const { colors } = useTheme();
+  const progress = useRef(new Animated.Value(checked ? 1 : 0)).current;
+
+  useEffect(() => {
+    Animated.spring(progress, {
+      toValue: checked ? 1 : 0,
+      useNativeDriver: false, // on anime des couleurs
+      friction: 7,
+      tension: 120,
+    }).start();
+  }, [checked, progress]);
+
+  const backgroundColor = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [channelsToRgb(colors.background), channelsToRgb(colors.primary)],
+  });
+  const borderColor = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [channelsToRgb(colors.input), channelsToRgb(colors.primary)],
+  });
+
   return (
     <Pressable
       accessibilityRole="checkbox"
@@ -33,19 +59,25 @@ export function Checkbox({
       className={cn('flex-row items-center gap-2', disabled && 'opacity-50')}
       {...props}
     >
-      <View
-        className={cn(
-          'h-5 w-5 items-center justify-center rounded-md border',
-          checked ? 'border-primary bg-primary' : 'border-input bg-background',
-          className
-        )}
+      <Animated.View
+        style={{
+          width: BOX_SIZE,
+          height: BOX_SIZE,
+          borderRadius: 6,
+          borderWidth: 1.5,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor,
+          borderColor,
+        }}
+        className={className}
       >
-        {checked ? (
+        <Animated.View style={{ opacity: progress, transform: [{ scale: progress }] }}>
           <Text className="text-xs font-bold text-primary-foreground leading-none">
             ✓
           </Text>
-        ) : null}
-      </View>
+        </Animated.View>
+      </Animated.View>
       {label ? <Text variant="body">{label}</Text> : null}
     </Pressable>
   );
