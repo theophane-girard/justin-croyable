@@ -78,7 +78,8 @@
   },
   "workspaces": [
     "packages/*",
-    "libs/mobile-ds"
+    "libs/mobile-ds",
+    "libs/design-system"
   ],
   "dependencies": {
     "class-variance-authority": "^0.7.1",

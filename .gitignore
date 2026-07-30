@@ -5,6 +5,9 @@ dist
 tmp
 out-tsc
 
+# cache du CLI Angular (track design-system web)
+.angular
+
 # dependencies
 node_modules
 
