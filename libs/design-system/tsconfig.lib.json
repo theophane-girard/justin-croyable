@@ -1,0 +1,29 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["es2022", "dom", "dom.iterable"],
+    "types": [],
+    // Les composants zard sont écrits avec les décorateurs Angular (legacy).
+    "experimentalDecorators": true,
+    // Repris de la config d'origine des composants (form-test) : ils sont
+    // écrits sous ces règles, les relâcher masquerait des régressions.
+    "noPropertyAccessFromIndexSignature": true,
+    // Le typecheck Nx passe par `tsc`, qui ne compile pas les templates. Des
+    // symboles utilisés uniquement dans un template inline seraient donc vus
+    // comme inutilisés. La vraie vérification de templates vient du build
+    // Angular de l'app storybook (`strictTemplates`).
+    "noUnusedLocals": false,
+    "tsBuildInfoFile": "dist/tsconfig.lib.tsbuildinfo"
+  },
+  "angularCompilerOptions": {
+    "strictInjectionParameters": true,
+    "strictInputAccessModifiers": true,
+    "strictTemplates": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["dist", "out-tsc", "src/**/*.spec.ts", "src/**/*.stories.ts"]
+}

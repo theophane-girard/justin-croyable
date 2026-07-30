@@ -1,0 +1,249 @@
+/*
+ * Preset Tailwind (v4) du Design System — @justin-croyable/design-system
+ *
+ * Tailwind v4 n'a plus de « preset » JavaScript : le preset d'un DS est un
+ * fichier CSS que l'application importe après `tailwindcss`.
+ *
+ * À FOURNIR PAR L'APPLICATION, dans son CSS d'entrée et dans cet ordre :
+ *
+ *   @layer ng-icon, theme, base, components, utilities;  // ng-icon avant base
+ *   @import 'tailwindcss';
+ *   @plugin "tailwindcss-animate";                       // animations du DS
+ *   @import '@justin-croyable/design-system/theme.css';  // ce fichier
+ *
+ * Pourquoi ce n'est pas ce fichier qui importe `tailwindcss` et le plugin :
+ * les `@import`/`@plugin` d'un CSS se résolvent depuis le dossier du fichier
+ * qui les contient. Un preset qui importerait ses propres outils exigerait donc
+ * que `tailwindcss` soit résolvable depuis `libs/design-system` — faux dans ce
+ * monorepo, où la racine hoiste Tailwind 3 pour le track NativeWind pendant que
+ * le DS web tourne sur Tailwind 4. Laisser l'app posséder ces deux lignes rend
+ * le preset utilisable quel que soit l'endroit d'où il est consommé.
+ *
+ * Découpage :
+ *   - `primitives.css` : les valeurs brutes (rampes de marque, neutres,
+ *     sémantiques, palette décorative). Aucune n'est utilisée directement par
+ *     les composants.
+ *   - ce fichier : les *rôles* (`--background`, `--primary`, …) adossés aux
+ *     primitives, leur bascule dark, puis l'exposition en utilitaires Tailwind
+ *     via `@theme inline`.
+ *
+ * Pour retheming : surcharger les primitives (ou les rôles) dans le CSS de
+ * l'app, après cet import. Les composants ne référencent que des rôles, donc
+ * ils suivent sans modification.
+ */
+@import './primitives.css';
+
+/* Les classes des composants du DS vivent hors de l'arborescence de l'app : sans
+   cette source, les utilitaires que seul le DS utilise seraient purgés. Attention,
+   ce chemin est ignoré quand le DS est consommé depuis `node_modules` (Tailwind
+   respecte `.gitignore`) : dans ce cas l'app doit redéclarer la source. */
+@source '../components';
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: var(--color-bg);
+  --foreground: var(--color-text);
+  --card: var(--color-surface);
+  --card-foreground: var(--color-text);
+  --popover: var(--color-surface);
+  --popover-foreground: var(--color-text);
+  --primary: var(--color-action);
+  --primary-foreground: var(--color-action-text);
+  --secondary: var(--primary-100);
+  --secondary-foreground: var(--primary-800);
+  --muted: var(--gray-100);
+  --muted-foreground: var(--color-muted);
+  --accent: var(--primary-100);
+  --accent-foreground: var(--primary-800);
+  --destructive: var(--error);
+  --border: var(--color-border);
+  --input: var(--color-border);
+  --ring: var(--color-action);
+  --chart-1: var(--primary-500);
+  --chart-2: var(--primary-300);
+  --chart-3: var(--primary-700);
+  --chart-4: var(--info);
+  --chart-5: var(--success);
+  --sidebar: var(--color-surface);
+  --sidebar-foreground: var(--color-text);
+  --sidebar-primary: var(--color-action);
+  --sidebar-primary-foreground: var(--color-action-text);
+  --sidebar-accent: var(--primary-100);
+  --sidebar-accent-foreground: var(--primary-800);
+  --sidebar-border: var(--color-border);
+  --sidebar-ring: var(--color-action);
+}
+
+.dark {
+  --background: var(--color-bg);
+  --foreground: var(--color-text);
+  --card: var(--color-surface);
+  --card-foreground: var(--color-text);
+  --popover: var(--color-surface);
+  --popover-foreground: var(--color-text);
+  --primary: var(--color-action);
+  --primary-foreground: var(--color-action-text);
+  --secondary: var(--primary-800);
+  --secondary-foreground: var(--gray-50);
+  --muted: var(--gray-800);
+  --muted-foreground: var(--color-muted);
+  --accent: var(--primary-800);
+  --accent-foreground: var(--gray-50);
+  --destructive: oklch(0.704 0.191 28);
+  --border: var(--color-border);
+  --input: var(--color-border);
+  --ring: var(--color-action);
+  --chart-1: var(--primary-400);
+  --chart-2: var(--primary-200);
+  --chart-3: var(--primary-600);
+  --chart-4: var(--info);
+  --chart-5: var(--success);
+  --sidebar: var(--color-surface);
+  --sidebar-foreground: var(--color-text);
+  --sidebar-primary: var(--color-action);
+  --sidebar-primary-foreground: var(--color-action-text);
+  --sidebar-accent: var(--primary-800);
+  --sidebar-accent-foreground: var(--gray-50);
+  --sidebar-border: var(--color-border);
+  --sidebar-ring: var(--color-action);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Palette complémentaire (cf. primitives.css). Chaque espace de noms est
+     d'abord remis à `initial` pour purger la rampe Tailwind par défaut : sans
+     ça, les pas que nous ne définissons pas (950) continueraient à résoudre
+     vers une teinte hors système. Un `orange-950` devient donc une erreur de
+     build plutôt qu'une couleur silencieusement fausse. */
+  --color-orange-*: initial;
+  --color-orange-50: var(--orange-50);
+  --color-orange-100: var(--orange-100);
+  --color-orange-200: var(--orange-200);
+  --color-orange-300: var(--orange-300);
+  --color-orange-400: var(--orange-400);
+  --color-orange-500: var(--orange-500);
+  --color-orange-600: var(--orange-600);
+  --color-orange-700: var(--orange-700);
+  --color-orange-800: var(--orange-800);
+  --color-orange-900: var(--orange-900);
+
+  --color-lime-*: initial;
+  --color-lime-50: var(--lime-50);
+  --color-lime-100: var(--lime-100);
+  --color-lime-200: var(--lime-200);
+  --color-lime-300: var(--lime-300);
+  --color-lime-400: var(--lime-400);
+  --color-lime-500: var(--lime-500);
+  --color-lime-600: var(--lime-600);
+  --color-lime-700: var(--lime-700);
+  --color-lime-800: var(--lime-800);
+  --color-lime-900: var(--lime-900);
+
+  --color-cyan-*: initial;
+  --color-cyan-50: var(--cyan-50);
+  --color-cyan-100: var(--cyan-100);
+  --color-cyan-200: var(--cyan-200);
+  --color-cyan-300: var(--cyan-300);
+  --color-cyan-400: var(--cyan-400);
+  --color-cyan-500: var(--cyan-500);
+  --color-cyan-600: var(--cyan-600);
+  --color-cyan-700: var(--cyan-700);
+  --color-cyan-800: var(--cyan-800);
+  --color-cyan-900: var(--cyan-900);
+
+  --color-violet-*: initial;
+  --color-violet-50: var(--violet-50);
+  --color-violet-100: var(--violet-100);
+  --color-violet-200: var(--violet-200);
+  --color-violet-300: var(--violet-300);
+  --color-violet-400: var(--violet-400);
+  --color-violet-500: var(--violet-500);
+  --color-violet-600: var(--violet-600);
+  --color-violet-700: var(--violet-700);
+  --color-violet-800: var(--violet-800);
+  --color-violet-900: var(--violet-900);
+
+  --color-rose-*: initial;
+  --color-rose-50: var(--rose-50);
+  --color-rose-100: var(--rose-100);
+  --color-rose-200: var(--rose-200);
+  --color-rose-300: var(--rose-300);
+  --color-rose-400: var(--rose-400);
+  --color-rose-500: var(--rose-500);
+  --color-rose-600: var(--rose-600);
+  --color-rose-700: var(--rose-700);
+  --color-rose-800: var(--rose-800);
+  --color-rose-900: var(--rose-900);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  input[type='number']::-webkit-inner-spin-button,
+  input[type='number']::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  input[type='number'] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--muted-foreground);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-track {
+  border-radius: 5px;
+  background: var(--muted);
+}
