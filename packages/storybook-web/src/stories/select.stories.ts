@@ -1,0 +1,97 @@
+import { SelectImports, type SelectSizeVariants } from '@justin-croyable/design-system';
+import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
+
+type SelectArgs = {
+  placeholder: string;
+  size: SelectSizeVariants;
+  multiple: boolean;
+  disabled: boolean;
+  maxLabelCount: number;
+  value: string | string[];
+};
+
+const meta: Meta<SelectArgs> = {
+  title: 'Composants/Select',
+  tags: ['autodocs'],
+  decorators: [moduleMetadata({ imports: [...SelectImports] })],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          "Liste déroulante bâtie sur le CDK Overlay, pilotable au clavier (flèches, Entrée, Échap, Début/Fin). En mode `multiple`, les valeurs choisies s'affichent en badges et `maxLabelCount` limite le nombre de libellés visibles avant compactage.",
+      },
+    },
+  },
+  argTypes: {
+    placeholder: { control: 'text' },
+    size: { control: 'inline-radio', options: ['sm', 'default', 'lg'] },
+    multiple: { control: 'boolean' },
+    disabled: { control: 'boolean' },
+    maxLabelCount: { control: { type: 'number', min: 1, max: 5 } },
+    value: { control: false },
+  },
+  args: {
+    placeholder: 'Sélectionner un rôle…',
+    size: 'default',
+    multiple: false,
+    disabled: false,
+    maxLabelCount: 1,
+    value: '',
+  },
+  render: args => ({
+    props: args,
+    template: `
+      <div class="w-72">
+        <app-select
+          [placeholder]="placeholder"
+          [size]="size"
+          [multiple]="multiple"
+          [disabled]="disabled"
+          [maxLabelCount]="maxLabelCount"
+          [(value)]="value"
+        >
+          <app-select-item value="admin">Administrateur</app-select-item>
+          <app-select-item value="editor">Éditeur</app-select-item>
+          <app-select-item value="user">Utilisateur</app-select-item>
+          <app-select-item value="guest" [disabled]="true">Invité (désactivé)</app-select-item>
+        </app-select>
+      </div>
+    `,
+  }),
+};
+
+export default meta;
+type Story = StoryObj<SelectArgs>;
+
+export const Default: Story = {};
+
+export const Preselected: Story = { args: { value: 'editor' } };
+
+export const Multiple: Story = {
+  args: { multiple: true, value: ['admin', 'editor'], maxLabelCount: 3, placeholder: 'Rôles…' },
+};
+
+export const Disabled: Story = { args: { disabled: true, value: 'user' } };
+
+export const Sizes: Story = {
+  parameters: { controls: { disable: true } },
+  render: () => ({
+    props: { sm: '', md: '', lg: '' },
+    template: `
+      <div class="flex w-72 flex-col gap-3">
+        <app-select size="sm" placeholder="sm" [(value)]="sm">
+          <app-select-item value="a">Option A</app-select-item>
+          <app-select-item value="b">Option B</app-select-item>
+        </app-select>
+        <app-select size="default" placeholder="default" [(value)]="md">
+          <app-select-item value="a">Option A</app-select-item>
+          <app-select-item value="b">Option B</app-select-item>
+        </app-select>
+        <app-select size="lg" placeholder="lg" [(value)]="lg">
+          <app-select-item value="a">Option A</app-select-item>
+          <app-select-item value="b">Option B</app-select-item>
+        </app-select>
+      </div>
+    `,
+  }),
+};
