@@ -1,0 +1,40 @@
+{
+  "//": "tsconfig utilisé par le compilateur Angular de Storybook (option `tsConfig` du framework).",
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    // La lib DS est source-only : le compilateur Angular doit voir ses sources
+    // comme du code du projet, pas comme un paquet précompilé. Le mapping vise
+    // donc le chemin réel du dépôt et non le lien symbolique node_modules —
+    // sinon ngtsc considère les composants comme externes et attend des .d.ts.
+    "paths": {
+      "@justin-croyable/design-system": ["../../../libs/design-system/src/index.ts"],
+      "@justin-croyable/design-system/*": ["../../../libs/design-system/src/*"]
+    },
+    // Storybook émet du JS : on neutralise le mode « projet composite / types
+    // seulement » hérité de la config racine.
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "emitDeclarationOnly": false,
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["es2022", "dom", "dom.iterable"],
+    "types": ["node"],
+    "experimentalDecorators": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noUnusedLocals": false
+  },
+  "angularCompilerOptions": {
+    "strictInjectionParameters": true,
+    "strictInputAccessModifiers": true,
+    "strictTemplates": true
+  },
+  // `main.ts` (config serveur de Storybook) est volontairement hors du
+  // programme : il n'a rien à faire dans un build navigateur, et Angular
+  // signalerait un fichier compilé mais inatteignable. Il reste typé par
+  // `tsconfig.app.json`, donc couvert par `nx typecheck`.
+  "include": ["../src/**/*.ts", "./preview.ts"],
+  "exclude": ["../src/**/*.spec.ts"]
+}

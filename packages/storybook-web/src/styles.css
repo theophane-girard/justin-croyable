@@ -1,0 +1,32 @@
+/*
+ * CSS global du Storybook web (chargé via l'option `styles` du builder, cf.
+ * `angular.json` — donc traité par le pipeline PostCSS d'Angular).
+ *
+ * Rôle de l'app : fournir Tailwind et le plugin d'animations, puis importer le
+ * preset du DS. C'est tout ce qu'une app consommatrice a à écrire — aucun token,
+ * aucune couleur, aucune config Tailwind ne se redéclare ici.
+ */
+
+/* `ng-icon` doit précéder `base` : @ng-icons pose ses styles dans cette couche
+   et le reset Tailwind doit pouvoir passer après. */
+@layer ng-icon, theme, base, components, utilities;
+
+@import 'tailwindcss';
+@plugin "tailwindcss-animate";
+
+@import '@justin-croyable/design-system/theme.css';
+
+/*
+ * Le preset déclare déjà ses sources, mais par le chemin
+ * `node_modules/@justin-croyable/design-system` (lien symbolique du workspace)
+ * — or Tailwind respecte `.gitignore`, qui exclut `node_modules`. On redéclare
+ * donc la source par son chemin réel dans le dépôt, sinon les utilitaires
+ * utilisés uniquement par les composants du DS sont purgés du bundle.
+ */
+@source '../../../libs/design-system/src/components';
+@source '../stories';
+
+/* Le canvas Storybook doit hériter des rôles du DS (sinon fond blanc en dark). */
+body {
+  @apply bg-background text-foreground;
+}
