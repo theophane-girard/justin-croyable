@@ -25,12 +25,12 @@
     "zone.js": "~0.16.0"
   },
   "devDependencies": {
+    "@angular-devkit/build-angular": "^21.2.0",
     "@angular/animations": "^21.2.0",
     "@angular/build": "^21.2.0",
     "@angular/cli": "^21.2.0",
     "@angular/compiler-cli": "^21.2.0",
     "@angular/platform-browser-dynamic": "^21.2.0",
-    "@angular-devkit/build-angular": "^21.2.0",
     "@storybook/addon-a11y": "^10.5.5",
     "@storybook/addon-docs": "^10.5.5",
     "@storybook/angular": "^10.5.5",
@@ -38,6 +38,7 @@
     "postcss": "^8.5.15",
     "postcss-loader": "^8.2.1",
     "storybook": "^10.5.5",
+    "storybook-version": "^0.1.9",
     "tailwindcss": "^4.3.3",
     "tailwindcss-animate": "^1.0.7"
   }

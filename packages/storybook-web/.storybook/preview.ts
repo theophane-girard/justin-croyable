@@ -21,6 +21,10 @@ import { inject, provideAppInitializer } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { applicationConfig, type Decorator, type Preview } from '@storybook/angular';
 
+import designSystemPackage from '@justin-croyable/design-system/package.json';
+
+const [major = '0', minor = '0', patch = '0'] = designSystemPackage.version.split('.');
+
 // Le CSS global n'est pas importé ici : il est déclaré dans l'option `styles`
 // du builder (`angular.json`), donc traité par le pipeline de styles d'Angular
 // — c'est ce qui applique PostCSS/Tailwind v4 via `.postcssrc.json`.
@@ -118,6 +122,8 @@ const preview: Preview = {
     backgrounds: { value: 'ds-white' },
   },
   parameters: {
+    // Version de la lib DS, affichée dans la toolbar par `storybook-version`.
+    version: { major, minor, patch },
     layout: 'centered',
     controls: {
       matchers: {

@@ -9,6 +9,9 @@
     // sinon ngtsc considère les composants comme externes et attend des .d.ts.
     "paths": {
       "@justin-croyable/design-system": ["../../../libs/design-system/src/index.ts"],
+      // Mapping exact, prioritaire sur le joker : sans lui le manifeste serait
+      // cherché dans `src/`, où il n'existe pas.
+      "@justin-croyable/design-system/package.json": ["../../../libs/design-system/package.json"],
       "@justin-croyable/design-system/*": ["../../../libs/design-system/src/*"]
     },
     // Storybook émet du JS : on neutralise le mode « projet composite / types
@@ -24,7 +27,10 @@
     "types": ["node"],
     "experimentalDecorators": true,
     "noPropertyAccessFromIndexSignature": true,
-    "noUnusedLocals": false
+    "noUnusedLocals": false,
+    // `preview.ts` lit la version de la lib dans son package.json pour la
+    // transmettre à l'addon de version, plutôt que de la recopier à la main.
+    "resolveJsonModule": true
   },
   "angularCompilerOptions": {
     "strictInjectionParameters": true,
