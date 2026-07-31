@@ -28,8 +28,9 @@ import { mergeClasses } from '../../utils/merge-classes';
  *
  * These heights intentionally differ from button size variants to accommodate
  * the date-picker UI:
- * - default: h-9 (vs button h-8)
- * - lg: h-11 (vs button h-9)
+ * - xs: h-7 (vs button h-6)
+ * - sm: h-8 (vs button h-7)
+ * - lg: h-11 (vs button h-10)
  *
  * The `mergeClasses` utility (tailwind-merge) resolves class conflicts,
  * allowing these values to override the base button heights defined in
