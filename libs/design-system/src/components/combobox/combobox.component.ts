@@ -18,6 +18,7 @@ import {
   ViewEncapsulation,
 } from '@angular/core';
 import { type ControlValueAccessor, FormsModule, NG_VALUE_ACCESSOR } from '@angular/forms';
+import type { Field } from '@angular/forms/signals';
 
 import { NgIcon, provideIcons, type IconName } from '@ng-icons/core';
 import { lucideCheck, lucideChevronsUpDown } from '@ng-icons/lucide';
@@ -39,6 +40,12 @@ import {
 } from '../command';
 import { EmptyComponent } from '../empty';
 import { PopoverComponent, PopoverDirective } from '../popover';
+import { IdDirective } from '../../core';
+import {
+  fieldLabelClasses,
+  fieldMessage,
+  fieldMessageClasses,
+} from '../../utils/field-message';
 import { mergeClasses } from '../../utils/merge-classes';
 
 export interface ComboboxOption {
@@ -69,8 +76,20 @@ export interface ComboboxGroup {
     PopoverDirective,
     PopoverComponent,
     EmptyComponent,
+    IdDirective,
   ],
   template: `
+    @if (label()) {
+      <label [id]="labelId()" [class]="labelClasses()">
+        {{ label() }}
+        @if (required()) {
+          <span class="text-destructive" aria-hidden="true">*</span>
+        }
+      </label>
+    }
+
+    <ng-container appId="combobox" #z="appId" />
+
     <button
       type="button"
       appButton
@@ -83,8 +102,11 @@ export interface ComboboxGroup {
       [attr.aria-expanded]="open()"
       [attr.aria-haspopup]="'listbox'"
       [attr.aria-controls]="'combobox-listbox'"
-      [attr.aria-label]="ariaLabel() || 'Select option'"
-      [attr.aria-describedby]="ariaDescribedBy()"
+      [attr.aria-labelledby]="label() ? labelId() : null"
+      [attr.aria-label]="label() ? null : ariaLabel() || 'Select option'"
+      [attr.aria-required]="required() || null"
+      [attr.aria-invalid]="showError() || null"
+      [attr.aria-describedby]="describedBy()"
       [attr.aria-autocomplete]="searchable() ? 'list' : 'none'"
       [attr.aria-activedescendant]="null"
       (visibleChange)="setOpen($event)"
@@ -95,6 +117,15 @@ export interface ComboboxGroup {
       </span>
       <ng-icon name="lucideChevronsUpDown" class="ml-2 shrink-0 opacity-50" />
     </button>
+
+    @let message = errorMessage();
+    @if (message) {
+      <p [id]="messageId()" [class]="messageClasses(true)" role="alert" aria-live="polite">
+        {{ message }}
+      </p>
+    } @else if (hint()) {
+      <p [id]="messageId()" [class]="messageClasses(false)">{{ hint() }}</p>
+    }
 
     <ng-template #popoverContent>
       <app-popover [class]="popoverClasses()">
@@ -207,6 +238,11 @@ export class ComboboxComponent implements ControlValueAccessor {
   readonly ariaLabel = input<string>('');
   readonly ariaDescribedBy = input<string>('');
 
+  readonly label = input<string>('');
+  readonly hint = input<string>('');
+  readonly required = input(false, { transform: booleanAttribute });
+  readonly field = input<Field<unknown>>();
+
   readonly valueChange = output<string | null>();
   readonly comboSelected = output<ComboboxOption>();
 
@@ -219,8 +255,26 @@ export class ComboboxComponent implements ControlValueAccessor {
   protected readonly internalValue = signal<string | null>(null);
   protected readonly open = signal(false);
 
+  private readonly uniqueId = viewChild<IdDirective>('z');
+  private readonly fieldState = fieldMessage(this.field);
+
+  protected readonly showError = this.fieldState.showError;
+  protected readonly errorMessage = this.fieldState.errorMessage;
+
+  protected readonly baseId = computed(() => this.uniqueId()?.id() ?? 'combobox');
+  protected readonly labelId = computed(() => `${this.baseId()}-label`);
+  protected readonly messageId = computed(() => `${this.baseId()}-message`);
+  protected readonly describedBy = computed(() => {
+    const ids = [this.ariaDescribedBy(), this.errorMessage() || this.hint() ? this.messageId() : ''];
+    return ids.filter(Boolean).join(' ') || null;
+  });
+
+  protected readonly labelClasses = fieldLabelClasses;
+  protected readonly messageClasses = fieldMessageClasses;
+
   protected readonly classes = computed(() =>
     mergeClasses(
+      'flex flex-col gap-1.5',
       comboboxVariants({
         width: this.width(),
       }),

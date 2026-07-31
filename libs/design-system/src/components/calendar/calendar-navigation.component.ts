@@ -41,7 +41,7 @@ import { SelectComponent } from '../select/select.component';
         <!-- Month Select -->
         <app-select
           [value]="currentMonth()"
-          [label]="currentMonthName()"
+          [displayLabel]="currentMonthName()"
           (selectionChange)="onMonthChange($event)"
         >
           @for (month of months; track month) {
@@ -52,7 +52,7 @@ import { SelectComponent } from '../select/select.component';
         <!-- Year Select -->
         <app-select
           [value]="currentYear()"
-          [label]="currentYear()"
+          [displayLabel]="currentYear()"
           (selectionChange)="onYearChange($event)"
         >
           @for (year of availableYears(); track year) {

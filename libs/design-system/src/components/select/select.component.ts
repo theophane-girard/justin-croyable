@@ -30,7 +30,7 @@ import {
   ViewContainerRef,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import type { FormValueControl } from '@angular/forms/signals';
+import type { Field, FormValueControl } from '@angular/forms/signals';
 
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideChevronDown } from '@ng-icons/lucide';
@@ -45,6 +45,8 @@ import {
   selectVariants,
   type SelectSizeVariants,
 } from './select.variants';
+import { IdDirective } from '../../core';
+import { fieldLabelClasses, fieldMessage, fieldMessageClasses } from '../../utils/field-message';
 import { mergeClasses } from '../../utils/merge-classes';
 
 type SelectValue = string | string[] | null;
@@ -53,36 +55,69 @@ const COMPACT_MODE_WIDTH_THRESHOLD = 100;
 
 @Component({
   selector: 'app-select, [app-select]',
-  imports: [OverlayModule, BadgeComponent, NgIcon],
+  imports: [OverlayModule, BadgeComponent, NgIcon, IdDirective],
   template: `
-    <button
-      type="button"
-      role="combobox"
-      aria-controls="dropdown"
-      [class]="triggerClasses()"
-      [disabled]="disabledState()"
-      [attr.aria-expanded]="isOpen()"
-      [attr.aria-haspopup]="'listbox'"
-      [attr.data-placeholder]="!value() ? '' : null"
-      (blur)="!isOpen() && isFocus.set(false)"
-      (click)="toggle()"
-      (focus)="onFocus()"
-    >
-      <span class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-        @for (label of selectedLabels(); track $index) {
-          @if (multiple()) {
-            <app-badge type="secondary">
-              <span class="truncate">{{ label }}</span>
-            </app-badge>
-          } @else {
-            <span class="truncate">{{ label }}</span>
-          }
-        } @empty {
-          <span class="text-muted-foreground truncate">{{ placeholder() }}</span>
+    @if (label()) {
+      <label [id]="labelId()" [attr.for]="triggerId()" [class]="labelClasses()">
+        {{ label() }}
+        @if (required()) {
+          <span class="text-destructive" aria-hidden="true">*</span>
         }
-      </span>
-      <ng-icon name="lucideChevronDown" class="size-4! opacity-50" />
-    </button>
+      </label>
+    }
+
+    <ng-container appId="select" #z="appId" />
+
+    <div
+      [class]="controlClasses()"
+      [attr.data-active]="isFocus() ? '' : null"
+      [attr.data-disabled]="disabledState() ? '' : null"
+      data-slot="select-control"
+      #control
+    >
+      <button
+        type="button"
+        role="combobox"
+        aria-controls="dropdown"
+        [id]="triggerId()"
+        [class]="triggerClasses()"
+        [disabled]="disabledState()"
+        [attr.aria-expanded]="isOpen()"
+        [attr.aria-haspopup]="'listbox'"
+        [attr.aria-labelledby]="label() ? labelId() : null"
+        [attr.aria-describedby]="describedBy()"
+        [attr.aria-required]="required() || null"
+        [attr.aria-invalid]="showError() || null"
+        [attr.data-placeholder]="!value() ? '' : null"
+        (blur)="!isOpen() && isFocus.set(false)"
+        (click)="toggle()"
+        (focus)="onFocus()"
+      >
+        <span class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+          @for (selectedLabel of selectedLabels(); track $index) {
+            @if (multiple()) {
+              <app-badge type="secondary">
+                <span class="truncate">{{ selectedLabel }}</span>
+              </app-badge>
+            } @else {
+              <span class="truncate">{{ selectedLabel }}</span>
+            }
+          } @empty {
+            <span class="text-muted-foreground truncate">{{ placeholder() }}</span>
+          }
+        </span>
+        <ng-icon name="lucideChevronDown" class="size-4! opacity-50" />
+      </button>
+    </div>
+
+    @let message = errorMessage();
+    @if (message) {
+      <p [id]="messageId()" [class]="messageClasses(true)" role="alert" aria-live="polite">
+        {{ message }}
+      </p>
+    } @else if (hint()) {
+      <p [id]="messageId()" [class]="messageClasses(false)">{{ hint() }}</p>
+    }
 
     <ng-template #dropdownTemplate>
       <div
@@ -127,11 +162,16 @@ export class SelectComponent implements FormValueControl<SelectValue>, OnDestroy
   private portal?: TemplatePortal;
 
   readonly class = input<ClassValue>('');
-  readonly label = input<string>('');
   readonly maxLabelCount = input<number>(1);
   readonly multiple = input<boolean>(false);
   readonly placeholder = input<string>('Select an option...');
   readonly size = input<SelectSizeVariants>('default');
+  readonly displayLabel = input<string>('');
+
+  readonly label = input<string>('');
+  readonly hint = input<string>('');
+  readonly required = input(false, { transform: booleanAttribute });
+  readonly field = input<Field<unknown>>();
 
   // Signal Forms contract (`FormValueControl`): `value` is the two-way model and `disabled`
   // is an `input()` that `[formField]` writes into.
@@ -173,7 +213,41 @@ export class SelectComponent implements FormValueControl<SelectValue>, OnDestroy
     return this.provideLabelForSingleSelectMode(selectedValue as string);
   });
 
-  protected readonly classes = computed(() => mergeClasses(selectVariants(), this.class()));
+  private readonly uniqueId = viewChild<IdDirective>('z');
+  private readonly control = viewChild<ElementRef<HTMLElement>>('control');
+
+  /**
+   * Ancre et référence de largeur du dropdown. L'hôte porte désormais le
+   * libellé et le message, s'y ancrer ouvrirait la liste sous le hint.
+   */
+  private controlElement(): ElementRef<HTMLElement> {
+    return this.control() ?? this.elementRef;
+  }
+  private readonly fieldState = fieldMessage(this.field);
+
+  protected readonly showError = this.fieldState.showError;
+  protected readonly errorMessage = this.fieldState.errorMessage;
+
+  protected readonly baseId = computed(() => this.uniqueId()?.id() ?? 'select');
+  protected readonly labelId = computed(() => `${this.baseId()}-label`);
+  protected readonly messageId = computed(() => `${this.baseId()}-message`);
+  protected readonly triggerId = computed(() => `${this.baseId()}-trigger`);
+  protected readonly describedBy = computed(() =>
+    this.errorMessage() || this.hint() ? this.messageId() : null,
+  );
+
+  protected readonly labelClasses = fieldLabelClasses;
+  protected readonly messageClasses = fieldMessageClasses;
+
+  protected readonly classes = computed(() =>
+    mergeClasses('flex w-full flex-col gap-1.5', this.class()),
+  );
+  protected readonly controlClasses = computed(() =>
+    mergeClasses(
+      selectVariants(),
+      this.showError() ? 'border-destructive data-active:border-destructive' : '',
+    ),
+  );
   protected readonly contentClasses = computed(() => mergeClasses(selectContentVariants()));
   protected readonly triggerClasses = computed(() =>
     mergeClasses(
@@ -287,7 +361,7 @@ export class SelectComponent implements FormValueControl<SelectValue>, OnDestroy
   }
 
   private updateItems(items: readonly SelectItemComponent[]): void {
-    const hostWidth = this.elementRef.nativeElement.offsetWidth || 0;
+    const hostWidth = this.controlElement().nativeElement.offsetWidth || 0;
     const isCompact = hostWidth <= COMPACT_MODE_WIDTH_THRESHOLD;
     this.isCompact.set(isCompact);
     // Setup select host reference for each item
@@ -333,7 +407,7 @@ export class SelectComponent implements FormValueControl<SelectValue>, OnDestroy
   }
 
   private provideLabelForSingleSelectMode(selectedValue: string): string[] {
-    const manualLabel = this.label();
+    const manualLabel = this.displayLabel();
     if (manualLabel) {
       return [manualLabel];
     }
@@ -360,7 +434,7 @@ export class SelectComponent implements FormValueControl<SelectValue>, OnDestroy
       return;
     }
 
-    const hostWidth = this.elementRef.nativeElement.offsetWidth || 0;
+    const hostWidth = this.controlElement().nativeElement.offsetWidth || 0;
 
     if (this.overlayRef.hasAttached()) {
       this.overlayRef.detach();
@@ -462,7 +536,7 @@ export class SelectComponent implements FormValueControl<SelectValue>, OnDestroy
     if (isPlatformBrowser(this.platformId)) {
       try {
         const positionStrategy = this.overlayPositionBuilder
-          .flexibleConnectedTo(this.elementRef)
+          .flexibleConnectedTo(this.controlElement())
           .withPositions([
             {
               originX: 'center',
