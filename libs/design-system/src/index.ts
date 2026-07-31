@@ -31,6 +31,7 @@ export * from './components/combobox';
 export * from './components/command';
 export * from './components/date-picker';
 export * from './components/dialog';
+export * from './i18n';
 export * from './components/divider';
 export * from './components/empty';
 export * from './components/input';
