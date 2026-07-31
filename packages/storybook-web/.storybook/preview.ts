@@ -1,4 +1,5 @@
 import {
+  DESIGN_SYSTEM_DEFAULT_LANG,
   DESIGN_SYSTEM_LANGS,
   provideDesignSystemI18n,
   provideZard,
@@ -42,14 +43,33 @@ const withColorScheme: Decorator = (storyFn, context) => {
 };
 
 /**
- * Langue active du DS. Un décorateur n'a pas accès à l'injecteur de la story,
- * donc il mémorise le choix de la toolbar ici et un initialiseur d'application
- * l'applique à Transloco au démarrage de la story.
+ * Langue active du DS.
+ *
+ * Changer un global re-rend la story mais ne re-bootstrappe pas l'application
+ * Angular : appliquer la langue depuis le seul initialiseur d'application ne
+ * suffit donc pas, elle resterait figée sur celle du premier rendu. On garde une
+ * référence au service pour l'appliquer à l'instance vivante à chaque rendu, et
+ * la variable sert d'amorce quand une nouvelle application démarre.
+ *
+ * Un décorateur n'a pas accès à l'injecteur de la story, d'où cette référence de
+ * module plutôt qu'une injection.
  */
-let activeLang: DesignSystemLang = 'fr-FR';
+let activeLang: DesignSystemLang = DESIGN_SYSTEM_DEFAULT_LANG;
+let translocoRef: TranslocoService | null = null;
+
+function applyLang(lang: DesignSystemLang): void {
+  activeLang = lang;
+  if (!translocoRef) {
+    return;
+  }
+  translocoRef.setActiveLang(lang);
+  // `translate()` est synchrone : sans ce chargement, une langue jamais affichée
+  // rendrait la clé brute côté pipes et directives.
+  translocoRef.load(lang).subscribe({ error: () => undefined });
+}
 
 const withLocale: Decorator = (storyFn, context) => {
-  activeLang = (context.globals['locale'] as DesignSystemLang) ?? 'fr-FR';
+  applyLang((context.globals['locale'] as DesignSystemLang) ?? DESIGN_SYSTEM_DEFAULT_LANG);
   return storyFn();
 };
 
@@ -66,14 +86,12 @@ const preview: Preview = {
         // Breadcrumb et header rendent des `routerLink` : sans Router injecté,
         // ces stories lèvent une erreur au rendu.
         provideRouter([]),
-        // Traductions du DS, en mémoire : le sélecteur de langue de la toolbar
-        // appelle ensuite setActiveLang sur le service.
+        // Traductions du DS, en mémoire.
         provideDesignSystemI18n(),
         provideAppInitializer(() => {
           const transloco = inject(TranslocoService);
+          translocoRef = transloco;
           transloco.setActiveLang(activeLang);
-          // translate() est synchrone : sans ce préchargement, les premières
-          // ouvertures de modale afficheraient la clé au lieu du libellé.
           return transloco.load(activeLang);
         }),
         // Les composants du DS enregistrent eux-mêmes leurs icônes internes.
@@ -118,7 +136,7 @@ const preview: Preview = {
   },
   initialGlobals: {
     theme: 'light',
-    locale: 'fr-FR',
+    locale: DESIGN_SYSTEM_DEFAULT_LANG,
     backgrounds: { value: 'ds-white' },
   },
   parameters: {
