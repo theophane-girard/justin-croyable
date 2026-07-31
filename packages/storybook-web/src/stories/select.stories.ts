@@ -8,6 +8,9 @@ type SelectArgs = {
   disabled: boolean;
   maxLabelCount: number;
   value: string | string[];
+  label: string;
+  hint: string;
+  required: boolean;
 };
 
 const meta: Meta<SelectArgs> = {
@@ -29,6 +32,9 @@ const meta: Meta<SelectArgs> = {
     disabled: { control: 'boolean' },
     maxLabelCount: { control: { type: 'number', min: 1, max: 5 } },
     value: { control: false },
+    label: { control: 'text', description: 'Libellé visible, lié au déclencheur.' },
+    hint: { control: 'text', description: 'Texte d’aide sous le contrôle.' },
+    required: { control: 'boolean', description: 'Ajoute l’astérisque et aria-required.' },
   },
   args: {
     placeholder: 'Sélectionner un rôle…',
@@ -37,6 +43,9 @@ const meta: Meta<SelectArgs> = {
     disabled: false,
     maxLabelCount: 1,
     value: '',
+    label: '',
+    hint: '',
+    required: false,
   },
   render: args => ({
     props: args,
@@ -48,6 +57,9 @@ const meta: Meta<SelectArgs> = {
           [multiple]="multiple"
           [disabled]="disabled"
           [maxLabelCount]="maxLabelCount"
+          [label]="label"
+          [hint]="hint"
+          [required]="required"
           [(value)]="value"
         >
           <app-select-item value="admin">Administrateur</app-select-item>
@@ -64,6 +76,14 @@ export default meta;
 type Story = StoryObj<SelectArgs>;
 
 export const Default: Story = {};
+
+export const WithLabelAndHint: Story = {
+  args: {
+    label: 'Rôle',
+    hint: 'Détermine les permissions dans l’espace.',
+    required: true,
+  },
+};
 
 export const Preselected: Story = { args: { value: 'editor' } };
 

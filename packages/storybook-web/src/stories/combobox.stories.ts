@@ -16,6 +16,9 @@ type ComboboxArgs = {
   searchable: boolean;
   disabled: boolean;
   value: string | null;
+  label: string;
+  hint: string;
+  required: boolean;
 };
 
 const frameworks: ComboboxOption[] = [
@@ -48,6 +51,9 @@ const meta: Meta<ComboboxArgs> = {
     options: { control: 'object' },
     groups: { control: false },
     value: { control: false },
+    label: { control: 'text', description: 'Libellé visible, lié au déclencheur.' },
+    hint: { control: 'text', description: 'Texte d’aide sous le contrôle.' },
+    required: { control: 'boolean', description: 'Ajoute l’astérisque et aria-required.' },
   },
   args: {
     options: frameworks,
@@ -59,6 +65,9 @@ const meta: Meta<ComboboxArgs> = {
     searchable: true,
     disabled: false,
     value: null,
+    label: '',
+    hint: '',
+    required: false,
   },
   render: args => ({
     props: args,
@@ -72,6 +81,9 @@ const meta: Meta<ComboboxArgs> = {
         [emptyText]="emptyText"
         [searchable]="searchable"
         [disabled]="disabled"
+        [label]="label"
+        [hint]="hint"
+        [required]="required"
         [value]="value"
       />
     `,
@@ -82,6 +94,14 @@ export default meta;
 type Story = StoryObj<ComboboxArgs>;
 
 export const Default: Story = {};
+
+export const WithLabelAndHint: Story = {
+  args: {
+    label: 'Framework',
+    hint: 'Utilisé pour générer le squelette du projet.',
+    required: true,
+  },
+};
 
 export const Preselected: Story = { args: { value: 'angular' } };
 
