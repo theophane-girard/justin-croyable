@@ -172,7 +172,7 @@ export class SliderThumbComponent {
   template: `
     <span
       data-slot="slider"
-      [attr.data-disabled]="disabledState()"
+      [attr.data-disabled]="disabledState() ? true : null"
       [attr.data-orientation]="orientation()"
       [attr.data-horizontal]="orientation() === 'horizontal' || null"
       [attr.data-vertical]="orientation() === 'vertical' || null"
