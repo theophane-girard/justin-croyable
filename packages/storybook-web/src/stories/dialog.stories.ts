@@ -43,13 +43,18 @@ class DialogConfirmDemoComponent {
 class DialogInfoDemoComponent {
   private readonly dialog = inject(DialogService);
 
-  readonly action = input('import terminé');
+  /**
+   * Nommé `dialogTitle` et non `title` : sur un élément, `title` est un attribut
+   * HTML natif et déclencherait une infobulle du navigateur en plus d'alimenter
+   * l'entrée. L'option du service, elle, s'appelle bien `title`.
+   */
+  readonly dialogTitle = input('import terminé');
   readonly message = input('428 lignes ont été ajoutées au catalogue.');
   readonly desc = input('');
 
   protected open(): void {
     this.dialog.info({
-      action: this.action(),
+      title: this.dialogTitle(),
       message: this.message(),
       desc: this.desc() || undefined,
     });
@@ -208,7 +213,7 @@ export const InfoWithDesc: StoryObj = {
   render: () => ({
     template: `
       <app-dialog-info-demo
-        action="mise à jour disponible"
+        dialogTitle="mise à jour disponible"
         message="La version 2.5 corrige 14 anomalies."
         desc="Le déploiement prendra environ deux minutes."
       />

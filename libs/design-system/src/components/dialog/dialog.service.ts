@@ -39,7 +39,7 @@ export interface DialogConfirmOptions<T = unknown, U = unknown> extends DialogPa
 }
 
 export interface DialogInfoOptions<T = unknown, U = unknown> extends DialogPassthrough<T, U> {
-  action: string;
+  title: string;
   message: string;
   desc?: string;
 }
@@ -98,11 +98,11 @@ export class DialogService {
 
   /** Information sans action à confirmer : un seul bouton de fermeture. */
   info<T = unknown, U = unknown>(options: DialogInfoOptions<T, U>): DialogRef<T> {
-    const { action, message, desc, ...passthrough } = options;
+    const { title, message, desc, ...passthrough } = options;
 
     return this.create<T, U>({
       ...passthrough,
-      title: capitalize(action),
+      title: capitalize(title),
       description: message,
       content: desc,
       okText: this.translate('designSystem.dialog.close'),
