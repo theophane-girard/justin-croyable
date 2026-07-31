@@ -37,6 +37,7 @@ export * from './components/loader';
 export * from './components/popover';
 export * from './components/select';
 export * from './components/skeleton';
+export * from './components/sonner';
 export * from './components/switch';
 export * from './components/tabs';
 export * from './components/tooltip';

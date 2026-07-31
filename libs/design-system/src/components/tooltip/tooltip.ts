@@ -73,20 +73,21 @@ export class TooltipDirective implements OnInit, OnDestroy {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly renderer = inject(Renderer2);
 
-  private delaySubject?: Subject<DelayConfig>;
+  private ariaEffectRef?: ReturnType<typeof effect>;
   private componentRef?: ComponentRef<TooltipComponent>;
+  private delaySubject?: Subject<DelayConfig>;
   private listenersRefs: (() => void)[] = [];
   private overlayRef?: OverlayRef;
-  private ariaEffectRef?: ReturnType<typeof effect>;
 
+  readonly hideDelay = input(100, { transform: numberAttribute });
   readonly position = input<TooltipPositionVariants>('top');
+  readonly positionOffset = input(4);
+  readonly showDelay = input(150, { transform: numberAttribute });
   readonly trigger = input<TooltipTriggers>('hover');
   readonly tooltip = input<TooltipType>(null, { alias: 'appTooltip' });
-  readonly showDelay = input(150, { transform: numberAttribute });
-  readonly hideDelay = input(100, { transform: numberAttribute });
 
-  readonly show = output<void>();
   readonly hide = output<void>();
+  readonly show = output<void>();
 
   private readonly tooltipText = computed<string | TemplateRef<void>>(() => {
     let tooltipText = this.tooltip();
@@ -100,9 +101,16 @@ export class TooltipDirective implements OnInit, OnDestroy {
 
   ngOnInit() {
     if (isPlatformBrowser(this.platformId)) {
+      const position = TOOLTIP_POSITIONS_MAP[this.position()];
+      const positionOffset = this.positionOffset();
+      if (this.position() === 'top' || this.position() === 'bottom') {
+        position.offsetY = this.position() === 'top' ? -positionOffset : positionOffset;
+      } else {
+        position.offsetX = this.position() === 'left' ? -positionOffset : positionOffset;
+      }
       const positionStrategy = this.overlayPositionBuilder
         .flexibleConnectedTo(this.elementRef)
-        .withPositions([TOOLTIP_POSITIONS_MAP[this.position()]]);
+        .withPositions([position]);
       this.overlayRef = this.overlay.create({ positionStrategy });
 
       runInInjectionContext(this.injector, () => {
@@ -277,6 +285,7 @@ export class TooltipDirective implements OnInit, OnDestroy {
     '[attr.id]': 'tooltipId()',
     '[attr.data-side]': 'position()',
     '[attr.data-state]': 'state()',
+    'data-slot': 'tooltip-content',
     role: 'tooltip',
   },
 })
