@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  FIREBASE_PROJECT_ID: REMPLACER-PAR-ID-PROJET-FIREBASE
+  FIREBASE_PROJECT_ID: justin-croyable-story
 
 jobs:
   ci:
@@ -49,11 +49,11 @@ jobs:
         env:
           SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: |
-          if [ -n "$SERVICE_ACCOUNT" ] && [ "$FIREBASE_PROJECT_ID" != "REMPLACER-PAR-ID-PROJET-FIREBASE" ]; then
+          if [ -n "$SERVICE_ACCOUNT" ]; then
             echo 'ready=true' >> "$GITHUB_OUTPUT"
           else
             echo 'ready=false' >> "$GITHUB_OUTPUT"
-            echo "::warning::Déploiement ignoré. Renseignez FIREBASE_PROJECT_ID dans ce workflow et dans .firebaserc, puis ajoutez le secret FIREBASE_SERVICE_ACCOUNT."
+            echo "::warning::Déploiement ignoré : le secret FIREBASE_SERVICE_ACCOUNT est absent des secrets Actions du dépôt."
           fi
 
       - name: Déploiement sur le canal live
