@@ -47,9 +47,13 @@ export class DialogOptions<T, U> {
   cancelText?: string | null;
   closable?: boolean;
   content?: string | TemplateRef<T> | Type<T>;
+  /** Classes du corps, pour en régler l'emphase. */
+  contentClass?: ClassValue;
   customClasses?: ClassValue;
   data?: U;
   description?: string;
+  /** Classes de la description, pour en régler l'emphase. */
+  descriptionClass?: ClassValue;
   /** Animation duration (ms) used when closing. Defaults to 100 (matches CSS transition). */
   duration?: number;
   hideFooter?: boolean;
@@ -114,7 +118,7 @@ export class DialogOptions<T, U> {
 
         @if (isStringContent()) {
           <!-- Angular auto-sanitizes [innerHTML] by default; scripts/event handlers are stripped. -->
-          <div data-testid="app-content" [innerHTML]="config.content"></div>
+          <div data-testid="app-content" [class]="contentClasses()" [innerHTML]="config.content"></div>
         }
       </main>
 
@@ -207,7 +211,10 @@ export class DialogComponent<T, U> extends BasePortalOutlet {
   protected readonly classes = computed(() => mergeClasses(dialogVariants(), this.config.customClasses));
   protected readonly headerClasses = computed(() => dialogHeaderVariants());
   protected readonly titleClasses = computed(() => dialogTitleVariants());
-  protected readonly descriptionClasses = computed(() => dialogDescriptionVariants());
+  protected readonly descriptionClasses = computed(() =>
+    mergeClasses(dialogDescriptionVariants(), this.config.descriptionClass),
+  );
+  protected readonly contentClasses = computed(() => mergeClasses(this.config.contentClass));
   protected readonly footerClasses = computed(() => dialogFooterVariants());
   protected readonly isStringContent = computed(() => typeof this.config.content === 'string');
   protected readonly titleId = computed(() => (this.config.title ? `${this.idRef().id()}-title` : null));

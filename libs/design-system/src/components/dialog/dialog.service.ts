@@ -24,7 +24,15 @@ export type DialogConfirmTone = 'danger' | 'primary';
 
 type DialogPassthrough<T, U> = Omit<
   DialogOptions<T, U>,
-  'title' | 'description' | 'content' | 'okText' | 'cancelText' | 'okVariant' | 'okDestructive'
+  | 'title'
+  | 'description'
+  | 'descriptionClass'
+  | 'content'
+  | 'contentClass'
+  | 'okText'
+  | 'cancelText'
+  | 'okVariant'
+  | 'okDestructive'
 >;
 
 export interface DialogConfirmOptions<T = unknown, U = unknown> extends DialogPassthrough<T, U> {
@@ -89,7 +97,9 @@ export class DialogService {
         subject,
       }),
       description: this.translate('designSystem.dialog.confirm.message', { action, subject }),
+      descriptionClass: 'text-popover-foreground',
       content: desc,
+      contentClass: 'text-muted-foreground',
       okText: capitalizedAction,
       okVariant: tone === 'danger' ? 'destructive' : 'default',
       cancelText: this.translate('designSystem.dialog.cancel'),
@@ -104,7 +114,9 @@ export class DialogService {
       ...passthrough,
       title: capitalize(title),
       description: message,
+      descriptionClass: 'text-popover-foreground',
       content: desc,
+      contentClass: 'text-muted-foreground',
       okText: this.translate('designSystem.dialog.close'),
       okVariant: 'secondary',
       cancelText: null,
