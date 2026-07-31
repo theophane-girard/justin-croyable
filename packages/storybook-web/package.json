@@ -1,0 +1,45 @@
+{
+  "name": "@justin-croyable/storybook-web",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "storybook": "ng run storybook-web:storybook",
+    "build-storybook": "ng run storybook-web:build-storybook"
+  },
+  "//": "Les versions sont épinglées ici et non prises à la racine : le track React Native de la racine tient sur Storybook 8.6 + Tailwind 3, alors que le DS web tient sur Storybook 10 + Tailwind 4. npm isole donc ces deux jeux dans packages/storybook-web/node_modules. @angular/platform-browser-dynamic est listé explicitement car c'est un peer de @storybook/angular : sans épinglage, npm choisit la 20.x et tire tout Angular en arrière.",
+  "dependencies": {
+    "@angular/cdk": "^21.2.0",
+    "@angular/common": "^21.2.0",
+    "@angular/compiler": "^21.2.0",
+    "@angular/core": "^21.2.0",
+    "@angular/forms": "^21.2.0",
+    "@angular/platform-browser": "^21.2.0",
+    "@angular/router": "^21.2.0",
+    "@jsverse/transloco": "^8.4.0",
+    "@justin-croyable/design-system": "*",
+    "@ng-icons/core": "^33.2.3",
+    "@ng-icons/lucide": "^33.2.3",
+    "ngx-sonner": "^3.1.0",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0",
+    "zone.js": "~0.16.0"
+  },
+  "devDependencies": {
+    "@angular-devkit/build-angular": "^21.2.0",
+    "@angular/animations": "^21.2.0",
+    "@angular/build": "^21.2.0",
+    "@angular/cli": "^21.2.0",
+    "@angular/compiler-cli": "^21.2.0",
+    "@angular/platform-browser-dynamic": "^21.2.0",
+    "@storybook/addon-a11y": "^10.5.5",
+    "@storybook/addon-docs": "^10.5.5",
+    "@storybook/angular": "^10.5.5",
+    "@tailwindcss/postcss": "^4.3.3",
+    "postcss": "^8.5.15",
+    "postcss-loader": "^8.2.1",
+    "storybook": "^10.5.5",
+    "storybook-version": "^0.1.9",
+    "tailwindcss": "^4.3.3",
+    "tailwindcss-animate": "^1.0.7"
+  }
+}

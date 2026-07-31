@@ -1,0 +1,22 @@
+{
+  "//": "Typecheck Nx des stories et de la config Storybook. La compilation réelle (AOT Angular) passe par .storybook/tsconfig.json.",
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": ".",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["es2022", "dom", "dom.iterable"],
+    "types": ["node"],
+    "experimentalDecorators": true,
+    "noUnusedLocals": false,
+    "tsBuildInfoFile": "dist/tsconfig.app.tsbuildinfo"
+  },
+  "include": ["src/**/*.ts", ".storybook/main.ts"],
+  "exclude": ["dist", "out-tsc", "src/**/*.spec.ts"],
+  "references": [
+    {
+      "path": "../../libs/design-system/tsconfig.lib.json"
+    }
+  ]
+}

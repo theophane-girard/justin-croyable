@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FIREBASE_PROJECT_ID: justin-croyable-story
+
+jobs:
+  ci:
+    name: Vérifications et déploiement
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck et lint
+        run: npx nx run-many -t typecheck lint
+
+      - name: Tests
+        run: npx nx run-many -t test
+
+      - name: Build du Storybook web
+        run: npx nx build-storybook @justin-croyable/storybook-web
+
+      - name: Firebase est-il configuré ?
+        id: firebase
+        env:
+          SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -n "$SERVICE_ACCOUNT" ]; then
+            echo 'ready=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'ready=false' >> "$GITHUB_OUTPUT"
+            echo "::warning::Déploiement ignoré : le secret FIREBASE_SERVICE_ACCOUNT est absent des secrets Actions du dépôt."
+          fi
+
+      - name: Déploiement sur le canal live
+        if: steps.firebase.outputs.ready == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          projectId: ${{ env.FIREBASE_PROJECT_ID }}
+          channelId: live
+
+      - name: Déploiement d'un canal de prévisualisation
+        if: steps.firebase.outputs.ready == 'true' && github.event_name == 'pull_request'
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          projectId: ${{ env.FIREBASE_PROJECT_ID }}
+          expires: 7d
