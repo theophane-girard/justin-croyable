@@ -104,6 +104,49 @@ popover · select · skeleton · switch · tabs · tooltip
 Les groupes composables exportent un tableau d'imports prêt à l'emploi : `SelectImports`,
 `CommandImports`, `TooltipImports`, `LayoutImports`, `BreadcrumbImports`.
 
+## Configuration : `provideJustinCroyableDS()`
+
+Point d'entrée unique, composable par fonctionnalités façon `provideRouter()` :
+
+```ts
+providers: [
+  provideJustinCroyableDS(
+    withIcons(SCOPED_APP_ICONS), // jeu @ng-icons de l'app (Phosphor, Lucide…)
+    withTables(),                // AG Grid community + défauts de `app-table`
+    withCharts(),                // ECharts via ngx-echarts
+    withTranslations(),          // Transloco + traductions du DS
+  ),
+];
+```
+
+Chaque fonctionnalité n'apporte que ses providers : une application sans tableaux
+ne charge pas AG Grid. `provideZard()` est inclus d'office, il n'est pas optionnel
+(cf. plus bas).
+
+| Fonctionnalité | Ce qu'elle fait | À savoir |
+| --- | --- | --- |
+| `withIcons(icons)` | `provideIcons()` pour tout l'arbre | Le jeu vient de l'app. Seules les icônes passées **par nom** à une entrée (`app-empty [icon]`) en ont besoin. |
+| `withTables(opts?)` | Enregistre `AllCommunityModule`, fixe les défauts de `app-table` | L'enregistrement est fait dans un initialiseur, donc uniquement si la fonctionnalité est déclarée. |
+| `withCharts(opts?)` | `provideEchartsCore()`, défauts de `app-chart` | Charge le bundle ECharts complet à la demande. Passer `echarts` pour un `echarts/core` réduit au strict nécessaire. |
+| `withTranslations(opts?)` | Transloco + les 5 langues du DS | À omettre si l'app gère déjà Transloco, les deux configurations se remplaceraient. |
+
+## Thème et couleurs
+
+`ThemeService` bascule entre `light` et `dark` en posant la classe `.dark` sur
+l'élément racine, avec persistance et sans toucher à `localStorage` ni
+`matchMedia` côté serveur.
+
+`app-table` et `app-chart` suivent ce service, par deux chemins différents :
+
+- **`app-table`** est du DOM. Son thème AG Grid pointe directement les variables
+  CSS (`var(--primary)`, `var(--border)`…), donc il suit le thème sans
+  JavaScript ; seule la partie de schéma clair / sombre est permutée.
+- **`app-chart`** dessine dans un canvas, où `var(--primary)` ne veut rien dire.
+  `ThemePaletteService` résout les variables en valeurs concrètes et les
+  recalcule à chaque bascule. La lecture se fait sur un élément sonde portant la
+  classe `dark`, pas sur la racine : sinon le résultat dépendrait de l'ordre
+  d'exécution des effets.
+
 ### `provideZard()` est requis
 
 Select, command et sidebar utilisent la syntaxe d'événements groupés
