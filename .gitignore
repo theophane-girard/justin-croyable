@@ -8,6 +8,9 @@ out-tsc
 # cache du CLI Angular (track design-system web)
 .angular
 
+# cache du CLI Firebase
+.firebase
+
 # dependencies
 node_modules
 
