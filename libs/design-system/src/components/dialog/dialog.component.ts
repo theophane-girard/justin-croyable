@@ -39,6 +39,7 @@ import {
   dialogVariants,
 } from './dialog.variants';
 import { ButtonComponent } from '../button/button.component';
+import type { ButtonVariant } from '../button/button.variants';
 
 export type OnClickCallback<T> = (instance: T) => false | void | object;
 export class DialogOptions<T, U> {
@@ -57,6 +58,8 @@ export class DialogOptions<T, U> {
   okDisabled?: boolean;
   okIcon?: string;
   okText?: string | null;
+  /** Variante du bouton principal. Prend le pas sur `okDestructive`. */
+  okVariant?: ButtonVariant;
   onCancel?: EventEmitter<T> | OnClickCallback<T> = noopFn;
   onOk?: EventEmitter<T> | OnClickCallback<T> = noopFn;
   title?: string | TemplateRef<T>;
@@ -136,7 +139,7 @@ export class DialogOptions<T, U> {
               type="button"
               data-testid="app-ok-button"
               appButton
-              [variant]="config.okDestructive ? 'destructive' : 'default'"
+              [variant]="config.okVariant ?? (config.okDestructive ? 'destructive' : 'default')"
               [disabled]="config.okDisabled"
               (click)="onOkClick()"
             >
