@@ -12,6 +12,7 @@ type TooltipArgs = {
   trigger: TooltipTriggers;
   showDelay: number;
   hideDelay: number;
+  positionOffset: number;
 };
 
 const meta: Meta<TooltipArgs> = {
@@ -33,6 +34,10 @@ const meta: Meta<TooltipArgs> = {
     trigger: { control: 'inline-radio', options: ['hover', 'click'] },
     showDelay: { control: { type: 'number', min: 0, max: 1000, step: 50 } },
     hideDelay: { control: { type: 'number', min: 0, max: 1000, step: 50 } },
+    positionOffset: {
+      control: { type: 'number', min: 0, max: 24 },
+      description: 'Distance en px entre le déclencheur et la bulle.',
+    },
   },
   args: {
     appTooltip: 'Ajouter aux favoris',
@@ -40,6 +45,7 @@ const meta: Meta<TooltipArgs> = {
     trigger: 'hover',
     showDelay: 150,
     hideDelay: 100,
+    positionOffset: 4,
   },
   render: args => ({
     props: args,
@@ -53,6 +59,7 @@ const meta: Meta<TooltipArgs> = {
           [trigger]="trigger"
           [showDelay]="showDelay"
           [hideDelay]="hideDelay"
+          [positionOffset]="positionOffset"
         >
           Survolez-moi
         </button>
