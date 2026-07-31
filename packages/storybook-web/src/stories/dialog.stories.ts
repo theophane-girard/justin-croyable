@@ -1,6 +1,60 @@
 import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
-import { ButtonComponent, DialogService } from '@justin-croyable/design-system';
+import {
+  ButtonComponent,
+  DialogService,
+  type DialogConfirmTone,
+} from '@justin-croyable/design-system';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
+
+@Component({
+  selector: 'app-dialog-confirm-demo',
+  imports: [ButtonComponent],
+  template: `
+    <button appButton variant="outline" (click)="open()">Confirmer une action</button>
+  `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+class DialogConfirmDemoComponent {
+  private readonly dialog = inject(DialogService);
+
+  readonly action = input('supprimer');
+  readonly subject = input('le projet');
+  readonly desc = input('');
+  readonly tone = input<DialogConfirmTone>('danger');
+
+  protected open(): void {
+    this.dialog.confirm({
+      action: this.action(),
+      subject: this.subject(),
+      desc: this.desc() || undefined,
+      tone: this.tone(),
+    });
+  }
+}
+
+@Component({
+  selector: 'app-dialog-info-demo',
+  imports: [ButtonComponent],
+  template: `
+    <button appButton variant="outline" (click)="open()">Afficher une information</button>
+  `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+class DialogInfoDemoComponent {
+  private readonly dialog = inject(DialogService);
+
+  readonly action = input('import terminé');
+  readonly message = input('428 lignes ont été ajoutées au catalogue.');
+  readonly desc = input('');
+
+  protected open(): void {
+    this.dialog.info({
+      action: this.action(),
+      message: this.message(),
+      desc: this.desc() || undefined,
+    });
+  }
+}
 
 @Component({
   selector: 'app-dialog-demo',
@@ -49,7 +103,11 @@ type DialogArgs = {
 const meta: Meta<DialogArgs> = {
   title: 'Composants/Dialog',
   tags: ['autodocs'],
-  decorators: [moduleMetadata({ imports: [DialogDemoComponent] })],
+  decorators: [
+    moduleMetadata({
+      imports: [DialogDemoComponent, DialogConfirmDemoComponent, DialogInfoDemoComponent],
+    }),
+  ],
   parameters: {
     layout: 'padded',
     docs: {
@@ -104,3 +162,56 @@ export const WithoutFooter: Story = { args: { hideFooter: true } };
 export const NotDismissible: Story = { args: { closable: false, maskClosable: false } };
 
 export const Wide: Story = { args: { width: '40rem' } };
+
+/**
+ * `confirm()` compose le titre et le message à partir du verbe et de son
+ * complément, via les traductions du DS. Le sélecteur « Langue » de la toolbar
+ * change les libellés — en allemand, l'ordre des mots du titre diffère.
+ */
+export const Confirm: StoryObj = {
+  parameters: { controls: { disable: true } },
+  render: () => ({
+    template: `<app-dialog-confirm-demo action="supprimer" subject="le projet" />`,
+  }),
+};
+
+export const ConfirmPrimary: StoryObj = {
+  parameters: { controls: { disable: true } },
+  render: () => ({
+    template: `<app-dialog-confirm-demo action="publier" subject="la version 2.4" tone="primary" />`,
+  }),
+};
+
+export const ConfirmWithDesc: StoryObj = {
+  parameters: { controls: { disable: true } },
+  render: () => ({
+    template: `
+      <app-dialog-confirm-demo
+        action="archiver"
+        subject="l'espace de travail"
+        desc="Les membres perdront l'accès immédiatement."
+      />
+    `,
+  }),
+};
+
+/** `info()` n'affiche qu'un bouton de fermeture, en variante secondary. */
+export const Info: StoryObj = {
+  parameters: { controls: { disable: true } },
+  render: () => ({
+    template: `<app-dialog-info-demo />`,
+  }),
+};
+
+export const InfoWithDesc: StoryObj = {
+  parameters: { controls: { disable: true } },
+  render: () => ({
+    template: `
+      <app-dialog-info-demo
+        action="mise à jour disponible"
+        message="La version 2.5 corrige 14 anomalies."
+        desc="Le déploiement prendra environ deux minutes."
+      />
+    `,
+  }),
+};

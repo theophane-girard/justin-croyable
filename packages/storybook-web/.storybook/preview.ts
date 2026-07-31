@@ -1,4 +1,10 @@
-import { provideZard } from '@justin-croyable/design-system';
+import {
+  DESIGN_SYSTEM_LANGS,
+  provideDesignSystemI18n,
+  provideZard,
+  type DesignSystemLang,
+} from '@justin-croyable/design-system';
+import { TranslocoService } from '@jsverse/transloco';
 import { provideIcons } from '@ng-icons/core';
 import {
   lucideCalendar,
@@ -11,6 +17,7 @@ import {
   lucideSearch,
   lucideSun,
 } from '@ng-icons/lucide';
+import { inject, provideAppInitializer } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { applicationConfig, type Decorator, type Preview } from '@storybook/angular';
 
@@ -30,9 +37,22 @@ const withColorScheme: Decorator = (storyFn, context) => {
   return storyFn();
 };
 
+/**
+ * Langue active du DS. Un décorateur n'a pas accès à l'injecteur de la story,
+ * donc il mémorise le choix de la toolbar ici et un initialiseur d'application
+ * l'applique à Transloco au démarrage de la story.
+ */
+let activeLang: DesignSystemLang = 'fr-FR';
+
+const withLocale: Decorator = (storyFn, context) => {
+  activeLang = (context.globals['locale'] as DesignSystemLang) ?? 'fr-FR';
+  return storyFn();
+};
+
 const preview: Preview = {
   decorators: [
     withColorScheme,
+    withLocale,
     applicationConfig({
       providers: [
         // `provideZard()` installe les plugins d'event manager dont dépend la
@@ -42,6 +62,16 @@ const preview: Preview = {
         // Breadcrumb et header rendent des `routerLink` : sans Router injecté,
         // ces stories lèvent une erreur au rendu.
         provideRouter([]),
+        // Traductions du DS, en mémoire : le sélecteur de langue de la toolbar
+        // appelle ensuite setActiveLang sur le service.
+        provideDesignSystemI18n(),
+        provideAppInitializer(() => {
+          const transloco = inject(TranslocoService);
+          transloco.setActiveLang(activeLang);
+          // translate() est synchrone : sans ce préchargement, les premières
+          // ouvertures de modale afficheraient la clé au lieu du libellé.
+          return transloco.load(activeLang);
+        }),
         // Les composants du DS enregistrent eux-mêmes leurs icônes internes.
         // Ici on ne déclare que celles passées *par nom* depuis les stories
         // (`app-empty [icon]`, `app-command-option [icon]`).
@@ -60,6 +90,15 @@ const preview: Preview = {
     }),
   ],
   globalTypes: {
+    locale: {
+      description: 'Langue des libellés du Design System',
+      toolbar: {
+        title: 'Langue',
+        icon: 'globe',
+        items: DESIGN_SYSTEM_LANGS.map(lang => ({ value: lang, title: lang })),
+        dynamicTitle: true,
+      },
+    },
     theme: {
       description: 'Thème du Design System',
       toolbar: {
@@ -75,6 +114,7 @@ const preview: Preview = {
   },
   initialGlobals: {
     theme: 'light',
+    locale: 'fr-FR',
     backgrounds: { value: 'ds-white' },
   },
   parameters: {
