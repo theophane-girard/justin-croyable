@@ -75,6 +75,7 @@ const preview: Preview = {
   },
   initialGlobals: {
     theme: 'light',
+    backgrounds: { value: 'ds-white' },
   },
   parameters: {
     layout: 'centered',
@@ -84,9 +85,12 @@ const preview: Preview = {
         date: /Date$/i,
       },
     },
-    // Le fond doit venir des tokens du DS, pas de la palette Storybook :
-    // sinon la story ne montre pas le contraste réel du composant.
-    backgrounds: { disable: true },
+    backgrounds: {
+      options: {
+        'ds-white': { name: 'DS white', value: 'oklch(0.972 0.006 323)' },
+        'ds-black': { name: 'DS black', value: 'oklch(0.22 0.012 323)' },
+      },
+    },
     a11y: { test: 'todo' },
   },
 };
