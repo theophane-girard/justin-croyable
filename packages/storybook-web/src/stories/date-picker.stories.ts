@@ -3,7 +3,7 @@ import {
   type ButtonVariant,
   type DatePickerSizeVariants,
 } from '@justin-croyable/design-system';
-import type { Meta, StoryObj } from '@storybook/angular';
+import type { Meta, StoryObj } from '@storybook/angular-vite';
 
 type DatePickerArgs = {
   placeholder: string;

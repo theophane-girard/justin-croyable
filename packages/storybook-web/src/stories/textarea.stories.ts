@@ -1,5 +1,5 @@
 import { TextareaComponent } from '@justin-croyable/design-system';
-import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
+import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
 
 type TextareaArgs = {
   placeholder: string;

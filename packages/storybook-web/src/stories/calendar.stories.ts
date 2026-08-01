@@ -1,5 +1,5 @@
 import { CalendarComponent, type CalendarMode, type CalendarValue } from '@justin-croyable/design-system';
-import type { Meta, StoryObj } from '@storybook/angular';
+import type { Meta, StoryObj } from '@storybook/angular-vite';
 
 type CalendarArgs = {
   mode: CalendarMode;

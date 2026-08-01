@@ -1,5 +1,5 @@
 import { SkeletonComponent } from '@justin-croyable/design-system';
-import type { Meta, StoryObj } from '@storybook/angular';
+import type { Meta, StoryObj } from '@storybook/angular-vite';
 
 type SkeletonArgs = { class: string };
 

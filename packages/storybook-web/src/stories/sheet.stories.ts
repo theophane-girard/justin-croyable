@@ -4,7 +4,7 @@ import {
   SheetService,
   type SheetVariants,
 } from '@justin-croyable/design-system';
-import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
+import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
 
 type Side = NonNullable<SheetVariants['side']>;
 type Size = NonNullable<SheetVariants['size']>;

@@ -4,7 +4,7 @@ import {
   type ToggleSizeVariants,
   type ToggleTypeVariants,
 } from '@justin-croyable/design-system';
-import type { Meta, StoryObj } from '@storybook/angular';
+import type { Meta, StoryObj } from '@storybook/angular-vite';
 
 type ToggleGroupArgs = {
   items: ToggleGroupItem[];
