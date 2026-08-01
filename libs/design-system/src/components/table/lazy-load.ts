@@ -9,7 +9,7 @@ import {
   untracked,
 } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
-import type { IDatasource, IGetRowsParams, SortModelItem } from 'ag-grid-community';
+import type { FilterModel, IDatasource, IGetRowsParams, SortModelItem } from 'ag-grid-community';
 import { map, type Observable, of } from 'rxjs';
 
 /**
@@ -24,8 +24,13 @@ export interface LazyLoadRequest {
   readonly endRow: number;
   /** Tri courant de la grille, dans l'ordre de priorité. */
   readonly sortModel: SortModelItem[];
-  /** Modèle de filtre courant de la grille (forme libre, dépend des filtres). */
-  readonly filterModel: unknown;
+  /**
+   * Modèle de filtre courant, tel que renvoyé par `gridApi.getFilterModel()` :
+   * une map indexée par identifiant de colonne. La valeur de chaque entrée
+   * dépend du filtre concerné (`TextFilterModel`, `NumberFilterModel`, …), d'où
+   * son typage `any` côté AG Grid.
+   */
+  readonly filterModel: FilterModel;
 }
 
 /** Résultat d'un chargement paresseux : le bloc de lignes et, si connu, le total. */
