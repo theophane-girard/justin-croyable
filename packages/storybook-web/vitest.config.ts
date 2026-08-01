@@ -114,6 +114,20 @@ export default defineConfig({
      * stories à plat dans `src/stories` (cf. le motif de `.storybook/main.ts`).
      */
     dir: DOSSIER_STORIES,
+    /**
+     * Un fichier à la fois.
+     *
+     * En parallèle, chaque fichier ouvre son propre contexte de navigateur qui
+     * demande ses modules au serveur Vite, pendant que le plugin Angular compile.
+     * Sur un runner à quatre cœurs, cette contention faisait échouer un fichier
+     * au hasard — tantôt « Cannot connect to the iframe », tantôt « Failed to
+     * fetch dynamically imported module » — sans qu'aucune assertion soit en
+     * cause : 167 tests sur 170 passaient.
+     *
+     * Le coût est d'environ vingt-cinq secondes en local. En échange, la CI est
+     * déterministe et une exécution locale prédit son résultat.
+     */
+    fileParallelism: false,
     // Pas de `setupFiles` : depuis Storybook 10.3 l'addon applique lui-même les
     // annotations du `preview` (décorateurs, providers du DS, globals). Fournir
     // un fichier de setup qui appelle `setProjectAnnotations` lui ferait au
