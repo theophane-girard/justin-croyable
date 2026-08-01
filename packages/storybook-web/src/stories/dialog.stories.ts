@@ -7,11 +7,6 @@ import {
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
 
-/**
- * La modale est rendue dans une couche du CDK, greffée sur `document.body` et
- * donc hors de `canvasElement` : les assertions visent le document, pas le
- * canevas de la story.
- */
 async function ouvrirDialogue(canvasElement: HTMLElement): Promise<HTMLElement> {
   await userEvent.click(within(canvasElement).getByRole('button'));
   return waitFor(() => {
@@ -21,10 +16,6 @@ async function ouvrirDialogue(canvasElement: HTMLElement): Promise<HTMLElement> 
   });
 }
 
-/**
- * Referme la modale avant la story suivante : la couche du CDK survit au
- * démontage de la story, une modale laissée ouverte fausserait le test suivant.
- */
 async function fermerParLeBouton(libelle: string): Promise<void> {
   await userEvent.click(within(document.body).getByRole('button', { name: libelle }));
   await waitFor(() => {
@@ -69,11 +60,6 @@ class DialogConfirmDemoComponent {
 class DialogInfoDemoComponent {
   private readonly dialog = inject(DialogService);
 
-  /**
-   * Nommé `dialogTitle` et non `title` : sur un élément, `title` est un attribut
-   * HTML natif et déclencherait une infobulle du navigateur en plus d'alimenter
-   * l'entrée. L'option du service, elle, s'appelle bien `title`.
-   */
   readonly dialogTitle = input('import terminé');
   readonly message = input('428 lignes ont été ajoutées au catalogue.');
   readonly desc = input('');
@@ -230,7 +216,6 @@ export const WithoutFooter: Story = {
     const dialogue = await ouvrirDialogue(canvasElement);
     expect(dialogue.querySelector('[data-slot="dialog-footer"]')).toBeNull();
 
-    // Pas de bouton d'action ici : la croix d'en-tête est la seule sortie.
     await userEvent.click(dialogue.querySelector<HTMLElement>('[data-slot="dialog-close"]')!);
     await waitFor(() => {
       expect(document.querySelector('[data-slot="dialog-content"]')).toBeNull();
@@ -242,11 +227,6 @@ export const NotDismissible: Story = { args: { closable: false, maskClosable: fa
 
 export const Wide: Story = { args: { width: '40rem' } };
 
-/**
- * `confirm()` compose le titre et le message à partir du verbe et de son
- * complément, via les traductions du DS. Le sélecteur « Langue » de la toolbar
- * change les libellés — en allemand, l'ordre des mots du titre diffère.
- */
 export const Confirm: StoryObj = {
   parameters: { controls: { disable: true } },
   render: () => ({
@@ -255,8 +235,6 @@ export const Confirm: StoryObj = {
   play: async ({ canvasElement }) => {
     const dialogue = await ouvrirDialogue(canvasElement);
 
-    // Le titre capitalise le verbe, le message le laisse tel quel : c'est toute
-    // la composition faite par `confirm()` à partir des traductions du DS.
     expect(dialogue.querySelector('[data-slot="dialog-title"]')?.textContent?.trim()).toBe(
       'Supprimer le projet',
     );
@@ -293,7 +271,6 @@ export const ConfirmWithDesc: StoryObj = {
   }),
 };
 
-/** `info()` n'affiche qu'un bouton de fermeture, en variante secondary. */
 export const Info: StoryObj = {
   parameters: { controls: { disable: true } },
   render: () => ({
@@ -303,12 +280,9 @@ export const Info: StoryObj = {
     const dialogue = await ouvrirDialogue(canvasElement);
 
     expect(dialogue.querySelector('[data-slot="dialog-title"]')?.textContent?.trim()).toBe(
-      // `info()` capitalise le titre, comme `confirm()` capitalise le verbe.
       'Import terminé',
     );
 
-    // Une seule sortie, sans bouton d'annulation : c'est ce qui distingue
-    // `info()` de `confirm()`.
     const actions = [...dialogue.querySelectorAll('[data-slot="dialog-footer"] button')].map(
       bouton => bouton.textContent?.trim(),
     );

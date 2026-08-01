@@ -66,7 +66,6 @@ export const Sizes: Story = {
   }),
 };
 
-/** Chemin long tronqué : `app-breadcrumb-ellipsis` marque l'élément replié. */
 export const WithEllipsis: Story = {
   parameters: { controls: { disable: true } },
   render: () => ({

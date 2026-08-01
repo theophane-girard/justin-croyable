@@ -28,7 +28,6 @@ type Story = StoryObj<SkeletonArgs>;
 
 export const Default: Story = {};
 
-/** Squelette d'une carte : on reproduit la silhouette réelle du contenu. */
 export const CardPlaceholder: Story = {
   parameters: { controls: { disable: true } },
   render: () => ({

@@ -25,9 +25,6 @@ const meta: Meta<CalendarArgs> = {
   argTypes: {
     mode: { control: 'inline-radio', options: ['single', 'multiple', 'range'] },
     disabled: { control: 'boolean' },
-    // Pas de contrôle `date` : Storybook renverrait un timestamp là où le
-    // composant attend un `Date`. Les bornes sont démontrées par la story
-    // `Bounded`, qui construit de vraies dates.
     value: { control: false },
     minDate: { control: false },
     maxDate: { control: false },
@@ -77,7 +74,6 @@ export const Default: Story = {
       expect(joursSelectionnes(canvasElement)).toEqual([jours[10].textContent?.trim()]);
     });
 
-    // En mode `single`, choisir un autre jour remplace la sélection.
     await userEvent.click(jours[15]);
     await waitFor(() => {
       expect(joursSelectionnes(canvasElement)).toEqual([jours[15].textContent?.trim()]);
@@ -93,7 +89,6 @@ export const Multiple: Story = {
     await userEvent.click(jours[10]);
     await userEvent.click(jours[15]);
 
-    // En mode `multiple`, les jours s'accumulent.
     await waitFor(() => {
       expect(joursSelectionnes(canvasElement).length).toBe(2);
     });
@@ -104,10 +99,6 @@ export const Range: Story = { args: { mode: 'range' } };
 
 export const Disabled: Story = { args: { disabled: true } };
 
-/**
- * Bornes de navigation. Les dates sont construites à l'exécution de la story
- * pour rester relatives à aujourd'hui.
- */
 export const Bounded: Story = {
   render: () => {
     const today = new Date();

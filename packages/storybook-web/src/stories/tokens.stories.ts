@@ -1,12 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/angular-vite';
 
-/**
- * Ces stories ne montrent aucun composant : elles rendent visible ce que le
- * preset Tailwind du DS expose réellement. Chaque pastille est une classe
- * utilitaire (`bg-primary`, `bg-muted`, …) — si le preset n'était pas importé,
- * ou si un token disparaissait, la pastille correspondante deviendrait
- * transparente. C'est la vérification la moins coûteuse du câblage du thème.
- */
 const meta: Meta = {
   title: 'Design System/Tokens',
   tags: ['autodocs'],
@@ -25,7 +18,6 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj;
 
-/** Rôles sémantiques — la surface que les composants consomment. */
 export const Roles: Story = {
   render: () => ({
     props: {
@@ -52,7 +44,6 @@ export const Roles: Story = {
   }),
 };
 
-/** Bordure, champ et anneau de focus : les rôles de contour. */
 export const Outlines: Story = {
   render: () => ({
     template: `
@@ -65,7 +56,6 @@ export const Outlines: Story = {
   }),
 };
 
-/** Rayons dérivés de `--radius`. */
 export const Radii: Story = {
   render: () => ({
     props: { radii: ['rounded-sm', 'rounded-md', 'rounded-lg', 'rounded-xl'] },
@@ -82,16 +72,8 @@ export const Radii: Story = {
   }),
 };
 
-/**
- * Palette complémentaire, décorative. Les pas 300–700 sont trop proches des
- * teintes réservées (error, warning, success, info, marque) pour porter seuls
- * un statut — cf. le tableau d'écarts ΔE dans `primitives.css`.
- */
 export const DecorativeRamps: Story = {
   render: () => ({
-    // Les classes sont écrites en entier, jamais concaténées : Tailwind scanne
-    // du texte, donc `'bg-' + family + '-' + step` produirait des classes
-    // introuvables à la compilation et purgées du bundle.
     props: {
       ramps: [
         {

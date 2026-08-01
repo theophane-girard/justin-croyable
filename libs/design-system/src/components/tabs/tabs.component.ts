@@ -56,7 +56,6 @@ export type align = 'center' | 'start' | 'end';
 })
 export class TabComponent {
   readonly label = input.required<string>();
-  /** Stable identifier, e.g. for driving the active tab from outside. */
   readonly slug = input<string>('');
   readonly contentTemplate = viewChild.required<TemplateRef<unknown>>('content');
 }
@@ -215,15 +214,12 @@ export class TabGroupComponent implements AfterViewInit {
   readonly showArrow = input(true);
   readonly scrollAmount = input(100);
   readonly alignTabs = input<align>('start');
-  /** When `false`, the tab navigation (and its border) is not rendered. */
   readonly showNav = input(true);
-  // Preserve consumer classes on host
   readonly class = input<string>('');
 
   protected readonly arrowsVisible = computed(() => this.showArrow() && this.scrollPresent());
 
   ngAfterViewInit(): void {
-    // default tab selection
     if (this.tabs().length) {
       this.setActiveTab(0);
     }
@@ -235,7 +231,6 @@ export class TabGroupComponent implements AfterViewInit {
         toObservable(this.tabsPosition),
       );
 
-      // Re-observe whenever #tabNav reference changes (e.g., when placement toggles)
       let observedEl: HTMLElement | null = null;
       const tabNavEl$ = toObservable(this.tabsContainer).pipe(
         filter((ref): ref is ElementRef => !!ref),
@@ -244,7 +239,6 @@ export class TabGroupComponent implements AfterViewInit {
       );
 
       afterNextRender(() => {
-        // SSR/browser guard
         if (!this.window || typeof ResizeObserver === 'undefined') {
           return;
         }
@@ -372,17 +366,14 @@ export class TabGroupComponent implements AfterViewInit {
     }
   }
 
-  /** The tabs as plain data (slug + label) — e.g. to render the nav elsewhere. */
   readonly tabItems = computed(() =>
     this.tabs().map((tab, index) => ({ slug: tab.slug() || `tab-${index}`, label: tab.label() })),
   );
 
-  /** Slug of the currently active tab. */
   readonly activeSlug = computed<string | null>(
     () => this.tabItems()[this.activeTabIndex()]?.slug ?? null,
   );
 
-  /** Activate a tab by its slug (no-op if unknown). */
   selectBySlug(slug: string): void {
     const index = this.tabItems().findIndex((tab) => tab.slug === slug);
     if (index !== -1) {

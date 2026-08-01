@@ -53,7 +53,6 @@ export const Default: Story = {
 
     await userEvent.click(boutons[1]);
 
-    // Un groupe radio est exclusif : cocher le second doit décocher le premier.
     await waitFor(() => {
       expect(boutons.map(bouton => bouton.getAttribute('aria-checked'))).toEqual([
         'false',
@@ -70,7 +69,6 @@ export const NoSelection: Story = {
     const boutons = [...canvasElement.querySelectorAll<HTMLElement>('[role="radio"]')];
     expect(boutons.every(bouton => bouton.getAttribute('aria-checked') === 'false')).toBe(true);
 
-    // La troisième option est désactivée : elle ne doit pas devenir la sélection.
     await userEvent.click(boutons[2], { pointerEventsCheck: 0 });
     expect(boutons[2].getAttribute('aria-checked')).toBe('false');
   },

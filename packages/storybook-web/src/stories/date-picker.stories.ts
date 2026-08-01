@@ -74,7 +74,6 @@ export const Default: Story = {
 
     await userEvent.click(declencheur);
 
-    // Le calendrier est rendu dans une couche du CDK, donc hors du canevas.
     const calendrier = await waitFor(() => {
       const trouve = document.querySelector<HTMLElement>('app-calendar');
       expect(trouve).toBeTruthy();
@@ -86,7 +85,6 @@ export const Default: Story = {
     ].filter(jour => !jour.disabled);
     await userEvent.click(jours[10]);
 
-    // Choisir une date la formate dans le déclencheur et referme le calendrier.
     await waitFor(() => {
       expect(declencheur.textContent).not.toContain('Choisir une date');
       expect(document.querySelector('app-calendar')).toBeNull();

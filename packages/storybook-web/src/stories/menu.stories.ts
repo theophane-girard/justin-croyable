@@ -99,15 +99,9 @@ export const Default: Story = {
       'Équipe',
       'Se',
     ]);
-    /**
-     * Une entrée désactivée l'est par `aria-disabled`, pas par l'attribut natif :
-     * un élément de menu doit rester atteignable au clavier pour ne pas trouer
-     * la navigation par flèches. C'est le CDK qui bloque son activation.
-     */
     expect(entrees[2].getAttribute('aria-disabled')).toBe('');
     expect(entrees[2].getAttribute('data-disabled')).toBe('');
 
-    // Choisir une entrée referme le menu.
     await userEvent.click(entrees[0]);
     await waitFor(() => {
       expect(document.querySelector('[app-menu-content]')).toBeNull();

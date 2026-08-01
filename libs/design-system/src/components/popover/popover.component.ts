@@ -224,7 +224,6 @@ export class PopoverDirective implements OnInit, OnDestroy {
     const placement = this.placement();
     const positions: ConnectedPosition[] = [];
 
-    // Primary position
     const primaryConfig = POPOVER_POSITIONS_MAP[placement];
     positions.push({
       originX: primaryConfig.originX,
@@ -235,10 +234,8 @@ export class PopoverDirective implements OnInit, OnDestroy {
       offsetY: primaryConfig.offsetY ?? 0,
     });
 
-    // Fallback positions for better positioning when primary doesn't fit
     switch (placement) {
       case 'bottom':
-        // Try top if bottom doesn't fit
         positions.push({
           originX: 'center',
           originY: 'top',
@@ -247,7 +244,6 @@ export class PopoverDirective implements OnInit, OnDestroy {
           offsetX: 0,
           offsetY: -8,
         });
-        // If neither top nor bottom work, try right
         positions.push({
           originX: 'end',
           originY: 'center',
@@ -256,7 +252,6 @@ export class PopoverDirective implements OnInit, OnDestroy {
           offsetX: 8,
           offsetY: 0,
         });
-        // Finally try left
         positions.push({
           originX: 'start',
           originY: 'center',
@@ -267,7 +262,6 @@ export class PopoverDirective implements OnInit, OnDestroy {
         });
         break;
       case 'top':
-        // Try bottom if top doesn't fit
         positions.push({
           originX: 'center',
           originY: 'bottom',
@@ -276,7 +270,6 @@ export class PopoverDirective implements OnInit, OnDestroy {
           offsetX: 0,
           offsetY: 8,
         });
-        // If neither top nor bottom work, try right
         positions.push({
           originX: 'end',
           originY: 'center',
@@ -285,7 +278,6 @@ export class PopoverDirective implements OnInit, OnDestroy {
           offsetX: 8,
           offsetY: 0,
         });
-        // Finally try left
         positions.push({
           originX: 'start',
           originY: 'center',
@@ -296,7 +288,6 @@ export class PopoverDirective implements OnInit, OnDestroy {
         });
         break;
       case 'right':
-        // Try left if right doesn't fit
         positions.push({
           originX: 'start',
           originY: 'center',
@@ -305,7 +296,6 @@ export class PopoverDirective implements OnInit, OnDestroy {
           offsetX: -8,
           offsetY: 0,
         });
-        // If neither left nor right work, try bottom
         positions.push({
           originX: 'center',
           originY: 'bottom',
@@ -314,7 +304,6 @@ export class PopoverDirective implements OnInit, OnDestroy {
           offsetX: 0,
           offsetY: 8,
         });
-        // Finally try top
         positions.push({
           originX: 'center',
           originY: 'top',
@@ -325,7 +314,6 @@ export class PopoverDirective implements OnInit, OnDestroy {
         });
         break;
       case 'left':
-        // Try right if left doesn't fit
         positions.push({
           originX: 'end',
           originY: 'center',
@@ -334,7 +322,6 @@ export class PopoverDirective implements OnInit, OnDestroy {
           offsetX: 8,
           offsetY: 0,
         });
-        // If neither left nor right work, try bottom
         positions.push({
           originX: 'center',
           originY: 'bottom',
@@ -343,7 +330,6 @@ export class PopoverDirective implements OnInit, OnDestroy {
           offsetX: 0,
           offsetY: 8,
         });
-        // Finally try top
         positions.push({
           originX: 'center',
           originY: 'top',

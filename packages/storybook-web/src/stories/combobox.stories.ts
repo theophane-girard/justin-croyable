@@ -108,7 +108,6 @@ export const Default: Story = {
     });
     expect(liste.querySelectorAll('[role="option"]').length).toBe(frameworks.length);
 
-    // La saisie filtre la liste : c'est ce qui distingue le combobox du select.
     await userEvent.type(document.querySelector<HTMLInputElement>('input')!, 'vu');
     await waitFor(() => {
       const restantes = [...liste.querySelectorAll('[role="option"]')].map(option =>

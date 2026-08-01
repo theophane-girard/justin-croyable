@@ -65,13 +65,6 @@ export const Default: Story = {
     expect(poignees.length).toBe(1);
     expect(poignees[0].getAttribute('aria-valuenow')).toBe('40');
 
-    /**
-     * L'attribut ne doit pas exister quand le curseur est actif.
-     *
-     * Le style s'accroche à `data-disabled:opacity-50`, qui réagit à la seule
-     * présence de l'attribut : un `data-disabled="false"` rendait le curseur
-     * grisé en permanence. Vérifier la valeur ne suffirait donc pas.
-     */
     expect(canvasElement.querySelector('[data-slot="slider"]')?.hasAttribute('data-disabled')).toBe(
       false,
     );

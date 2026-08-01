@@ -56,7 +56,6 @@ export const NoResults: Story = {
   },
 };
 
-/** Avec une action : le contenu projeté se place sous la description. */
 export const WithAction: Story = {
   parameters: { controls: { disable: true } },
   render: () => ({

@@ -17,8 +17,6 @@ const meta: Meta<DividerArgs> = {
   args: { orientation: 'horizontal', spacing: 'default' },
   render: args => ({
     props: args,
-    // En vertical le séparateur prend la hauteur de son parent (`h-full`) :
-    // sans conteneur de hauteur définie, il serait invisible.
     template: `
       <div class="flex h-24 w-80 items-center" [class.flex-col]="orientation === 'horizontal'">
         <span class="text-sm text-muted-foreground">Avant</span>

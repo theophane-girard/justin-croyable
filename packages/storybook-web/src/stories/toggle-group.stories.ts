@@ -89,7 +89,6 @@ export const Single: Story = {
     const items = canvasElement.querySelectorAll<HTMLElement>('[data-slot="toggle-group-item"]');
     await userEvent.click(items[2]);
 
-    // En mode `single`, activer une option doit désactiver la précédente.
     await waitFor(() => {
       expect(pressions(canvasElement)).toEqual(['false', 'false', 'true', 'false']);
     });
@@ -104,7 +103,6 @@ export const Multiple: Story = {
     const items = canvasElement.querySelectorAll<HTMLElement>('[data-slot="toggle-group-item"]');
     await userEvent.click(items[2]);
 
-    // En mode `multiple`, les sélections s'accumulent.
     await waitFor(() => {
       expect(pressions(canvasElement)).toEqual(['true', 'true', 'true', 'false']);
     });

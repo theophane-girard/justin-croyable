@@ -70,10 +70,6 @@ const meta: Meta<PopoverArgs> = {
 export default meta;
 type Story = StoryObj<PopoverArgs>;
 
-/**
- * Le panneau est rendu dans une couche du CDK, greffée sur `document.body` : les
- * assertions visent le document, pas le canevas de la story.
- */
 async function attendrePanneau(): Promise<HTMLElement> {
   return waitFor(() => {
     const panneau = document.querySelector<HTMLElement>('app-popover');
@@ -98,8 +94,6 @@ export const Default: Story = {
     const panneau = await attendrePanneau();
     expect(panneau.textContent).toContain('Dimensions');
 
-    // Un second clic referme : sans quoi le panneau resterait dans la couche et
-    // fausserait la story suivante.
     await fermerEtAttendre(declencheur);
   },
 };
