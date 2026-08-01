@@ -9,28 +9,68 @@ import {
   untracked,
 } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
-import type { FilterModel, IDatasource, IGetRowsParams, SortModelItem } from 'ag-grid-community';
+import type {
+  DateFilterModel,
+  ICombinedSimpleModel,
+  IDatasource,
+  IGetRowsParams,
+  NumberFilterModel,
+  TextFilterModel,
+} from 'ag-grid-community';
 import { map, type Observable, of } from 'rxjs';
+
+/** Clés utilisables comme identifiant de colonne : les champs de la ligne. */
+type ColId<TRow> = Extract<keyof TRow, string>;
+
+/**
+ * Filtre appliqué à une colonne. Union discriminée par `filterType` des filtres
+ * community d'AG Grid (`text` / `number` / `date`), chacun dans sa variante
+ * simple ou combinée (deux conditions jointes par AND/OR). On narrow ainsi sans
+ * cast :
+ *
+ * ```ts
+ * const f = filterModel.contributions;
+ * if (f?.filterType === 'number' && 'filter' in f) f.filter; // number
+ * ```
+ *
+ * Un filtre custom (modèle maison) sort de cette union : caste-le sur place.
+ */
+export type ColumnFilterModel =
+  | TextFilterModel
+  | NumberFilterModel
+  | DateFilterModel
+  | ICombinedSimpleModel<TextFilterModel>
+  | ICombinedSimpleModel<NumberFilterModel>
+  | ICombinedSimpleModel<DateFilterModel>;
+
+/** Tri d'une colonne : `colId` restreint aux champs de la ligne. */
+export interface LazyLoadSort<TRow> {
+  readonly colId: ColId<TRow>;
+  readonly sort: 'asc' | 'desc';
+}
+
+/** Modèle de filtre courant, indexé par champ de la ligne (jamais par magic string). */
+export type LazyLoadFilterModel<TRow> = Partial<Record<ColId<TRow>, ColumnFilterModel>>;
 
 /**
  * Fenêtre de lignes réclamée par AG Grid pour le row model `infinite`.
  * Reprend les champs utiles d'`IGetRowsParams` sans exposer les callbacks
  * impératifs de la grille à l'appelant.
+ *
+ * `sortModel` et `filterModel` sont typés sur `TRow` : leurs `colId` / clés sont
+ * les champs de la ligne, en supposant — comme c'est le cas par défaut — que le
+ * `colId` d'une colonne est son `field`. Une colonne à `colId` custom ou sans
+ * `field` (valueGetter) échappe donc à ce typage et devra être castée.
  */
-export interface LazyLoadRequest {
+export interface LazyLoadRequest<TRow> {
   /** Index (inclus) de la première ligne du bloc demandé. */
   readonly startRow: number;
   /** Index (exclu) de la ligne suivant le bloc demandé. */
   readonly endRow: number;
   /** Tri courant de la grille, dans l'ordre de priorité. */
-  readonly sortModel: SortModelItem[];
-  /**
-   * Modèle de filtre courant, tel que renvoyé par `gridApi.getFilterModel()` :
-   * une map indexée par identifiant de colonne. La valeur de chaque entrée
-   * dépend du filtre concerné (`TextFilterModel`, `NumberFilterModel`, …), d'où
-   * son typage `any` côté AG Grid.
-   */
-  readonly filterModel: FilterModel;
+  readonly sortModel: LazyLoadSort<TRow>[];
+  /** Filtres actifs, indexés par champ de la ligne (voir {@link LazyLoadFilterModel}). */
+  readonly filterModel: LazyLoadFilterModel<TRow>;
 }
 
 /** Résultat d'un chargement paresseux : le bloc de lignes et, si connu, le total. */
@@ -52,7 +92,7 @@ export interface LazyLoadBlock<TRow> {
  * qui s'appuient sur `fetch` plutôt que sur RxJS.
  */
 export type LazyLoadFetcher<TRow> = (
-  request: LazyLoadRequest,
+  request: LazyLoadRequest<TRow>,
   abortSignal: AbortSignal,
 ) => Observable<LazyLoadBlock<TRow>>;
 
@@ -83,12 +123,17 @@ export interface LazyLoadDatasource<TRow> {
   readonly loading: Signal<boolean>;
 }
 
-function toLazyLoadRequest(params: IGetRowsParams): LazyLoadRequest {
+/**
+ * Recolle les `params` bruts d'AG Grid sur la forme typée `TRow`. Le pont typé
+ * repose sur l'hypothèse `colId === field` (cf. {@link LazyLoadRequest}) : c'est
+ * l'unique endroit où on l'affirme, d'où les casts, plutôt qu'au point d'appel.
+ */
+function toLazyLoadRequest<TRow>(params: IGetRowsParams): LazyLoadRequest<TRow> {
   return {
     startRow: params.startRow,
     endRow: params.endRow,
-    sortModel: params.sortModel,
-    filterModel: params.filterModel,
+    sortModel: params.sortModel as LazyLoadSort<TRow>[],
+    filterModel: (params.filterModel ?? {}) as LazyLoadFilterModel<TRow>,
   };
 }
 
