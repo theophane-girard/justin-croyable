@@ -58,11 +58,6 @@ export class TableComponent<TRow = unknown> {
   readonly columnDefs = input<ColDef<TRow>[]>([]);
   readonly defaultColDef = input<ColDef<TRow> | undefined>(undefined);
   readonly gridOptions = input<GridOptions<TRow> | undefined>(undefined);
-  /**
-   * Active le rendu paresseux en infinite scroll : les lignes ne sont plus
-   * fournies via `rowData` mais réclamées bloc par bloc au builder de
-   * datasource porté par la config. Voir {@link LazyLoadConfig}.
-   */
   readonly lazyloadConfig = input<LazyLoadConfig<TRow> | undefined>(undefined);
   readonly height = input<string>('24rem');
   readonly class = input<ClassValue>('');
@@ -72,18 +67,8 @@ export class TableComponent<TRow = unknown> {
 
   protected readonly classes = computed(() => mergeClasses('block w-full', this.class()));
 
-  /**
-   * Datasource `infinite` construite une seule fois puis pilotée par le signal
-   * de config : le builder annule tout bloc encore en vol dès qu'un nouveau est
-   * réclamé (voir {@link LazyLoadDatasource}).
-   */
   private readonly lazyDatasource = buildLazyLoadDatasource<TRow>(this.lazyloadConfig, this.injector);
 
-  /**
-   * En mode paresseux, `rowData` doit rester absent : le row model `infinite`
-   * ignore les lignes statiques et journalise un avertissement si on lui en
-   * passe.
-   */
   protected readonly effectiveRowData = computed(() => (this.lazyloadConfig() ? undefined : this.rowData()));
 
   /**
