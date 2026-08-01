@@ -3,8 +3,10 @@ name: CI
 on:
   push:
     branches: [master]
+  # Sans filtre de base, une PR empilée sur une branche de travail exécute aussi
+  # les vérifications. Le déploiement, lui, reste conditionné plus bas : canal
+  # live sur master seulement, canal de prévisualisation sur les PR.
   pull_request:
-    branches: [master]
 
 concurrency:
   group: ci-${{ github.ref }}

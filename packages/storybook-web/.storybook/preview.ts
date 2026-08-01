@@ -1,12 +1,16 @@
 import {
   DESIGN_SYSTEM_DEFAULT_LANG,
   DESIGN_SYSTEM_LANGS,
-  provideDesignSystemI18n,
-  provideZard,
+  provideJustinCroyableDS,
+  ThemeService,
+  withCharts,
+  withIcons,
+  withTables,
+  withTranslations,
   type DesignSystemLang,
+  type Theme,
 } from '@justin-croyable/design-system';
 import { TranslocoService } from '@jsverse/transloco';
-import { provideIcons } from '@ng-icons/core';
 import {
   lucideCalendar,
   lucideFileText,
@@ -31,14 +35,23 @@ const [major = '0', minor = '0', patch = '0'] = designSystemPackage.version.spli
 // — c'est ce qui applique PostCSS/Tailwind v4 via `.postcssrc.json`.
 
 /**
- * Bascule light/dark : le DS pose son thème sombre via la classe `.dark` sur
- * l'élément racine (cf. `@custom-variant dark` du preset). On la pilote depuis
- * la toolbar plutôt que via `ThemeService`, pour que le choix survive au
- * remontage d'une story et reste indépendant du `localStorage` du service.
+ * Bascule light/dark, pilotée par le `ThemeService` du DS et non par la classe
+ * `.dark` en direct.
+ *
+ * C'est ce qui rend le thème observable : `app-chart` et `app-table` réagissent
+ * au signal `isDark()` du service. Poser la classe soi-même les laisserait sur
+ * le thème du démarrage, et se battrait avec l'effet du service.
+ *
+ * Même mécanique que pour la langue : le décorateur mémorise le choix, un
+ * initialiseur d'application l'applique au démarrage, et la référence permet de
+ * l'appliquer à l'instance vivante quand la story est seulement re-rendue.
  */
+let activeTheme: Theme = 'light';
+let themeRef: ThemeService | null = null;
+
 const withColorScheme: Decorator = (storyFn, context) => {
-  const isDark = context.globals['theme'] === 'dark';
-  document.documentElement.classList.toggle('dark', isDark);
+  activeTheme = context.globals['theme'] === 'dark' ? 'dark' : 'light';
+  themeRef?.set(activeTheme);
   return storyFn();
 };
 
@@ -79,34 +92,39 @@ const preview: Preview = {
     withLocale,
     applicationConfig({
       providers: [
-        // `provideZard()` installe les plugins d'event manager dont dépend la
-        // syntaxe `(keydown.{arrowdown,enter,escape}.prevent)` utilisée par
-        // select et command : sans lui, la navigation clavier est muette.
-        provideZard(),
+        // Configuration du DS par fonctionnalités. `provideZard()` y est inclus
+        // d'office : select, command et sidebar dépendent de ses plugins d'event
+        // manager pour la syntaxe `(keydown.{arrowdown,enter,escape}.prevent)`.
+        provideJustinCroyableDS(
+          // Les composants du DS déclarent les icônes de leurs propres templates.
+          // Seules celles passées par nom à une entrée ont besoin d'être ici.
+          withIcons({
+            lucideCalendar,
+            lucideFileText,
+            lucideFolder,
+            lucideHouse,
+            lucideInbox,
+            lucideMoon,
+            lucidePanelLeft,
+            lucideSearch,
+            lucideSun,
+          }),
+          withTables(),
+          withCharts(),
+          withTranslations(),
+        ),
         // Breadcrumb et header rendent des `routerLink` : sans Router injecté,
         // ces stories lèvent une erreur au rendu.
         provideRouter([]),
-        // Traductions du DS, en mémoire.
-        provideDesignSystemI18n(),
         provideAppInitializer(() => {
+          // Le thème vient de la toolbar, pas du localStorage du service.
+          themeRef = inject(ThemeService);
+          themeRef.set(activeTheme);
+
           const transloco = inject(TranslocoService);
           translocoRef = transloco;
           transloco.setActiveLang(activeLang);
           return transloco.load(activeLang);
-        }),
-        // Les composants du DS enregistrent eux-mêmes leurs icônes internes.
-        // Ici on ne déclare que celles passées *par nom* depuis les stories
-        // (`app-empty [icon]`, `app-command-option [icon]`).
-        provideIcons({
-          lucideCalendar,
-          lucideFileText,
-          lucideFolder,
-          lucideHouse,
-          lucideInbox,
-          lucideMoon,
-          lucidePanelLeft,
-          lucideSearch,
-          lucideSun,
         }),
       ],
     }),
