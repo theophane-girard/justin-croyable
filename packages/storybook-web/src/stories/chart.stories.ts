@@ -23,6 +23,45 @@ const barres: EChartsCoreOption = {
   ],
 };
 
+const jauge: EChartsCoreOption = {
+  series: [
+    {
+      type: 'gauge',
+      progress: { show: true, width: 10 },
+      axisLine: { lineStyle: { width: 10 } },
+      axisTick: { show: false },
+      splitLine: { length: 12 },
+      detail: { valueAnimation: true, formatter: '{value}%', fontSize: 20 },
+      title: { offsetCenter: [0, '72%'] },
+      data: [{ value: 72, name: 'Satisfaction' }],
+    },
+  ],
+};
+
+const courbe: EChartsCoreOption = {
+  tooltip: { trigger: 'axis' },
+  xAxis: { type: 'category', boundaryGap: false, data: mois },
+  yAxis: { type: 'value' },
+  series: [{ name: 'Sessions', type: 'line', smooth: true, areaStyle: {}, data: [220, 332, 301, 434, 390, 530] }],
+};
+
+const camembert: EChartsCoreOption = {
+  tooltip: { trigger: 'item' },
+  legend: { bottom: 0 },
+  series: [
+    {
+      type: 'pie',
+      radius: ['45%', '70%'],
+      data: [
+        { value: 1048, name: 'Angular' },
+        { value: 735, name: 'React' },
+        { value: 580, name: 'Vue' },
+        { value: 300, name: 'Svelte' },
+      ],
+    },
+  ],
+};
+
 const meta: Meta<ChartArgs> = {
   title: 'Composants/Chart',
   component: ChartComponent,
@@ -190,4 +229,35 @@ export const MultipleSeries: Story = {
       })),
     },
   },
+};
+
+/**
+ * Exemple d'assemblage : un tableau de bord de 4 cartes en grille 2×2
+ * (histogramme, jauge, courbe, camembert), chacune enveloppant un `app-chart`.
+ * Illustre l'usage du composant en situation réelle, pas seulement isolé.
+ */
+export const Dashboard: Story = {
+  render: () => ({
+    props: { barres, jauge, courbe, camembert },
+    template: `
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div class="border-border rounded-lg border p-4">
+          <h3 class="text-foreground mb-3 text-sm font-medium">Inscriptions & désabonnements</h3>
+          <app-chart [options]="barres" height="15rem" />
+        </div>
+        <div class="border-border rounded-lg border p-4">
+          <h3 class="text-foreground mb-3 text-sm font-medium">Taux de satisfaction</h3>
+          <app-chart [options]="jauge" height="15rem" />
+        </div>
+        <div class="border-border rounded-lg border p-4">
+          <h3 class="text-foreground mb-3 text-sm font-medium">Sessions (tendance)</h3>
+          <app-chart [options]="courbe" height="15rem" />
+        </div>
+        <div class="border-border rounded-lg border p-4">
+          <h3 class="text-foreground mb-3 text-sm font-medium">Répartition par framework</h3>
+          <app-chart [options]="camembert" height="15rem" />
+        </div>
+      </div>
+    `,
+  }),
 };
