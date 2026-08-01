@@ -111,8 +111,9 @@ export const Pie: Story = {
 };
 
 /**
- * Vérifie qu'en chargement le composant affiche le skeleton attendu (à la place
- * du canvas ECharts et de son spinner par défaut), pour le type demandé.
+ * Vérifie qu'en chargement le composant affiche le skeleton attendu, pour le
+ * type demandé. Le skeleton est superposé en overlay : le chart ECharts reste
+ * monté dessous (préservation de l'état), on ne vérifie donc pas son absence.
  */
 const expectSkeleton = (type: ChartSkeletonType) => async ({ canvasElement }: { canvasElement: HTMLElement }) => {
   const skeleton = await waitFor(() => {
@@ -121,7 +122,6 @@ const expectSkeleton = (type: ChartSkeletonType) => async ({ canvasElement }: { 
     return found as HTMLElement;
   });
 
-  expect(canvasElement.querySelector('canvas')).toBeNull();
   expect(skeleton.getAttribute('aria-busy')).toBe('true');
   expect(skeleton.getAttribute('data-skeleton-type')).toBe(type);
 };
@@ -149,6 +149,31 @@ export const LoadingPie: Story = {
 export const LoadingGauge: Story = {
   args: { loading: true, skeletonType: 'gauge', height: '22rem' },
   play: expectSkeleton('gauge'),
+};
+
+export const Reloading: Story = {
+  args: { loading: true, skeletonType: 'bar' },
+  /**
+   * Cas « rechargement » : le skeleton est superposé au-dessus d'un chart déjà
+   * monté. On vérifie que le canvas ECharts et le skeleton coexistent — l'instance
+   * n'est pas détruite pendant le chargement, donc son état est préservé.
+   */
+  play: async ({ canvasElement }) => {
+    const canvas = await waitFor(
+      () => {
+        const found = canvasElement.querySelector('canvas');
+        expect(found).toBeTruthy();
+        return found as HTMLCanvasElement;
+      },
+      { timeout: 15_000 },
+    );
+
+    expect(canvas.width).toBeGreaterThan(0);
+
+    const skeleton = canvasElement.querySelector('[data-slot="chart-skeleton"]');
+    expect(skeleton).toBeTruthy();
+    expect(skeleton?.getAttribute('aria-busy')).toBe('true');
+  },
 };
 
 export const MultipleSeries: Story = {
