@@ -1,9 +1,46 @@
+import { readdirSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { storybookTest } from '@storybook/addon-vitest/vitest-plugin';
 import { storybookAngularVitest } from '@storybook/angular-vite/vitest';
 import { playwright } from '@vitest/browser-playwright';
 import { defineConfig, type Plugin } from 'vitest/config';
+
+const DOSSIER_STORIES = fileURLToPath(new URL('./src/stories', import.meta.url));
+
+/**
+ * Refuse de démarrer si une story est rangée dans un sous-dossier.
+ *
+ * La contrainte vient de la racine Vitest (voir `dir` plus bas) : l'addon
+ * compare des chemins relatifs à cette racine, et le moindre séparateur y
+ * réintroduit le bug d'antislash sous Windows. Une story nichée ne serait donc
+ * jamais transformée en test.
+ *
+ * Elle n'apparaîtrait pas non plus dans le Storybook, dont le motif est resserré
+ * de la même façon — mais compter là-dessus reviendrait à espérer que la
+ * personne le remarque. Autant le dire ici, avec la raison.
+ */
+function verifierStoriesAPlat(): void {
+  const racineSources = fileURLToPath(new URL('./src', import.meta.url));
+  const egarees = readdirSync(racineSources, { recursive: true, withFileTypes: true })
+    .filter(entree => entree.isFile() && entree.name.endsWith('.stories.ts'))
+    .filter(entree => resolve(entree.parentPath) !== resolve(DOSSIER_STORIES))
+    .map(entree => resolve(entree.parentPath, entree.name));
+
+  if (egarees.length === 0) {
+    return;
+  }
+
+  throw new Error(
+    `Stories hors de src/stories, donc jamais exécutées comme tests :\n` +
+      `${egarees.map(chemin => `  - ${chemin}`).join('\n')}\n` +
+      `Les stories doivent être à plat dans src/stories tant que le contournement ` +
+      `de la racine Vitest est nécessaire (voir le commentaire sur \`dir\`).`,
+  );
+}
+
+verifierStoriesAPlat();
 
 /**
  * Rend la garde générée par l'addon insensible au chemin percent-encodé.
@@ -76,7 +113,7 @@ export default defineConfig({
      * antislash, sur toutes les plateformes. C'est ce qui impose de garder les
      * stories à plat dans `src/stories` (cf. le motif de `.storybook/main.ts`).
      */
-    dir: fileURLToPath(new URL('./src/stories', import.meta.url)),
+    dir: DOSSIER_STORIES,
     // Pas de `setupFiles` : depuis Storybook 10.3 l'addon applique lui-même les
     // annotations du `preview` (décorateurs, providers du DS, globals). Fournir
     // un fichier de setup qui appelle `setProjectAnnotations` lui ferait au
