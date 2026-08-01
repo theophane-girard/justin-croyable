@@ -6,10 +6,11 @@ import { filter, fromEvent, Subject, takeUntil } from 'rxjs';
 
 import type { SheetComponent, SheetOptions } from './sheet.component';
 
-const enum eTriggerAction {
-  CANCEL = 'cancel',
-  OK = 'ok',
-}
+const TRIGGER_ACTION = {
+  CANCEL: 'cancel',
+  OK: 'ok',
+} as const;
+type TriggerAction = (typeof TRIGGER_ACTION)[keyof typeof TRIGGER_ACTION];
 
 export class SheetRef<T = any, R = any, U = any> {
   private destroy$ = new Subject<void>();
@@ -23,8 +24,8 @@ export class SheetRef<T = any, R = any, U = any> {
     private containerInstance: SheetComponent<T, U>,
     @Inject(PLATFORM_ID) private platformId: object,
   ) {
-    this.containerInstance.cancelTriggered.subscribe(() => this.trigger(eTriggerAction.CANCEL));
-    this.containerInstance.okTriggered.subscribe(() => this.trigger(eTriggerAction.OK));
+    this.containerInstance.cancelTriggered.subscribe(() => this.trigger(TRIGGER_ACTION.CANCEL));
+    this.containerInstance.okTriggered.subscribe(() => this.trigger(TRIGGER_ACTION.OK));
 
     if ((this.config.maskClosable ?? true) && isPlatformBrowser(this.platformId)) {
       this.overlayRef
@@ -73,7 +74,7 @@ export class SheetRef<T = any, R = any, U = any> {
     }
   }
 
-  private trigger(action: eTriggerAction) {
+  private trigger(action: TriggerAction) {
     const trigger = { ok: this.config.onOk, cancel: this.config.onCancel }[action];
 
     if (trigger instanceof EventEmitter) {
