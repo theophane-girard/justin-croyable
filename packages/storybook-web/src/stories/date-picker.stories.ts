@@ -4,6 +4,7 @@ import {
   type DatePickerSizeVariants,
 } from '@justin-croyable/design-system';
 import type { Meta, StoryObj } from '@storybook/angular-vite';
+import { expect, userEvent, waitFor } from 'storybook/test';
 
 type DatePickerArgs = {
   placeholder: string;
@@ -66,7 +67,32 @@ const meta: Meta<DatePickerArgs> = {
 export default meta;
 type Story = StoryObj<DatePickerArgs>;
 
-export const Default: Story = {};
+export const Default: Story = {
+  play: async ({ canvasElement }) => {
+    const declencheur = canvasElement.querySelector<HTMLElement>('button')!;
+    expect(declencheur.textContent).toContain('Choisir une date');
+
+    await userEvent.click(declencheur);
+
+    // Le calendrier est rendu dans une couche du CDK, donc hors du canevas.
+    const calendrier = await waitFor(() => {
+      const trouve = document.querySelector<HTMLElement>('app-calendar');
+      expect(trouve).toBeTruthy();
+      return trouve!;
+    });
+
+    const jours = [
+      ...calendrier.querySelectorAll<HTMLButtonElement>('[role="gridcell"] button'),
+    ].filter(jour => !jour.disabled);
+    await userEvent.click(jours[10]);
+
+    // Choisir une date la formate dans le déclencheur et referme le calendrier.
+    await waitFor(() => {
+      expect(declencheur.textContent).not.toContain('Choisir une date');
+      expect(document.querySelector('app-calendar')).toBeNull();
+    });
+  },
+};
 
 export const Preselected: Story = {
   render: args => ({

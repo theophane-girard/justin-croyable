@@ -5,6 +5,7 @@ import {
   type ComboboxWidthVariants,
 } from '@justin-croyable/design-system';
 import type { Meta, StoryObj } from '@storybook/angular-vite';
+import { expect, userEvent, waitFor } from 'storybook/test';
 
 type ComboboxArgs = {
   options: ComboboxOption[];
@@ -93,7 +94,36 @@ const meta: Meta<ComboboxArgs> = {
 export default meta;
 type Story = StoryObj<ComboboxArgs>;
 
-export const Default: Story = {};
+export const Default: Story = {
+  play: async ({ canvasElement }) => {
+    const declencheur = canvasElement.querySelector<HTMLElement>('[role="combobox"]')!;
+    expect(declencheur.textContent).toContain('Choisir un framework…');
+
+    await userEvent.click(declencheur);
+
+    const liste = await waitFor(() => {
+      const trouvee = document.querySelector<HTMLElement>('[role="listbox"]');
+      expect(trouvee).toBeTruthy();
+      return trouvee!;
+    });
+    expect(liste.querySelectorAll('[role="option"]').length).toBe(frameworks.length);
+
+    // La saisie filtre la liste : c'est ce qui distingue le combobox du select.
+    await userEvent.type(document.querySelector<HTMLInputElement>('input')!, 'vu');
+    await waitFor(() => {
+      const restantes = [...liste.querySelectorAll('[role="option"]')].map(option =>
+        option.textContent?.trim(),
+      );
+      expect(restantes).toEqual(['Vue']);
+    });
+
+    await userEvent.click(liste.querySelector<HTMLElement>('[role="option"]')!);
+    await waitFor(() => {
+      expect(declencheur.textContent).toContain('Vue');
+      expect(document.querySelector('[role="listbox"]')).toBeNull();
+    });
+  },
+};
 
 export const WithLabelAndHint: Story = {
   args: {

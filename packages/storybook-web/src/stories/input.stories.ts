@@ -4,6 +4,7 @@ import {
   type InputStatusVariants,
 } from '@justin-croyable/design-system';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
+import { expect, userEvent } from 'storybook/test';
 
 type InputArgs = {
   placeholder: string;
@@ -63,7 +64,15 @@ const meta: Meta<InputArgs> = {
 export default meta;
 type Story = StoryObj<InputArgs>;
 
-export const Default: Story = {};
+export const Default: Story = {
+  play: async ({ canvasElement }) => {
+    const champ = canvasElement.querySelector<HTMLInputElement>('input')!;
+    expect(champ.placeholder).toBe('jean.dupont@exemple.fr');
+
+    await userEvent.type(champ, 'jean@exemple.fr');
+    expect(champ.value).toBe('jean@exemple.fr');
+  },
+};
 
 export const Sizes: Story = {
   parameters: { controls: { disable: true } },
@@ -91,7 +100,16 @@ export const Statuses: Story = {
   }),
 };
 
-export const Disabled: Story = { args: { disabled: true, placeholder: 'Non modifiable' } };
+export const Disabled: Story = {
+  args: { disabled: true, placeholder: 'Non modifiable' },
+  play: async ({ canvasElement }) => {
+    const champ = canvasElement.querySelector<HTMLInputElement>('input')!;
+    expect(champ.disabled).toBe(true);
+
+    await userEvent.type(champ, 'refusé', { pointerEventsCheck: 0 });
+    expect(champ.value).toBe('');
+  },
+};
 
 export const Textarea: Story = {
   parameters: { controls: { disable: true } },

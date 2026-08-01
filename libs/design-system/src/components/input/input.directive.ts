@@ -106,6 +106,15 @@ export class InputDirective implements FormValueControl<InputValue> {
     }
   }
 
+  setAriaRequired(required: boolean): void {
+    const el = this.elementRef.nativeElement;
+    if (required) {
+      el.setAttribute('aria-required', 'true');
+    } else {
+      el.removeAttribute('aria-required');
+    }
+  }
+
   setAriaInvalid(invalid: boolean): void {
     const el = this.elementRef.nativeElement;
     if (invalid) {

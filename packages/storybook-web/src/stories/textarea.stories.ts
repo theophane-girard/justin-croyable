@@ -1,5 +1,6 @@
 import { TextareaComponent } from '@justin-croyable/design-system';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
+import { expect, userEvent } from 'storybook/test';
 
 type TextareaArgs = {
   placeholder: string;
@@ -46,7 +47,15 @@ const meta: Meta<TextareaArgs> = {
 export default meta;
 type Story = StoryObj<TextareaArgs>;
 
-export const Default: Story = {};
+export const Default: Story = {
+  play: async ({ canvasElement }) => {
+    const zone = canvasElement.querySelector<HTMLTextAreaElement>('textarea')!;
+    expect(zone.rows).toBe(4);
+
+    await userEvent.type(zone, 'Première ligne');
+    expect(zone.value).toBe('Première ligne');
+  },
+};
 
 export const Filled: Story = {
   args: { value: 'Le composant conserve la valeur saisie via son model().' },
