@@ -5,6 +5,7 @@ import {
   type SheetVariants,
 } from '@justin-croyable/design-system';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
+import { expect, userEvent, waitFor, within } from 'storybook/test';
 
 type Side = NonNullable<SheetVariants['side']>;
 type Size = NonNullable<SheetVariants['size']>;
@@ -100,9 +101,51 @@ const meta: Meta<SheetArgs> = {
 export default meta;
 type Story = StoryObj<SheetArgs>;
 
-export const Left: Story = {};
+async function ouvrirPanneau(canvasElement: HTMLElement): Promise<HTMLElement> {
+  await userEvent.click(within(canvasElement).getByRole('button'));
+  return waitFor(() => {
+    const panneau = document.querySelector<HTMLElement>('[data-slot="sheet"]');
+    expect(panneau).toBeTruthy();
+    return panneau!;
+  });
+}
 
-export const Right: Story = { args: { side: 'right' } };
+async function fermerParAnnuler(): Promise<void> {
+  await userEvent.click(within(document.body).getByRole('button', { name: 'Annuler' }));
+  await waitFor(() => {
+    expect(document.querySelector('[data-slot="sheet"]')).toBeNull();
+  });
+}
+
+export const Left: Story = {
+  play: async ({ canvasElement }) => {
+    const panneau = await ouvrirPanneau(canvasElement);
+
+    expect(panneau.querySelector('[data-slot="sheet-title"]')?.textContent?.trim()).toBe('Filtres');
+    /**
+     * L'action principale est rendue avant l'annulation, à l'inverse du dialog
+     * qui place `Annuler` en premier. L'assertion fige l'ordre observé, elle ne
+     * l'approuve pas : les deux composants du même DS devraient s'accorder.
+     */
+    const actions = [...panneau.querySelectorAll('[data-slot="sheet-footer"] button')].map(bouton =>
+      bouton.textContent?.trim(),
+    );
+    expect(actions).toEqual(['Appliquer', 'Annuler']);
+
+    await fermerParAnnuler();
+  },
+};
+
+export const Right: Story = {
+  args: { side: 'right' },
+  play: async ({ canvasElement }) => {
+    const panneau = await ouvrirPanneau(canvasElement);
+    // Le côté pilote le placement, c'est la seule chose que change cette story.
+    expect(panneau.getAttribute('data-side') ?? panneau.className).toContain('right');
+
+    await fermerParAnnuler();
+  },
+};
 
 export const Bottom: Story = { args: { side: 'bottom', size: 'sm' } };
 

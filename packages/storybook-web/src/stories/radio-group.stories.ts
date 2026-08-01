@@ -1,5 +1,6 @@
 import { RadioGroupImports } from '@justin-croyable/design-system';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
+import { expect, userEvent, waitFor } from 'storybook/test';
 
 type RadioGroupArgs = {
   value: unknown;
@@ -40,8 +41,48 @@ const meta: Meta<RadioGroupArgs> = {
 export default meta;
 type Story = StoryObj<RadioGroupArgs>;
 
-export const Default: Story = {};
+export const Default: Story = {
+  play: async ({ canvasElement }) => {
+    const boutons = [...canvasElement.querySelectorAll<HTMLElement>('[role="radio"]')];
+    expect(boutons.length).toBe(3);
+    expect(boutons.map(bouton => bouton.getAttribute('aria-checked'))).toEqual([
+      'true',
+      'false',
+      'false',
+    ]);
 
-export const NoSelection: Story = { args: { value: null } };
+    await userEvent.click(boutons[1]);
 
-export const DisabledGroup: Story = { args: { disabled: true } };
+    // Un groupe radio est exclusif : cocher le second doit décocher le premier.
+    await waitFor(() => {
+      expect(boutons.map(bouton => bouton.getAttribute('aria-checked'))).toEqual([
+        'false',
+        'true',
+        'false',
+      ]);
+    });
+  },
+};
+
+export const NoSelection: Story = {
+  args: { value: null },
+  play: async ({ canvasElement }) => {
+    const boutons = [...canvasElement.querySelectorAll<HTMLElement>('[role="radio"]')];
+    expect(boutons.every(bouton => bouton.getAttribute('aria-checked') === 'false')).toBe(true);
+
+    // La troisième option est désactivée : elle ne doit pas devenir la sélection.
+    await userEvent.click(boutons[2], { pointerEventsCheck: 0 });
+    expect(boutons[2].getAttribute('aria-checked')).toBe('false');
+  },
+};
+
+export const DisabledGroup: Story = {
+  args: { disabled: true },
+  play: async ({ canvasElement }) => {
+    const boutons = [...canvasElement.querySelectorAll<HTMLButtonElement>('[role="radio"]')];
+    expect(boutons.every(bouton => bouton.disabled)).toBe(true);
+
+    await userEvent.click(boutons[1], { pointerEventsCheck: 0 });
+    expect(boutons[1].getAttribute('aria-checked')).toBe('false');
+  },
+};
