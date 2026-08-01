@@ -43,8 +43,6 @@ import {
     '[attr.data-disabled]': 'isNotInsideOfButtonOrLink() && buttonDisabled() || null',
     '[attr.aria-disabled]': 'isNotInsideOfButtonOrLink() && buttonDisabled() || null',
     '[attr.disabled]': 'isNotInsideOfButtonOrLink() && buttonDisabled() ? "" : null',
-    '[attr.role]': 'isNotInsideOfButtonOrLink() ? "button" : null',
-    '[attr.tabindex]': 'isNotInsideOfButtonOrLink() ? "0" : null',
   },
   exportAs: 'button',
 })
@@ -65,6 +63,23 @@ export class ButtonComponent implements OnDestroy {
   private _mutationObserver: MutationObserver | null = null;
 
   constructor() {
+    /**
+     * Rôle et tabindex sont posés impérativement, et seulement sur un élément
+     * qui n'est ni un bouton ni un lien.
+     *
+     * En liaison d'hôte, ils s'écrivaient dans tous les cas — `null` compris,
+     * qui supprime l'attribut — et l'emportaient sur ce qu'écrit l'appelant :
+     * sur les onglets, rendus par `<button appButton role="tab"
+     * [attr.tabindex]="…">`, le rôle d'onglet devenait `button` et le tabindex
+     * roulant était figé à 0. Sur un bouton natif ces deux attributs sont de
+     * toute façon redondants.
+     */
+    if (this.needsButtonSemantics()) {
+      const host = this.elementRef.nativeElement;
+      host.setAttribute('role', 'button');
+      host.setAttribute('tabindex', '0');
+    }
+
     afterNextRender(() => {
       if (typeof window === 'undefined' || typeof MutationObserver === 'undefined') {
         return;
@@ -121,6 +136,21 @@ export class ButtonComponent implements OnDestroy {
       this.class(),
     ),
   );
+
+  /**
+   * Le rôle et le tabindex ne sont posés que sur un élément qui n'est pas déjà
+   * un bouton ou un lien.
+   *
+   * Une liaison d'hôte l'emporte sur ce qu'écrit l'appelant, y compris sur un
+   * attribut statique : sur `<button appButton role="tab">`, forcer
+   * `role="button"` effaçait le rôle d'onglet, et forcer `tabindex="0"` annulait
+   * le tabindex roulant de la barre d'onglets. Sur un bouton natif ces deux
+   * attributs sont de toute façon redondants.
+   */
+  protected readonly needsButtonSemantics = computed(() => {
+    const { tagName } = this.elementRef.nativeElement;
+    return tagName !== 'BUTTON' && tagName !== 'A' && this.isNotInsideOfButtonOrLink();
+  });
 
   protected readonly isNotInsideOfButtonOrLink = computed(() => {
     // Evaluated once; assumes component parent doesn't change after mount

@@ -108,7 +108,7 @@ export class SheetOptions<T, U> {
             class="cursor-pointer"
             appButton
             [variant]="config.okDestructive ? 'destructive' : 'default'"
-            [disabled]="config.okDisabled"
+            [buttonDisabled]="config.okDisabled"
             (click)="onOkClick()"
           >
             @if (config.okIcon) {

@@ -29,7 +29,7 @@ import { SelectComponent } from '../select/select.component';
         variant="ghost"
         size="sm"
         (click)="onPreviousClick()"
-        [disabled]="isPreviousDisabled()"
+        [buttonDisabled]="isPreviousDisabled()"
         aria-label="Previous month"
         class="size-7 p-0"
       >
@@ -67,7 +67,7 @@ import { SelectComponent } from '../select/select.component';
         variant="ghost"
         size="sm"
         (click)="onNextClick()"
-        [disabled]="isNextDisabled()"
+        [buttonDisabled]="isNextDisabled()"
         aria-label="Next month"
         class="size-7 p-0"
       >
