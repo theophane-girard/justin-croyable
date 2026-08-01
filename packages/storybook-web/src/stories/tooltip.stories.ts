@@ -4,7 +4,8 @@ import {
   type TooltipPositionVariants,
   type TooltipTriggers,
 } from '@justin-croyable/design-system';
-import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
+import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
+import { expect, userEvent, waitFor } from 'storybook/test';
 
 type TooltipArgs = {
   appTooltip: string;
@@ -71,9 +72,46 @@ const meta: Meta<TooltipArgs> = {
 export default meta;
 type Story = StoryObj<TooltipArgs>;
 
-export const Default: Story = {};
+export const Default: Story = {
+  play: async ({ canvasElement }) => {
+    const declencheur = canvasElement.querySelector<HTMLElement>('button')!;
 
-export const OnClick: Story = { args: { trigger: 'click', appTooltip: 'Copié !' } };
+    await userEvent.hover(declencheur);
+
+    // La bulle est créée vide puis remplie : attendre sa seule présence
+    // laisserait passer un contenu jamais projeté.
+    await waitFor(() => {
+      expect(document.querySelector('[data-slot="tooltip-content"]')?.textContent).toContain(
+        'Ajouter aux favoris',
+      );
+    });
+
+    // La sortie doit refermer : la directive expose `show`/`hide` en sorties et
+    // ses méthodes internes ont dû être renommées pour ne pas les masquer.
+    await userEvent.unhover(declencheur);
+    await waitFor(() => {
+      expect(document.querySelector('[data-slot="tooltip-content"]')).toBeNull();
+    });
+  },
+};
+
+export const OnClick: Story = {
+  args: { trigger: 'click', appTooltip: 'Copié !' },
+  play: async ({ canvasElement }) => {
+    const declencheur = canvasElement.querySelector<HTMLElement>('button')!;
+
+    // En mode clic, le survol seul ne doit rien afficher.
+    await userEvent.hover(declencheur);
+    expect(document.querySelector('[data-slot="tooltip-content"]')).toBeNull();
+
+    await userEvent.click(declencheur);
+    await waitFor(() => {
+      expect(document.querySelector('[data-slot="tooltip-content"]')?.textContent).toContain(
+        'Copié !',
+      );
+    });
+  },
+};
 
 export const NoDelay: Story = { args: { showDelay: 0, hideDelay: 0 } };
 

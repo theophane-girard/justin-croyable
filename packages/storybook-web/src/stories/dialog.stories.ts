@@ -4,7 +4,33 @@ import {
   DialogService,
   type DialogConfirmTone,
 } from '@justin-croyable/design-system';
-import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
+import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
+import { expect, userEvent, waitFor, within } from 'storybook/test';
+
+/**
+ * La modale est rendue dans une couche du CDK, greffée sur `document.body` et
+ * donc hors de `canvasElement` : les assertions visent le document, pas le
+ * canevas de la story.
+ */
+async function ouvrirDialogue(canvasElement: HTMLElement): Promise<HTMLElement> {
+  await userEvent.click(within(canvasElement).getByRole('button'));
+  return waitFor(() => {
+    const dialogue = document.querySelector<HTMLElement>('[data-slot="dialog-content"]');
+    expect(dialogue).toBeTruthy();
+    return dialogue!;
+  });
+}
+
+/**
+ * Referme la modale avant la story suivante : la couche du CDK survit au
+ * démontage de la story, une modale laissée ouverte fausserait le test suivant.
+ */
+async function fermerParLeBouton(libelle: string): Promise<void> {
+  await userEvent.click(within(document.body).getByRole('button', { name: libelle }));
+  await waitFor(() => {
+    expect(document.querySelector('[data-slot="dialog-content"]')).toBeNull();
+  });
+}
 
 @Component({
   selector: 'app-dialog-confirm-demo',
@@ -156,13 +182,61 @@ const meta: Meta<DialogArgs> = {
 export default meta;
 type Story = StoryObj<DialogArgs>;
 
-export const Default: Story = {};
+export const Default: Story = {
+  play: async ({ canvasElement }) => {
+    const dialogue = await ouvrirDialogue(canvasElement);
 
-export const Destructive: Story = { args: { okDestructive: true } };
+    expect(dialogue.querySelector('[data-slot="dialog-title"]')?.textContent?.trim()).toBe(
+      'Supprimer le projet',
+    );
+    expect(dialogue.querySelector('[data-slot="dialog-description"]')?.textContent).toContain(
+      'Cette action est définitive',
+    );
 
-export const OkDisabled: Story = { args: { okDisabled: true } };
+    const actions = [...dialogue.querySelectorAll('[data-slot="dialog-footer"] button')].map(
+      bouton => bouton.textContent?.trim(),
+    );
+    expect(actions).toEqual(['Annuler', 'Confirmer']);
 
-export const WithoutFooter: Story = { args: { hideFooter: true } };
+    await fermerParLeBouton('Annuler');
+  },
+};
+
+export const Destructive: Story = {
+  args: { okDestructive: true },
+  play: async ({ canvasElement }) => {
+    const dialogue = await ouvrirDialogue(canvasElement);
+    const principal = dialogue.querySelectorAll('[data-slot="dialog-footer"] button')[1];
+    expect(principal.textContent?.trim()).toBe('Supprimer');
+
+    await fermerParLeBouton('Annuler');
+  },
+};
+
+export const OkDisabled: Story = {
+  args: { okDisabled: true },
+  play: async ({ canvasElement }) => {
+    const dialogue = await ouvrirDialogue(canvasElement);
+    const principal = dialogue.querySelector<HTMLButtonElement>('[data-testid="app-ok-button"]')!;
+    expect(principal.disabled).toBe(true);
+
+    await fermerParLeBouton('Annuler');
+  },
+};
+
+export const WithoutFooter: Story = {
+  args: { hideFooter: true },
+  play: async ({ canvasElement }) => {
+    const dialogue = await ouvrirDialogue(canvasElement);
+    expect(dialogue.querySelector('[data-slot="dialog-footer"]')).toBeNull();
+
+    // Pas de bouton d'action ici : la croix d'en-tête est la seule sortie.
+    await userEvent.click(dialogue.querySelector<HTMLElement>('[data-slot="dialog-close"]')!);
+    await waitFor(() => {
+      expect(document.querySelector('[data-slot="dialog-content"]')).toBeNull();
+    });
+  },
+};
 
 export const NotDismissible: Story = { args: { closable: false, maskClosable: false } };
 
@@ -178,6 +252,25 @@ export const Confirm: StoryObj = {
   render: () => ({
     template: `<app-dialog-confirm-demo action="supprimer" subject="le projet" />`,
   }),
+  play: async ({ canvasElement }) => {
+    const dialogue = await ouvrirDialogue(canvasElement);
+
+    // Le titre capitalise le verbe, le message le laisse tel quel : c'est toute
+    // la composition faite par `confirm()` à partir des traductions du DS.
+    expect(dialogue.querySelector('[data-slot="dialog-title"]')?.textContent?.trim()).toBe(
+      'Supprimer le projet',
+    );
+    expect(dialogue.querySelector('[data-slot="dialog-description"]')?.textContent?.trim()).toBe(
+      'Êtes-vous sûr de supprimer le projet ?',
+    );
+
+    const actions = [...dialogue.querySelectorAll('[data-slot="dialog-footer"] button')].map(
+      bouton => bouton.textContent?.trim(),
+    );
+    expect(actions).toEqual(['Annuler', 'Supprimer']);
+
+    await fermerParLeBouton('Annuler');
+  },
 };
 
 export const ConfirmPrimary: StoryObj = {
@@ -206,6 +299,23 @@ export const Info: StoryObj = {
   render: () => ({
     template: `<app-dialog-info-demo />`,
   }),
+  play: async ({ canvasElement }) => {
+    const dialogue = await ouvrirDialogue(canvasElement);
+
+    expect(dialogue.querySelector('[data-slot="dialog-title"]')?.textContent?.trim()).toBe(
+      // `info()` capitalise le titre, comme `confirm()` capitalise le verbe.
+      'Import terminé',
+    );
+
+    // Une seule sortie, sans bouton d'annulation : c'est ce qui distingue
+    // `info()` de `confirm()`.
+    const actions = [...dialogue.querySelectorAll('[data-slot="dialog-footer"] button')].map(
+      bouton => bouton.textContent?.trim(),
+    );
+    expect(actions).toEqual(['Fermer']);
+
+    await fermerParLeBouton('Fermer');
+  },
 };
 
 export const InfoWithDesc: StoryObj = {

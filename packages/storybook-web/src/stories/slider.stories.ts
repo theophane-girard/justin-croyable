@@ -1,5 +1,6 @@
 import { SliderComponent } from '@justin-croyable/design-system';
-import type { Meta, StoryObj } from '@storybook/angular';
+import type { Meta, StoryObj } from '@storybook/angular-vite';
+import { expect } from 'storybook/test';
 
 type SliderArgs = {
   min: number;
@@ -58,12 +59,52 @@ const meta: Meta<SliderArgs> = {
 export default meta;
 type Story = StoryObj<SliderArgs>;
 
-export const Default: Story = {};
+export const Default: Story = {
+  play: async ({ canvasElement }) => {
+    const poignees = canvasElement.querySelectorAll('[data-slot="slider-thumb"]');
+    expect(poignees.length).toBe(1);
+    expect(poignees[0].getAttribute('aria-valuenow')).toBe('40');
 
-export const Range: Story = { args: { default: [25, 75] } };
+    /**
+     * L'attribut ne doit pas exister quand le curseur est actif.
+     *
+     * Le style s'accroche à `data-disabled:opacity-50`, qui réagit à la seule
+     * présence de l'attribut : un `data-disabled="false"` rendait le curseur
+     * grisé en permanence. Vérifier la valeur ne suffirait donc pas.
+     */
+    expect(canvasElement.querySelector('[data-slot="slider"]')?.hasAttribute('data-disabled')).toBe(
+      false,
+    );
+  },
+};
+
+export const Range: Story = {
+  args: { default: [25, 75] },
+  play: async ({ canvasElement }) => {
+    const poignees = [...canvasElement.querySelectorAll('[data-slot="slider-thumb"]')];
+    expect(poignees.map(poignee => poignee.getAttribute('aria-valuenow'))).toEqual(['25', '75']);
+  },
+};
 
 export const Steps: Story = { args: { step: 10, default: [50] } };
 
-export const Vertical: Story = { args: { orientation: 'vertical' } };
+export const Vertical: Story = {
+  args: { orientation: 'vertical' },
+  play: async ({ canvasElement }) => {
+    expect(canvasElement.querySelector('[data-slot="slider"]')?.getAttribute('data-orientation')).toBe(
+      'vertical',
+    );
+  },
+};
 
-export const Disabled: Story = { args: { disabled: true } };
+export const Disabled: Story = {
+  args: { disabled: true },
+  play: async ({ canvasElement }) => {
+    expect(canvasElement.querySelector('[data-slot="slider"]')?.hasAttribute('data-disabled')).toBe(
+      true,
+    );
+    expect(canvasElement.querySelector('[data-slot="slider-thumb"]')?.getAttribute('aria-disabled')).toBe(
+      'true',
+    );
+  },
+};

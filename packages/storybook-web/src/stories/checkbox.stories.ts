@@ -1,5 +1,6 @@
 import { CheckboxComponent } from '@justin-croyable/design-system';
-import type { Meta, StoryObj } from '@storybook/angular';
+import type { Meta, StoryObj } from '@storybook/angular-vite';
+import { expect, userEvent } from 'storybook/test';
 
 type CheckboxArgs = {
   label: string;
@@ -36,9 +37,32 @@ const meta: Meta<CheckboxArgs> = {
 export default meta;
 type Story = StoryObj<CheckboxArgs>;
 
-export const Default: Story = {};
+export const Default: Story = {
+  play: async ({ canvasElement }) => {
+    const boite = canvasElement.querySelector<HTMLInputElement>('input[type="checkbox"]');
+    expect(boite).toBeTruthy();
+    expect(boite!.checked).toBe(false);
 
-export const Disabled: Story = { args: { disabled: true } };
+    await userEvent.click(boite!);
+    expect(boite!.checked).toBe(true);
+
+    await userEvent.click(boite!);
+    expect(boite!.checked).toBe(false);
+  },
+};
+
+export const Disabled: Story = {
+  args: { disabled: true },
+  play: async ({ canvasElement }) => {
+    const boite = canvasElement.querySelector<HTMLInputElement>('input[type="checkbox"]');
+    expect(boite!.disabled).toBe(true);
+
+    // `userEvent.click` respecte l'état désactivé : c'est bien l'absence de
+    // bascule qu'on vérifie, pas l'absence de gestionnaire.
+    await userEvent.click(boite!, { pointerEventsCheck: 0 });
+    expect(boite!.checked).toBe(false);
+  },
+};
 
 export const Invalid: Story = { args: { invalid: true, label: 'Champ obligatoire' } };
 
