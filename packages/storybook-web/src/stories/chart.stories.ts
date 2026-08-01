@@ -1,4 +1,4 @@
-import { ChartComponent } from '@justin-croyable/design-system';
+import { ChartComponent, type ChartSkeletonType } from '@justin-croyable/design-system';
 import type { EChartsCoreOption } from 'echarts/core';
 import type { Meta, StoryObj } from '@storybook/angular-vite';
 import { expect, waitFor } from 'storybook/test';
@@ -7,6 +7,7 @@ type ChartArgs = {
   options: EChartsCoreOption;
   height: string;
   loading: boolean;
+  skeletonType: ChartSkeletonType;
 };
 
 const mois = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin'];
@@ -39,11 +40,12 @@ const meta: Meta<ChartArgs> = {
     options: { control: 'object' },
     height: { control: 'text' },
     loading: { control: 'boolean' },
+    skeletonType: { control: 'select', options: ['bar', 'pie', 'gauge', 'line'] },
   },
-  args: { options: barres, height: '20rem', loading: false },
+  args: { options: barres, height: '20rem', loading: false, skeletonType: 'bar' },
   render: args => ({
     props: args,
-    template: `<app-chart [options]="options" [height]="height" [loading]="loading" />`,
+    template: `<app-chart [options]="options" [height]="height" [loading]="loading" [skeletonType]="skeletonType" />`,
   }),
 };
 
@@ -108,23 +110,40 @@ export const Pie: Story = {
   },
 };
 
-export const Loading: Story = {
-  args: { loading: true },
-  /**
-   * En chargement, le composant remplace le canvas ECharts par un skeleton en
-   * forme d'histogramme plutôt que par le spinner par défaut d'ECharts.
-   */
-  play: async ({ canvasElement }) => {
-    const skeleton = await waitFor(() => {
-      const found = canvasElement.querySelector('[data-slot="chart-skeleton"]');
-      expect(found).toBeTruthy();
-      return found as HTMLElement;
-    });
+/**
+ * Vérifie qu'en chargement le composant affiche le skeleton attendu (à la place
+ * du canvas ECharts et de son spinner par défaut), pour le type demandé.
+ */
+const expectSkeleton = (type: ChartSkeletonType) => async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+  const skeleton = await waitFor(() => {
+    const found = canvasElement.querySelector('[data-slot="chart-skeleton"]');
+    expect(found).toBeTruthy();
+    return found as HTMLElement;
+  });
 
-    // Le skeleton s'affiche à la place du graphique, sans canvas monté.
-    expect(canvasElement.querySelector('canvas')).toBeNull();
-    expect(skeleton.getAttribute('aria-busy')).toBe('true');
-  },
+  expect(canvasElement.querySelector('canvas')).toBeNull();
+  expect(skeleton.getAttribute('aria-busy')).toBe('true');
+  expect(skeleton.getAttribute('data-skeleton-type')).toBe(type);
+};
+
+export const LoadingBar: Story = {
+  args: { loading: true, skeletonType: 'bar' },
+  play: expectSkeleton('bar'),
+};
+
+export const LoadingLine: Story = {
+  args: { loading: true, skeletonType: 'line' },
+  play: expectSkeleton('line'),
+};
+
+export const LoadingPie: Story = {
+  args: { loading: true, skeletonType: 'pie', height: '22rem' },
+  play: expectSkeleton('pie'),
+};
+
+export const LoadingGauge: Story = {
+  args: { loading: true, skeletonType: 'gauge', height: '22rem' },
+  play: expectSkeleton('gauge'),
 };
 
 export const MultipleSeries: Story = {
