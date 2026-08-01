@@ -1,6 +1,7 @@
-import { TableComponent } from '@justin-croyable/design-system';
-import type { ColDef } from 'ag-grid-community';
+import { type LazyLoadConfig, TableComponent } from '@justin-croyable/design-system';
+import type { ColDef, GridApi, GridReadyEvent } from 'ag-grid-community';
 import type { Meta, StoryObj } from '@storybook/angular-vite';
+import { delay, type Observable, of } from 'rxjs';
 import { expect, waitFor } from 'storybook/test';
 
 type Membre = {
@@ -130,5 +131,104 @@ export const Empty: Story = {
       expect(canvasElement.querySelector('.ag-root-wrapper')).toBeTruthy();
     });
     expect(canvasElement.querySelectorAll('.ag-row').length).toBe(0);
+  },
+};
+
+// Jeu de données « serveur » : 500 lignes générées à la volée, jamais chargées
+// d'un bloc. Le fetcher n'en matérialise que la fenêtre réclamée.
+const TOTAL_LIGNES = 500;
+
+function ligneServeur(index: number): Membre {
+  const modele = membres[index % membres.length];
+  return {
+    ...modele,
+    nom: `Membre ${index + 1}`,
+    contributions: 40 + index * 3,
+    actif: index % 3 !== 0,
+  };
+}
+
+// Builder de datasource AG Grid : chaque bloc est un `Observable`. Un délai
+// simule la latence réseau et donne à voir l'annulation — un scroll rapide
+// remplace la requête en vol avant qu'elle ne réponde.
+const lazyloadConfig: LazyLoadConfig<Membre> = {
+  blockSize: 25,
+  fetchRows: (request): Observable<{ rows: Membre[]; lastRow: number }> => {
+    const rows: Membre[] = [];
+    for (let index = request.startRow; index < Math.min(request.endRow, TOTAL_LIGNES); index++) {
+      rows.push(ligneServeur(index));
+    }
+    return of({ rows, lastRow: TOTAL_LIGNES }).pipe(delay(50));
+  },
+};
+
+// Partagé entre `render` (qui capte l'API sur `gridReady`) et `play` : les props
+// retournées par `render` ne transitent pas par les `args` de la story.
+let apiLazyLoading: GridApi<Membre> | undefined;
+
+export const LazyLoading: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Rendu paresseux en infinite scroll via `lazyloadConfig`. Les lignes ne sont pas passées à `rowData` : le tableau bascule sur le row model `infinite` d'AG Grid et réclame chaque bloc au `fetchRows` de la config, qui retourne un `Observable`. Le builder pilote un `rxResource` : dès qu'un nouveau bloc est réclamé, le flux précédent encore en vol est annulé (désabonnement + `AbortSignal`), ce qui évite qu'une réponse tardive n'écrase le bloc réellement affiché lors d'un scroll rapide.",
+      },
+    },
+  },
+  render: () => {
+    apiLazyLoading = undefined;
+    return {
+      props: {
+        columnDefs: colonnes,
+        lazyloadConfig,
+        onReady: (event: GridReadyEvent<Membre>) => {
+          apiLazyLoading = event.api;
+        },
+      },
+      template: `
+        <app-table
+          [columnDefs]="columnDefs"
+          [lazyloadConfig]="lazyloadConfig"
+          (gridReady)="onReady($event)"
+          height="28rem"
+        />
+      `,
+    };
+  },
+  play: async ({ canvasElement }) => {
+    await waitFor(() => {
+      expect(canvasElement.querySelector('.ag-root-wrapper')).toBeTruthy();
+      expect(apiLazyLoading).toBeTruthy();
+    });
+
+    // Premier bloc réclamé et rendu : la ligne 1 est du serveur, pas d'un
+    // `rowData` statique.
+    await waitFor(
+      () => {
+        const cellules = [...canvasElement.querySelectorAll('.ag-cell')].map(cell => cell.textContent?.trim());
+        expect(cellules).toContain('Membre 1');
+      },
+      { timeout: 5000 },
+    );
+
+    // Le row model infinite virtualise le DOM : la ligne 500 n'existe pas encore.
+    const cellulesInitiales = [...canvasElement.querySelectorAll('.ag-cell')].map(cell => cell.textContent?.trim());
+    expect(cellulesInitiales).not.toContain(`Membre ${TOTAL_LIGNES}`);
+
+    // Le total étant connu (`lastRow`), on saute à la dernière ligne : AG Grid
+    // en déduit le bloc final et le réclame à la demande.
+    if (!apiLazyLoading) {
+      throw new Error('API AG Grid absente après gridReady');
+    }
+    apiLazyLoading.ensureIndexVisible(TOTAL_LIGNES - 1, 'bottom');
+
+    // Ce bloc lointain a bien été chargé paresseusement.
+    await waitFor(
+      () => {
+        const cellules = [...canvasElement.querySelectorAll('.ag-cell')].map(cell => cell.textContent?.trim());
+        expect(cellules).toContain(`Membre ${TOTAL_LIGNES}`);
+      },
+      { timeout: 5000 },
+    );
   },
 };
