@@ -8,7 +8,7 @@ import { CHART_DEFAULTS } from '../../providers/tokens';
 import { mergeClasses } from '../../utils/merge-classes';
 
 /** Forme du skeleton affiché pendant le chargement, selon le type de graphique. */
-export type ChartSkeletonType = 'bar' | 'pie' | 'gauge' | 'line';
+export type ChartSkeletonType = 'bar' | 'pie' | 'gauge' | 'line' | 'curve';
 
 @Component({
   selector: 'app-chart',
@@ -51,6 +51,24 @@ export type ChartSkeletonType = 'bar' | 'pie' | 'gauge' | 'line';
                   stroke="currentColor"
                   stroke-width="3"
                   stroke-linejoin="round"
+                  stroke-linecap="round"
+                  vector-effect="non-scaling-stroke"
+                />
+              </svg>
+            </div>
+          }
+          @case ('curve') {
+            <div class="size-full border-b border-l border-border pl-1 pb-px">
+              <svg viewBox="0 0 100 60" preserveAspectRatio="none" fill="none" class="size-full animate-pulse text-accent">
+                <path
+                  d="M0 42 C 12 42 18 20 30 22 C 42 24 48 40 62 34 C 76 28 82 12 100 16 L100 60 L0 60 Z"
+                  fill="currentColor"
+                  fill-opacity="0.15"
+                />
+                <path
+                  d="M0 42 C 12 42 18 20 30 22 C 42 24 48 40 62 34 C 76 28 82 12 100 16"
+                  stroke="currentColor"
+                  stroke-width="3"
                   stroke-linecap="round"
                   vector-effect="non-scaling-stroke"
                 />

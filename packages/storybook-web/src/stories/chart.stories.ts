@@ -40,7 +40,7 @@ const meta: Meta<ChartArgs> = {
     options: { control: 'object' },
     height: { control: 'text' },
     loading: { control: 'boolean' },
-    skeletonType: { control: 'select', options: ['bar', 'pie', 'gauge', 'line'] },
+    skeletonType: { control: 'select', options: ['bar', 'pie', 'gauge', 'line', 'curve'] },
   },
   args: { options: barres, height: '20rem', loading: false, skeletonType: 'bar' },
   render: args => ({
@@ -134,6 +134,11 @@ export const LoadingBar: Story = {
 export const LoadingLine: Story = {
   args: { loading: true, skeletonType: 'line' },
   play: expectSkeleton('line'),
+};
+
+export const LoadingCurve: Story = {
+  args: { loading: true, skeletonType: 'curve' },
+  play: expectSkeleton('curve'),
 };
 
 export const LoadingPie: Story = {
