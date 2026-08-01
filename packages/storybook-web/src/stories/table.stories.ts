@@ -232,3 +232,119 @@ export const LazyLoading: Story = {
     );
   },
 };
+
+// Colonnes filtrables : le tri et le filtre sont délégués au « serveur » (le
+// row model infinite ne filtre/trie jamais côté client, il transmet
+// `sortModel`/`filterModel` au `fetchRows`).
+const colonnesServeur: ColDef<Membre>[] = [
+  { field: 'nom', headerName: 'Nom', minWidth: 220, filter: 'agTextColumnFilter' },
+  { field: 'equipe', headerName: 'Équipe', filter: 'agTextColumnFilter' },
+  { field: 'contributions', headerName: 'Contributions', type: 'numericColumn', filter: 'agNumberColumnFilter' },
+];
+
+function comparer(a: unknown, b: unknown): number {
+  if (typeof a === 'number' && typeof b === 'number') {
+    return a - b;
+  }
+  return String(a).localeCompare(String(b), 'fr');
+}
+
+// Backend simulé : applique filtre puis tri sur les 500 lignes, avant de
+// découper le bloc réclamé. Tout l'intérêt est dans la lecture *typée* de
+// `filterModel` / `sortModel` — clés = champs de `Membre`, narrowing sur
+// `filterType`, zéro magic string, zéro cast.
+const lazyloadServeur: LazyLoadConfig<Membre> = {
+  blockSize: 25,
+  fetchRows: ({ startRow, endRow, sortModel, filterModel }) => {
+    let lignes = Array.from({ length: TOTAL_LIGNES }, (_, index) => ligneServeur(index));
+
+    const filtreNom = filterModel.nom;
+    if (filtreNom?.filterType === 'text' && 'filter' in filtreNom && typeof filtreNom.filter === 'string') {
+      const terme = filtreNom.filter.toLowerCase();
+      lignes = lignes.filter(ligne => ligne.nom.toLowerCase().includes(terme));
+    }
+
+    const filtreContrib = filterModel.contributions;
+    if (filtreContrib?.filterType === 'number' && 'filter' in filtreContrib && typeof filtreContrib.filter === 'number') {
+      const seuil = filtreContrib.filter;
+      lignes = lignes.filter(ligne =>
+        filtreContrib.type === 'lessThan' ? ligne.contributions < seuil : ligne.contributions > seuil,
+      );
+    }
+
+    for (const tri of [...sortModel].reverse()) {
+      const sens = tri.sort === 'asc' ? 1 : -1;
+      lignes = [...lignes].sort((a, b) => sens * comparer(a[tri.colId], b[tri.colId]));
+    }
+
+    return of({ rows: lignes.slice(startRow, endRow), lastRow: lignes.length }).pipe(delay(30));
+  },
+};
+
+let apiServeur: GridApi<Membre> | undefined;
+
+export const TriEtFiltreServeur: Story = {
+  name: 'Lazy loading — tri & filtre serveur',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Même mode paresseux, mais le `fetchRows` applique le tri et le filtre côté « serveur » à partir du `sortModel` / `filterModel` typés sur `Membre`. Ouvre le menu d'une colonne (filtre texte sur Nom/Équipe, filtre nombre sur Contributions) ou clique un en-tête pour trier : chaque changement purge le cache infinite et relance une requête, dont la précédente est annulée si elle est encore en vol.",
+      },
+    },
+  },
+  render: () => {
+    apiServeur = undefined;
+    return {
+      props: {
+        columnDefs: colonnesServeur,
+        lazyloadConfig: lazyloadServeur,
+        onReady: (event: GridReadyEvent<Membre>) => {
+          apiServeur = event.api;
+        },
+      },
+      template: `
+        <app-table
+          [columnDefs]="columnDefs"
+          [lazyloadConfig]="lazyloadConfig"
+          (gridReady)="onReady($event)"
+          height="30rem"
+        />
+      `,
+    };
+  },
+  play: async ({ canvasElement }) => {
+    const nomLigne0 = () =>
+      canvasElement.querySelector('.ag-row[row-index="0"] [col-id="nom"]')?.textContent?.trim();
+
+    await waitFor(() => {
+      expect(canvasElement.querySelector('.ag-root-wrapper')).toBeTruthy();
+      expect(apiServeur).toBeTruthy();
+    });
+    if (!apiServeur) {
+      throw new Error('API AG Grid absente après gridReady');
+    }
+
+    // Départ : jeu complet, ordre naturel, la première ligne est Membre 1.
+    await waitFor(() => expect(nomLigne0()).toBe('Membre 1'), { timeout: 5000 });
+
+    // Filtre serveur — contributions > 1500. ligneServeur(i) = 40 + i*3, donc
+    // seuls i >= 487 passent, la première ligne devient Membre 488.
+    apiServeur.setFilterModel({ contributions: { filterType: 'number', type: 'greaterThan', filter: 1500 } });
+    await waitFor(
+      () => {
+        expect(nomLigne0()).toBe('Membre 488');
+        const noms = [...canvasElement.querySelectorAll('.ag-row [col-id="nom"]')].map(cell =>
+          cell.textContent?.trim(),
+        );
+        expect(noms).not.toContain('Membre 1');
+      },
+      { timeout: 5000 },
+    );
+
+    // Tri serveur — contributions décroissantes : la plus haute (Membre 500)
+    // remonte en tête, sans quitter le filtre actif.
+    apiServeur.applyColumnState({ state: [{ colId: 'contributions', sort: 'desc' }], defaultState: { sort: null } });
+    await waitFor(() => expect(nomLigne0()).toBe(`Membre ${TOTAL_LIGNES}`), { timeout: 5000 });
+  },
+};
