@@ -11,14 +11,21 @@ import { mergeClasses } from '../../utils/merge-classes';
   selector: 'app-chart',
   imports: [NgxEchartsDirective],
   template: `
-    <div
-      echarts
-      [options]="themedOptions()"
-      [merge]="merge()"
-      [loading]="loading()"
-      [autoResize]="true"
-      class="size-full"
-    ></div>
+    @if (loading()) {
+      <div
+        data-slot="chart-skeleton"
+        role="status"
+        aria-busy="true"
+        aria-label="Chargement du graphique"
+        class="flex size-full items-end gap-2 border-b border-l border-border pl-2 pb-px"
+      >
+        @for (bar of skeletonBars; track $index) {
+          <div class="bg-accent flex-1 animate-pulse rounded-t-md" [style.height.%]="bar"></div>
+        }
+      </div>
+    } @else {
+      <div echarts [options]="themedOptions()" [merge]="merge()" [autoResize]="true" class="size-full"></div>
+    }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
@@ -39,6 +46,12 @@ export class ChartComponent {
   readonly class = input<ClassValue>('');
 
   protected readonly classes = computed(() => mergeClasses('block w-full', this.class()));
+
+  /**
+   * Hauteurs (en %) des barres du skeleton affiché pendant le chargement. Fixes
+   * et non aléatoires pour rester déterministes entre les rendus et les tests.
+   */
+  protected readonly skeletonBars = [45, 70, 55, 85, 60, 95, 50, 75] as const;
 
   /**
    * ECharts rend dans un canvas : il ne résout pas `var(--primary)`. Les couleurs

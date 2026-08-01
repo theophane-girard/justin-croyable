@@ -6,6 +6,7 @@ import { expect, waitFor } from 'storybook/test';
 type ChartArgs = {
   options: EChartsCoreOption;
   height: string;
+  loading: boolean;
 };
 
 const mois = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin'];
@@ -37,11 +38,12 @@ const meta: Meta<ChartArgs> = {
   argTypes: {
     options: { control: 'object' },
     height: { control: 'text' },
+    loading: { control: 'boolean' },
   },
-  args: { options: barres, height: '20rem' },
+  args: { options: barres, height: '20rem', loading: false },
   render: args => ({
     props: args,
-    template: `<app-chart [options]="options" [height]="height" />`,
+    template: `<app-chart [options]="options" [height]="height" [loading]="loading" />`,
   }),
 };
 
@@ -103,6 +105,25 @@ export const Pie: Story = {
         },
       ],
     },
+  },
+};
+
+export const Loading: Story = {
+  args: { loading: true },
+  /**
+   * En chargement, le composant remplace le canvas ECharts par un skeleton en
+   * forme d'histogramme plutôt que par le spinner par défaut d'ECharts.
+   */
+  play: async ({ canvasElement }) => {
+    const skeleton = await waitFor(() => {
+      const found = canvasElement.querySelector('[data-slot="chart-skeleton"]');
+      expect(found).toBeTruthy();
+      return found as HTMLElement;
+    });
+
+    // Le skeleton s'affiche à la place du graphique, sans canvas monté.
+    expect(canvasElement.querySelector('canvas')).toBeNull();
+    expect(skeleton.getAttribute('aria-busy')).toBe('true');
   },
 };
 
