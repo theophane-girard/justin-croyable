@@ -230,6 +230,10 @@ export class InputGroupComponent {
       const hasMessage = Boolean(this.errorMessage()) || Boolean(this.hint());
       contentInput.setAriaDescribedBy(hasMessage ? this.messageId() : null);
       contentInput.setAriaInvalid(this.showError());
+      // L'astérisque du libellé n'est que visuel : sans cet attribut, un lecteur
+      // d'écran n'annonce pas le champ comme requis. `select` et `combobox`, qui
+      // reprennent ce motif, le posaient déjà.
+      contentInput.setAriaRequired(this.required());
     });
   }
 

@@ -1,5 +1,6 @@
 import { TabComponent, TabGroupComponent } from '@justin-croyable/design-system';
-import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
+import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
+import { expect, userEvent, waitFor } from 'storybook/test';
 
 type TabsArgs = {
   tabsPosition: 'top' | 'bottom' | 'left' | 'right';
@@ -69,7 +70,31 @@ const meta: Meta<TabsArgs> = {
 export default meta;
 type Story = StoryObj<TabsArgs>;
 
-export const Default: Story = {};
+export const Default: Story = {
+  play: async ({ canvasElement }) => {
+    // La barre d'onglets est alimentée par une requête de contenu : elle est
+    // vide au premier rendu et se remplit au cycle suivant.
+    const onglets = await waitFor(() => {
+      const trouves = canvasElement.querySelectorAll<HTMLElement>('[role="tab"]');
+      expect(trouves.length).toBe(3);
+      return trouves;
+    });
+    expect(onglets[0].getAttribute('aria-selected')).toBe('true');
+
+    await userEvent.click(onglets[1]);
+
+    await waitFor(() => {
+      expect(onglets[1].getAttribute('aria-selected')).toBe('true');
+      expect(onglets[0].getAttribute('aria-selected')).toBe('false');
+    });
+
+    // Le panneau visible doit suivre l'onglet, pas seulement son état ARIA.
+    const panneaux = [...canvasElement.querySelectorAll('[role="tabpanel"]')];
+    expect(panneaux.some(panneau => panneau.textContent?.includes('double authentification'))).toBe(
+      true,
+    );
+  },
+};
 
 export const BottomTabs: Story = { args: { tabsPosition: 'bottom', activePosition: 'top' } };
 

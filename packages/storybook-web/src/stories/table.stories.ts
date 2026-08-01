@@ -1,6 +1,7 @@
 import { TableComponent } from '@justin-croyable/design-system';
 import type { ColDef } from 'ag-grid-community';
-import type { Meta, StoryObj } from '@storybook/angular';
+import type { Meta, StoryObj } from '@storybook/angular-vite';
+import { expect, waitFor } from 'storybook/test';
 
 type Membre = {
   nom: string;
@@ -64,7 +65,23 @@ const meta: Meta<TableArgs> = {
 export default meta;
 type Story = StoryObj<TableArgs>;
 
-export const Default: Story = {};
+export const Default: Story = {
+  play: async ({ canvasElement }) => {
+    await waitFor(() => {
+      expect(canvasElement.querySelector('.ag-root-wrapper')).toBeTruthy();
+    });
+
+    // Une grille montée mais vide passerait un simple test de présence.
+    await waitFor(() => {
+      expect(canvasElement.querySelectorAll('.ag-row').length).toBe(membres.length);
+    });
+
+    const entetes = [...canvasElement.querySelectorAll('.ag-header-cell-text')].map(cell =>
+      cell.textContent?.trim(),
+    );
+    expect(entetes).toContain('Contributions');
+  },
+};
 
 export const Paginated: Story = {
   render: args => ({
@@ -75,7 +92,13 @@ export const Paginated: Story = {
         nom: `${membres[index % membres.length].nom} ${index + 1}`,
         contributions: 40 + index * 7,
       })),
-      gridOptions: { pagination: true, paginationPageSize: 10 },
+      // La taille de page doit figurer dans le sélecteur, sinon AG Grid la
+      // refuse et retombe sur sa valeur par défaut.
+      gridOptions: {
+        pagination: true,
+        paginationPageSize: 10,
+        paginationPageSizeSelector: [10, 20, 50],
+      },
     },
     template: `
       <app-table
@@ -102,4 +125,10 @@ export const MultipleSelection: Story = {
 
 export const Empty: Story = {
   args: { rowData: [] },
+  play: async ({ canvasElement }) => {
+    await waitFor(() => {
+      expect(canvasElement.querySelector('.ag-root-wrapper')).toBeTruthy();
+    });
+    expect(canvasElement.querySelectorAll('.ag-row').length).toBe(0);
+  },
 };

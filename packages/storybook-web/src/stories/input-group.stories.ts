@@ -3,7 +3,8 @@ import {
   InputGroupComponent,
   type InputSizeVariants,
 } from '@justin-croyable/design-system';
-import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
+import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
+import { expect, userEvent } from 'storybook/test';
 
 type InputGroupArgs = {
   label: string;
@@ -77,9 +78,28 @@ const meta: Meta<InputGroupArgs> = {
 export default meta;
 type Story = StoryObj<InputGroupArgs>;
 
-export const Default: Story = {};
+export const Default: Story = {
+  play: async ({ canvasElement }) => {
+    const champ = canvasElement.querySelector<HTMLInputElement>('input')!;
+    const libelle = canvasElement.querySelector('label')!;
 
-export const Required: Story = { args: { required: true } };
+    // Le libellé doit être relié au champ, sinon le clic dessus ne le focalise
+    // pas et le lecteur d'écran ne l'annonce pas.
+    expect(libelle.getAttribute('for')).toBe(champ.id);
+    expect(canvasElement.textContent).toContain('Nous ne partagerons jamais votre adresse.');
+
+    await userEvent.type(champ, 'jean@exemple.fr');
+    expect(champ.value).toBe('jean@exemple.fr');
+  },
+};
+
+export const Required: Story = {
+  args: { required: true },
+  play: async ({ canvasElement }) => {
+    expect(canvasElement.querySelector('label')?.textContent).toContain('*');
+    expect(canvasElement.querySelector('input')?.getAttribute('aria-required')).toBe('true');
+  },
+};
 
 export const WithAddons: Story = {
   args: { label: 'Site web', addonBefore: 'https://', addonAfter: '.fr', hint: '' },

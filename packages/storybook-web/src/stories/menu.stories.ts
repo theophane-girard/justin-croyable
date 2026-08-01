@@ -4,7 +4,8 @@ import {
   type MenuPlacement,
   type MenuTrigger,
 } from '@justin-croyable/design-system';
-import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
+import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
+import { expect, userEvent, waitFor } from 'storybook/test';
 
 type MenuArgs = {
   trigger: MenuTrigger;
@@ -76,9 +77,59 @@ const meta: Meta<MenuArgs> = {
 export default meta;
 type Story = StoryObj<MenuArgs>;
 
-export const Default: Story = {};
+async function attendreMenu(): Promise<HTMLElement> {
+  return waitFor(() => {
+    const menu = document.querySelector<HTMLElement>('[app-menu-content]');
+    expect(menu).toBeTruthy();
+    return menu!;
+  });
+}
 
-export const OnHover: Story = { args: { trigger: 'hover' } };
+export const Default: Story = {
+  play: async ({ canvasElement }) => {
+    const declencheur = canvasElement.querySelector<HTMLElement>('[app-menu]')!;
+
+    await userEvent.click(declencheur);
+    const menu = await attendreMenu();
+
+    const entrees = [...menu.querySelectorAll<HTMLButtonElement>('[app-menu-item]')];
+    expect(entrees.map(entree => entree.textContent?.trim().split(/\s+/)[0])).toEqual([
+      'Profil',
+      'Paramètres',
+      'Équipe',
+      'Se',
+    ]);
+    /**
+     * Une entrée désactivée l'est par `aria-disabled`, pas par l'attribut natif :
+     * un élément de menu doit rester atteignable au clavier pour ne pas trouer
+     * la navigation par flèches. C'est le CDK qui bloque son activation.
+     */
+    expect(entrees[2].getAttribute('aria-disabled')).toBe('');
+    expect(entrees[2].getAttribute('data-disabled')).toBe('');
+
+    // Choisir une entrée referme le menu.
+    await userEvent.click(entrees[0]);
+    await waitFor(() => {
+      expect(document.querySelector('[app-menu-content]')).toBeNull();
+    });
+  },
+};
+
+export const OnHover: Story = {
+  args: { trigger: 'hover' },
+  play: async ({ canvasElement }) => {
+    const declencheur = canvasElement.querySelector<HTMLElement>('[app-menu]')!;
+
+    await userEvent.hover(declencheur);
+    const menu = await attendreMenu();
+    expect(menu.textContent).toContain('Mon compte');
+
+    await userEvent.unhover(declencheur);
+    await waitFor(() => {
+      expect(document.querySelector('[app-menu-content]')).toBeNull();
+    });
+  },
+};
 
 export const BottomRight: Story = { args: { placement: 'bottomRight' } };
 

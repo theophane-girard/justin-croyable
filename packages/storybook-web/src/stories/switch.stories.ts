@@ -3,7 +3,8 @@ import {
   type SwitchSizeVariants,
   type SwitchTypeVariants,
 } from '@justin-croyable/design-system';
-import type { Meta, StoryObj } from '@storybook/angular';
+import type { Meta, StoryObj } from '@storybook/angular-vite';
+import { expect, userEvent, waitFor } from 'storybook/test';
 
 type SwitchArgs = {
   checked: boolean;
@@ -36,13 +37,33 @@ const meta: Meta<SwitchArgs> = {
 export default meta;
 type Story = StoryObj<SwitchArgs>;
 
-export const Default: Story = {};
+export const Default: Story = {
+  play: async ({ canvasElement }) => {
+    const bascule = canvasElement.querySelector<HTMLElement>('[role="switch"]')!;
+    expect(bascule.getAttribute('aria-checked')).toBe('true');
+
+    await userEvent.click(bascule);
+    await waitFor(() => {
+      expect(bascule.getAttribute('aria-checked')).toBe('false');
+      expect(bascule.getAttribute('data-state')).toBe('unchecked');
+    });
+  },
+};
 
 export const Unchecked: Story = { args: { checked: false } };
 
 export const Destructive: Story = { args: { type: 'destructive' } };
 
-export const Disabled: Story = { args: { disabled: true } };
+export const Disabled: Story = {
+  args: { disabled: true },
+  play: async ({ canvasElement }) => {
+    const bascule = canvasElement.querySelector<HTMLButtonElement>('[role="switch"]')!;
+    expect(bascule.disabled).toBe(true);
+
+    await userEvent.click(bascule, { pointerEventsCheck: 0 });
+    expect(bascule.getAttribute('aria-checked')).toBe('true');
+  },
+};
 
 export const Sizes: Story = {
   parameters: { controls: { disable: true } },

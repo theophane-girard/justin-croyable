@@ -210,7 +210,11 @@ export class DialogService {
       const vcr = (config.viewContainerRef ?? null) as unknown as ViewContainerRef;
       const ctx = { dialogRef } as unknown as T;
       dialogContainer.attachTemplatePortal(new TemplatePortal(componentOrTemplateRef, vcr, ctx));
-    } else if (typeof componentOrTemplateRef !== 'string') {
+      // Sans contenu, il n'y a rien à attacher. Le test ne portait que sur la
+      // chaîne, si bien qu'un `content` absent — le cas d'un `confirm()` ou d'un
+      // `info()` sans description — partait dans la branche composant et faisait
+      // journaliser un NG0919 à chaque ouverture.
+    } else if (componentOrTemplateRef && typeof componentOrTemplateRef !== 'string') {
       const injector = this.createInjector<T, U>(dialogRef, config);
       const contentRef = dialogContainer.attachComponentPortal<T>(
         new ComponentPortal(componentOrTemplateRef, config.viewContainerRef, injector),

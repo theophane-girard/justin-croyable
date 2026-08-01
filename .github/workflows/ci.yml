@@ -40,6 +40,13 @@ jobs:
       - name: Typecheck et lint
         run: npx nx run-many -t typecheck lint
 
+      # Les stories du DS web s'exécutent comme tests Vitest dans un vrai
+      # navigateur : AG Grid mesure des dimensions et ECharts peint dans un
+      # canvas, ce qu'un DOM simulé ne fait pas.
+      - name: Installation du navigateur de test
+        run: npx playwright install --with-deps chromium
+        working-directory: packages/storybook-web
+
       - name: Tests
         run: npx nx run-many -t test
 

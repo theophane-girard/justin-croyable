@@ -4,7 +4,8 @@ import {
   type ToggleSizeVariants,
   type ToggleTypeVariants,
 } from '@justin-croyable/design-system';
-import type { Meta, StoryObj } from '@storybook/angular';
+import type { Meta, StoryObj } from '@storybook/angular-vite';
+import { expect, userEvent, waitFor } from 'storybook/test';
 
 type ToggleGroupArgs = {
   items: ToggleGroupItem[];
@@ -76,14 +77,58 @@ const meta: Meta<ToggleGroupArgs> = {
 export default meta;
 type Story = StoryObj<ToggleGroupArgs>;
 
-export const Single: Story = {};
+const pressions = (canvasElement: HTMLElement): (string | null)[] =>
+  [...canvasElement.querySelectorAll('[data-slot="toggle-group-item"]')].map(item =>
+    item.getAttribute('aria-pressed'),
+  );
+
+export const Single: Story = {
+  play: async ({ canvasElement }) => {
+    expect(pressions(canvasElement)).toEqual(['true', 'false', 'false', 'false']);
+
+    const items = canvasElement.querySelectorAll<HTMLElement>('[data-slot="toggle-group-item"]');
+    await userEvent.click(items[2]);
+
+    // En mode `single`, activer une option doit désactiver la précédente.
+    await waitFor(() => {
+      expect(pressions(canvasElement)).toEqual(['false', 'false', 'true', 'false']);
+    });
+  },
+};
 
 export const Multiple: Story = {
   args: { mode: 'multiple', defaultValue: ['left', 'center'] },
+  play: async ({ canvasElement }) => {
+    expect(pressions(canvasElement)).toEqual(['true', 'true', 'false', 'false']);
+
+    const items = canvasElement.querySelectorAll<HTMLElement>('[data-slot="toggle-group-item"]');
+    await userEvent.click(items[2]);
+
+    // En mode `multiple`, les sélections s'accumulent.
+    await waitFor(() => {
+      expect(pressions(canvasElement)).toEqual(['true', 'true', 'true', 'false']);
+    });
+
+    await userEvent.click(items[0]);
+    await waitFor(() => {
+      expect(pressions(canvasElement)).toEqual(['false', 'true', 'true', 'false']);
+    });
+  },
 };
 
 export const Outline: Story = { args: { type: 'outline', spacing: 2 } };
 
 export const Vertical: Story = { args: { orientation: 'vertical' } };
 
-export const Disabled: Story = { args: { disabled: true } };
+export const Disabled: Story = {
+  args: { disabled: true },
+  play: async ({ canvasElement }) => {
+    const items = [
+      ...canvasElement.querySelectorAll<HTMLButtonElement>('[data-slot="toggle-group-item"]'),
+    ];
+    expect(items.every(item => item.disabled)).toBe(true);
+
+    await userEvent.click(items[1], { pointerEventsCheck: 0 });
+    expect(pressions(canvasElement)).toEqual(['true', 'false', 'false', 'false']);
+  },
+};

@@ -3,7 +3,8 @@ import {
   type ToggleSizeVariants,
   type ToggleTypeVariants,
 } from '@justin-croyable/design-system';
-import type { Meta, StoryObj } from '@storybook/angular';
+import type { Meta, StoryObj } from '@storybook/angular-vite';
+import { expect, userEvent, waitFor } from 'storybook/test';
 
 type ToggleArgs = {
   value: boolean;
@@ -52,7 +53,23 @@ const meta: Meta<ToggleArgs> = {
 export default meta;
 type Story = StoryObj<ToggleArgs>;
 
-export const Default: Story = {};
+export const Default: Story = {
+  play: async ({ canvasElement }) => {
+    const bascule = canvasElement.querySelector<HTMLElement>('[data-slot="toggle"]')!;
+    expect(bascule.getAttribute('aria-pressed')).toBe('false');
+
+    await userEvent.click(bascule);
+    await waitFor(() => {
+      expect(bascule.getAttribute('aria-pressed')).toBe('true');
+      expect(bascule.getAttribute('data-state')).toBe('on');
+    });
+
+    await userEvent.click(bascule);
+    await waitFor(() => {
+      expect(bascule.getAttribute('aria-pressed')).toBe('false');
+    });
+  },
+};
 
 export const Pressed: Story = { args: { value: true } };
 

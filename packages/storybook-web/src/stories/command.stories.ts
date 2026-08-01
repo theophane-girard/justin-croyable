@@ -1,5 +1,6 @@
 import { CommandImports } from '@justin-croyable/design-system';
-import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
+import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
+import { expect, userEvent, waitFor } from 'storybook/test';
 
 type CommandArgs = {
   size: 'sm' | 'default' | 'lg' | 'xl';
@@ -55,7 +56,34 @@ const meta: Meta<CommandArgs> = {
 export default meta;
 type Story = StoryObj<CommandArgs>;
 
-export const Default: Story = {};
+export const Default: Story = {
+  play: async ({ canvasElement }) => {
+    const libelles = (): (string | undefined)[] =>
+      [...canvasElement.querySelectorAll('[role="option"]')].map(option =>
+        option.textContent?.trim().replace(/\s*⌘.*$/, ''),
+      );
+
+    expect(libelles()).toEqual([
+      'Calendrier',
+      'Rechercher un fichier',
+      'Boîte de réception',
+      'Profil',
+      'Facturation',
+    ]);
+
+    // La palette est rendue à plat : la recherche masque les options, elle ne
+    // les retire pas d'un DOM déjà construit — d'où l'attente sur le décompte.
+    await userEvent.type(canvasElement.querySelector<HTMLInputElement>('input')!, 'fact');
+    await waitFor(() => {
+      expect(libelles()).toEqual(['Facturation']);
+    });
+
+    // L'option filtrée reste celle qui est désactivée dans le gabarit.
+    expect(
+      canvasElement.querySelector('[role="option"]')?.getAttribute('data-disabled'),
+    ).toBe('true');
+  },
+};
 
 export const Small: Story = { args: { size: 'sm' } };
 

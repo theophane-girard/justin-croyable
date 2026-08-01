@@ -52,7 +52,7 @@ const HEIGHT_BY_SIZE: Record<DatePickerSizeVariants, string> = {
       type="button"
       [variant]="type()"
       [size]="size()"
-      [disabled]="disabled()"
+      [buttonDisabled]="disabled()"
       [class]="buttonClasses()"
       appPopover
       #popoverDirective="appPopover"

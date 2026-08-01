@@ -1,6 +1,6 @@
 /*
- * CSS global du Storybook web (chargé via l'option `styles` du builder, cf.
- * `angular.json` — donc traité par le pipeline PostCSS d'Angular).
+ * CSS global du Storybook web, importé par `.storybook/preview.ts` et compilé
+ * par le plugin Vite de Tailwind.
  *
  * Rôle de l'app : fournir Tailwind et le plugin d'animations, puis importer le
  * preset du DS. C'est tout ce qu'une app consommatrice a à écrire — aucun token,

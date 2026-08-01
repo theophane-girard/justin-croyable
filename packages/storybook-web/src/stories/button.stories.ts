@@ -1,5 +1,5 @@
 import { ButtonComponent, type ButtonShape, type ButtonSize, type ButtonVariant } from '@justin-croyable/design-system';
-import type { Meta, StoryObj } from '@storybook/angular';
+import type { Meta, StoryObj } from '@storybook/angular-vite';
 
 /**
  * Les args sont typés par une interface locale plutôt que par la classe du

@@ -144,7 +144,7 @@ export class DialogOptions<T, U> {
               data-testid="app-ok-button"
               appButton
               [variant]="config.okVariant ?? (config.okDestructive ? 'destructive' : 'default')"
-              [disabled]="config.okDisabled"
+              [buttonDisabled]="config.okDisabled"
               (click)="onOkClick()"
             >
               @if (config.okIcon) {

@@ -1,6 +1,7 @@
 import { ChartComponent } from '@justin-croyable/design-system';
 import type { EChartsCoreOption } from 'echarts/core';
-import type { Meta, StoryObj } from '@storybook/angular';
+import type { Meta, StoryObj } from '@storybook/angular-vite';
+import { expect, waitFor } from 'storybook/test';
 
 type ChartArgs = {
   options: EChartsCoreOption;
@@ -47,7 +48,28 @@ const meta: Meta<ChartArgs> = {
 export default meta;
 type Story = StoryObj<ChartArgs>;
 
-export const Bars: Story = {};
+export const Bars: Story = {
+  /**
+   * ECharts est chargé à la demande par `withCharts()`, d'où l'attente : le
+   * canvas n'existe qu'une fois le bundle résolu. Le délai par défaut d'une
+   * seconde n'y suffit pas au premier chargement, quand le module n'est encore
+   * ni bundlé ni en cache.
+   */
+  play: async ({ canvasElement }) => {
+    const canvas = await waitFor(
+      () => {
+        const found = canvasElement.querySelector('canvas');
+        expect(found).toBeTruthy();
+        return found as HTMLCanvasElement;
+      },
+      { timeout: 15_000 },
+    );
+
+    // Un canvas de largeur nulle signifie un graphique monté mais jamais peint.
+    expect(canvas.width).toBeGreaterThan(0);
+    expect(canvas.height).toBeGreaterThan(0);
+  },
+};
 
 export const Line: Story = {
   args: {

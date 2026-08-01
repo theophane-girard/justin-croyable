@@ -1,5 +1,6 @@
 import { SelectImports, type SelectSizeVariants } from '@justin-croyable/design-system';
-import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
+import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
+import { expect, userEvent, waitFor, within } from 'storybook/test';
 
 type SelectArgs = {
   placeholder: string;
@@ -75,7 +76,28 @@ const meta: Meta<SelectArgs> = {
 export default meta;
 type Story = StoryObj<SelectArgs>;
 
-export const Default: Story = {};
+export const Default: Story = {
+  play: async ({ canvasElement }) => {
+    const declencheur = canvasElement.querySelector<HTMLElement>('[role="combobox"]')!;
+    expect(declencheur.textContent).toContain('Sélectionner un rôle…');
+
+    await userEvent.click(declencheur);
+
+    // La liste est rendue dans une couche du CDK, donc hors du canevas.
+    const liste = await waitFor(() => {
+      const trouvee = document.querySelector<HTMLElement>('[role="listbox"]');
+      expect(trouvee).toBeTruthy();
+      return trouvee!;
+    });
+
+    await userEvent.click(within(liste).getByText('Éditeur'));
+
+    await waitFor(() => {
+      expect(declencheur.textContent).toContain('Éditeur');
+      expect(document.querySelector('[role="listbox"]')).toBeNull();
+    });
+  },
+};
 
 export const WithLabelAndHint: Story = {
   args: {

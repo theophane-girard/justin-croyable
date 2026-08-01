@@ -5,7 +5,8 @@ import {
   type PopoverPlacement,
   type PopoverTrigger,
 } from '@justin-croyable/design-system';
-import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular';
+import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
+import { expect, userEvent, waitFor } from 'storybook/test';
 
 type PopoverArgs = {
   placement: PopoverPlacement;
@@ -69,9 +70,55 @@ const meta: Meta<PopoverArgs> = {
 export default meta;
 type Story = StoryObj<PopoverArgs>;
 
-export const Default: Story = {};
+/**
+ * Le panneau est rendu dans une couche du CDK, greffée sur `document.body` : les
+ * assertions visent le document, pas le canevas de la story.
+ */
+async function attendrePanneau(): Promise<HTMLElement> {
+  return waitFor(() => {
+    const panneau = document.querySelector<HTMLElement>('app-popover');
+    expect(panneau).toBeTruthy();
+    return panneau!;
+  });
+}
 
-export const OnHover: Story = { args: { trigger: 'hover' } };
+async function fermerEtAttendre(declencheur: HTMLElement): Promise<void> {
+  await userEvent.click(declencheur);
+  await waitFor(() => {
+    expect(document.querySelector('app-popover')).toBeNull();
+  });
+}
+
+export const Default: Story = {
+  play: async ({ canvasElement }) => {
+    const declencheur = canvasElement.querySelector<HTMLElement>('button')!;
+    expect(document.querySelector('app-popover')).toBeNull();
+
+    await userEvent.click(declencheur);
+    const panneau = await attendrePanneau();
+    expect(panneau.textContent).toContain('Dimensions');
+
+    // Un second clic referme : sans quoi le panneau resterait dans la couche et
+    // fausserait la story suivante.
+    await fermerEtAttendre(declencheur);
+  },
+};
+
+export const OnHover: Story = {
+  args: { trigger: 'hover' },
+  play: async ({ canvasElement }) => {
+    const declencheur = canvasElement.querySelector<HTMLElement>('button')!;
+
+    await userEvent.hover(declencheur);
+    const panneau = await attendrePanneau();
+    expect(panneau.textContent).toContain('Dimensions');
+
+    await userEvent.unhover(declencheur);
+    await waitFor(() => {
+      expect(document.querySelector('app-popover')).toBeNull();
+    });
+  },
+};
 
 export const Placements: Story = {
   parameters: { controls: { disable: true } },

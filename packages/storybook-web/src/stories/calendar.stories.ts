@@ -1,5 +1,6 @@
 import { CalendarComponent, type CalendarMode, type CalendarValue } from '@justin-croyable/design-system';
-import type { Meta, StoryObj } from '@storybook/angular';
+import type { Meta, StoryObj } from '@storybook/angular-vite';
+import { expect, userEvent, waitFor } from 'storybook/test';
 
 type CalendarArgs = {
   mode: CalendarMode;
@@ -55,9 +56,49 @@ const meta: Meta<CalendarArgs> = {
 export default meta;
 type Story = StoryObj<CalendarArgs>;
 
-export const Default: Story = {};
+const joursSelectionnes = (canvasElement: HTMLElement): string[] =>
+  [...canvasElement.querySelectorAll('[role="gridcell"] button[aria-selected="true"]')].map(
+    jour => jour.textContent?.trim() ?? '',
+  );
 
-export const Multiple: Story = { args: { mode: 'multiple' } };
+function joursActivables(canvasElement: HTMLElement): HTMLButtonElement[] {
+  return [
+    ...canvasElement.querySelectorAll<HTMLButtonElement>('[role="gridcell"] button'),
+  ].filter(jour => !jour.disabled);
+}
+
+export const Default: Story = {
+  play: async ({ canvasElement }) => {
+    expect(joursSelectionnes(canvasElement)).toEqual([]);
+
+    const jours = joursActivables(canvasElement);
+    await userEvent.click(jours[10]);
+    await waitFor(() => {
+      expect(joursSelectionnes(canvasElement)).toEqual([jours[10].textContent?.trim()]);
+    });
+
+    // En mode `single`, choisir un autre jour remplace la sélection.
+    await userEvent.click(jours[15]);
+    await waitFor(() => {
+      expect(joursSelectionnes(canvasElement)).toEqual([jours[15].textContent?.trim()]);
+    });
+  },
+};
+
+export const Multiple: Story = {
+  args: { mode: 'multiple' },
+  play: async ({ canvasElement }) => {
+    const jours = joursActivables(canvasElement);
+
+    await userEvent.click(jours[10]);
+    await userEvent.click(jours[15]);
+
+    // En mode `multiple`, les jours s'accumulent.
+    await waitFor(() => {
+      expect(joursSelectionnes(canvasElement).length).toBe(2);
+    });
+  },
+};
 
 export const Range: Story = { args: { mode: 'range' } };
 

@@ -1,5 +1,5 @@
 {
-  "//": "Typecheck Nx des stories et de la config Storybook. La compilation réelle (AOT Angular) passe par .storybook/tsconfig.json.",
+  "//": "Typecheck Nx des stories, de la config Storybook et du harnais Vitest. La compilation réelle (AOT Angular) passe par .storybook/tsconfig.json.",
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
@@ -12,7 +12,7 @@
     "noUnusedLocals": false,
     "tsBuildInfoFile": "dist/tsconfig.app.tsbuildinfo"
   },
-  "include": ["src/**/*.ts", ".storybook/main.ts"],
+  "include": ["src/**/*.ts", ".storybook/main.ts", "vitest.config.ts"],
   "exclude": ["dist", "out-tsc", "src/**/*.spec.ts"],
   "references": [
     {
