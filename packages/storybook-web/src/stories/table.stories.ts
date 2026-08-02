@@ -78,7 +78,6 @@ export const Default: Story = {
       expect(canvasElement.querySelector('.ag-root-wrapper')).toBeTruthy();
     });
 
-    // Une grille montée mais vide passerait un simple test de présence.
     await waitFor(() => {
       expect(canvasElement.querySelectorAll('.ag-row').length).toBe(membres.length);
     });
@@ -99,8 +98,6 @@ export const Paginated: Story = {
         nom: `${membres[index % membres.length].nom} ${index + 1}`,
         contributions: 40 + index * 7,
       })),
-      // La taille de page doit figurer dans le sélecteur, sinon AG Grid la
-      // refuse et retombe sur sa valeur par défaut.
       gridOptions: {
         pagination: true,
         paginationPageSize: 10,

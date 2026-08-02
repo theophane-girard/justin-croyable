@@ -83,8 +83,6 @@ export const Default: Story = {
     const champ = canvasElement.querySelector<HTMLInputElement>('input')!;
     const libelle = canvasElement.querySelector('label')!;
 
-    // Le libellé doit être relié au champ, sinon le clic dessus ne le focalise
-    // pas et le lecteur d'écran ne l'annonce pas.
     expect(libelle.getAttribute('for')).toBe(champ.id);
     expect(canvasElement.textContent).toContain('Nous ne partagerons jamais votre adresse.');
 

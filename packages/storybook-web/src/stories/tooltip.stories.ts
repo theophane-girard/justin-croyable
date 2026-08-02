@@ -78,16 +78,12 @@ export const Default: Story = {
 
     await userEvent.hover(declencheur);
 
-    // La bulle est créée vide puis remplie : attendre sa seule présence
-    // laisserait passer un contenu jamais projeté.
     await waitFor(() => {
       expect(document.querySelector('[data-slot="tooltip-content"]')?.textContent).toContain(
         'Ajouter aux favoris',
       );
     });
 
-    // La sortie doit refermer : la directive expose `show`/`hide` en sorties et
-    // ses méthodes internes ont dû être renommées pour ne pas les masquer.
     await userEvent.unhover(declencheur);
     await waitFor(() => {
       expect(document.querySelector('[data-slot="tooltip-content"]')).toBeNull();
@@ -100,7 +96,6 @@ export const OnClick: Story = {
   play: async ({ canvasElement }) => {
     const declencheur = canvasElement.querySelector<HTMLElement>('button')!;
 
-    // En mode clic, le survol seul ne doit rien afficher.
     await userEvent.hover(declencheur);
     expect(document.querySelector('[data-slot="tooltip-content"]')).toBeNull();
 

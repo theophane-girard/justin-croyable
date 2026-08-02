@@ -122,11 +122,6 @@ export const Left: Story = {
     const panneau = await ouvrirPanneau(canvasElement);
 
     expect(panneau.querySelector('[data-slot="sheet-title"]')?.textContent?.trim()).toBe('Filtres');
-    /**
-     * L'action principale est rendue avant l'annulation, à l'inverse du dialog
-     * qui place `Annuler` en premier. L'assertion fige l'ordre observé, elle ne
-     * l'approuve pas : les deux composants du même DS devraient s'accorder.
-     */
     const actions = [...panneau.querySelectorAll('[data-slot="sheet-footer"] button')].map(bouton =>
       bouton.textContent?.trim(),
     );
@@ -140,7 +135,6 @@ export const Right: Story = {
   args: { side: 'right' },
   play: async ({ canvasElement }) => {
     const panneau = await ouvrirPanneau(canvasElement);
-    // Le côté pilote le placement, c'est la seule chose que change cette story.
     expect(panneau.getAttribute('data-side') ?? panneau.className).toContain('right');
 
     await fermerParAnnuler();

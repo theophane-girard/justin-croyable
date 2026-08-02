@@ -16,9 +16,6 @@ type InputArgs = {
 
 const meta: Meta<InputArgs> = {
   title: 'Composants/Input',
-  // Pas de `component` ici : c'est une directive, et l'extraction d'args de
-  // Storybook attend un composant. La directive est fournie par `moduleMetadata`
-  // et les args sont déclarés explicitement ci-dessous.
   tags: ['autodocs'],
   decorators: [moduleMetadata({ imports: [InputDirective] })],
   parameters: {

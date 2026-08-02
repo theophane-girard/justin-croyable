@@ -69,7 +69,6 @@ export const WithAction: Story = {
   args: { action: 'Modifier', headerBorder: true, footerBorder: true },
 };
 
-/** Sans titre ni description, la carte n'est qu'une surface de contenu. */
 export const ContentOnly: Story = {
   parameters: { controls: { disable: true } },
   render: () => ({

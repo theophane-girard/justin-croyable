@@ -26,8 +26,6 @@ const meta: Meta<SwitchArgs> = {
   args: { checked: true, type: 'default', size: 'default', disabled: false },
   render: args => ({
     props: args,
-    // `checked` est un `model()` : la liaison bidirectionnelle renvoie l'état
-    // dans les args, donc le contrôle Storybook reste synchrone avec le clic.
     template: `
       <app-switch [(checked)]="checked" [type]="type" [size]="size" [disabled]="disabled" />
     `,
@@ -79,7 +77,6 @@ export const Sizes: Story = {
   }),
 };
 
-/** Associé à un libellé cliquable via `id`. */
 export const WithLabel: Story = {
   parameters: { controls: { disable: true } },
   render: () => ({

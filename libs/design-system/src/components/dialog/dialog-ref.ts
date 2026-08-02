@@ -7,10 +7,11 @@ import { filter, takeUntil } from 'rxjs';
 
 import type { DialogComponent, DialogOptions } from './dialog.component';
 
-const enum eTriggerAction {
-  CANCEL = 'cancel',
-  OK = 'ok',
-}
+const TRIGGER_ACTION = {
+  CANCEL: 'cancel',
+  OK: 'ok',
+} as const;
+type TriggerAction = (typeof TRIGGER_ACTION)[keyof typeof TRIGGER_ACTION];
 
 const ESCAPE_KEYS = ['Escape', 'Esc'] as const;
 
@@ -71,10 +72,10 @@ export class DialogRef<T = unknown, R = unknown, U = unknown> {
 
     outputToObservable(this.containerInstance.cancelTriggered)
       .pipe(takeUntil(detached$))
-      .subscribe(() => this.trigger(eTriggerAction.CANCEL));
+      .subscribe(() => this.trigger(TRIGGER_ACTION.CANCEL));
     outputToObservable(this.containerInstance.okTriggered)
       .pipe(takeUntil(detached$))
-      .subscribe(() => this.trigger(eTriggerAction.OK));
+      .subscribe(() => this.trigger(TRIGGER_ACTION.OK));
 
     if (config.maskClosable ?? true) {
       this.overlayRef
@@ -144,8 +145,8 @@ export class DialogRef<T = unknown, R = unknown, U = unknown> {
     return DialogRef.stack[DialogRef.stack.length - 1] === (this as unknown as DialogRef);
   }
 
-  private trigger(action: eTriggerAction) {
-    const trigger = action === eTriggerAction.OK ? this.config.onOk : this.config.onCancel;
+  private trigger(action: TriggerAction) {
+    const trigger = action === TRIGGER_ACTION.OK ? this.config.onOk : this.config.onCancel;
 
     if (trigger instanceof EventEmitter) {
       trigger.emit(this._componentInstance() as T);

@@ -72,8 +72,6 @@ type Story = StoryObj<TabsArgs>;
 
 export const Default: Story = {
   play: async ({ canvasElement }) => {
-    // La barre d'onglets est alimentée par une requête de contenu : elle est
-    // vide au premier rendu et se remplit au cycle suivant.
     const onglets = await waitFor(() => {
       const trouves = canvasElement.querySelectorAll<HTMLElement>('[role="tab"]');
       expect(trouves.length).toBe(3);
@@ -88,7 +86,6 @@ export const Default: Story = {
       expect(onglets[0].getAttribute('aria-selected')).toBe('false');
     });
 
-    // Le panneau visible doit suivre l'onglet, pas seulement son état ARIA.
     const panneaux = [...canvasElement.querySelectorAll('[role="tabpanel"]')];
     expect(panneaux.some(panneau => panneau.textContent?.includes('double authentification'))).toBe(
       true,
@@ -102,7 +99,6 @@ export const VerticalTabs: Story = { args: { tabsPosition: 'left', activePositio
 
 export const Centered: Story = { args: { alignTabs: 'center' } };
 
-/** Beaucoup d'onglets : la barre défile et les flèches apparaissent. */
 export const Scrollable: Story = {
   parameters: { controls: { disable: true } },
   render: () => ({

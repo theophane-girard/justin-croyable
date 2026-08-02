@@ -163,7 +163,6 @@ export const Bars: Story = {
       { timeout: 15_000 },
     );
 
-    // Un canvas de largeur nulle signifie un graphique monté mais jamais peint.
     expect(canvas.width).toBeGreaterThan(0);
     expect(canvas.height).toBeGreaterThan(0);
   },

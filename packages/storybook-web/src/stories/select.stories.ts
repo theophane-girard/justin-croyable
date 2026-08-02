@@ -83,7 +83,6 @@ export const Default: Story = {
 
     await userEvent.click(declencheur);
 
-    // La liste est rendue dans une couche du CDK, donc hors du canevas.
     const liste = await waitFor(() => {
       const trouvee = document.querySelector<HTMLElement>('[role="listbox"]');
       expect(trouvee).toBeTruthy();

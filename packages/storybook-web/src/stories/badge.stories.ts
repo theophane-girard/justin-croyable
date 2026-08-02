@@ -59,7 +59,6 @@ export const Shapes: Story = {
   }),
 };
 
-/** Cas d'usage typique : un compteur dans une pilule. */
 export const Counter: Story = {
   parameters: { controls: { disable: true } },
   render: () => ({

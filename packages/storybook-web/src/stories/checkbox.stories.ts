@@ -57,8 +57,6 @@ export const Disabled: Story = {
     const boite = canvasElement.querySelector<HTMLInputElement>('input[type="checkbox"]');
     expect(boite!.disabled).toBe(true);
 
-    // `userEvent.click` respecte l'état désactivé : c'est bien l'absence de
-    // bascule qu'on vérifie, pas l'absence de gestionnaire.
     await userEvent.click(boite!, { pointerEventsCheck: 0 });
     expect(boite!.checked).toBe(false);
   },

@@ -1,12 +1,6 @@
 import { ButtonComponent, type ButtonShape, type ButtonSize, type ButtonVariant } from '@justin-croyable/design-system';
 import type { Meta, StoryObj } from '@storybook/angular-vite';
 
-/**
- * Les args sont typés par une interface locale plutôt que par la classe du
- * composant : les entrées sont des `InputSignal`, et `Partial<ButtonComponent>`
- * attendrait donc des signaux, pas des valeurs. Même parti pris dans toutes les
- * stories de ce dossier.
- */
 type ButtonArgs = {
   variant: ButtonVariant;
   size: ButtonSize;

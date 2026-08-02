@@ -71,14 +71,11 @@ export const Default: Story = {
       'Facturation',
     ]);
 
-    // La palette est rendue à plat : la recherche masque les options, elle ne
-    // les retire pas d'un DOM déjà construit — d'où l'attente sur le décompte.
     await userEvent.type(canvasElement.querySelector<HTMLInputElement>('input')!, 'fact');
     await waitFor(() => {
       expect(libelles()).toEqual(['Facturation']);
     });
 
-    // L'option filtrée reste celle qui est désactivée dans le gabarit.
     expect(
       canvasElement.querySelector('[role="option"]')?.getAttribute('data-disabled'),
     ).toBe('true');
@@ -89,7 +86,6 @@ export const Small: Story = { args: { size: 'sm' } };
 
 export const ExtraLarge: Story = { args: { size: 'xl' } };
 
-/** Liste plate, sans regroupement. */
 export const Flat: Story = {
   parameters: { controls: { disable: true } },
   render: () => ({
