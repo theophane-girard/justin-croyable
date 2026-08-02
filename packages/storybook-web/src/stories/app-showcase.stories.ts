@@ -405,6 +405,11 @@ const meta: Meta<AppShowcaseComponent> = {
   decorators: [moduleMetadata({ imports: [AppShowcaseComponent] })],
   parameters: {
     layout: 'fullscreen',
+    // L'app fournit son propre fond (`bg-background`) : on désactive le canvas
+    // « ds-white » de Storybook, sinon il transparaît en thème sombre là où
+    // l'app ne peint pas jusqu'au bord. Le `body { bg-background }` du thème
+    // prend alors le relais et suit le thème.
+    backgrounds: { disable: true },
     docs: {
       description: {
         component:

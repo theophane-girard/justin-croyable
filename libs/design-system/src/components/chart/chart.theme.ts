@@ -59,9 +59,10 @@ function baseOption(palette: ThemePalette): EChartsCoreOption {
     textStyle: { fontFamily: CHART_FONT_FAMILY, color: palette.foreground },
     title: { textStyle: { fontFamily: CHART_FONT_FAMILY, color: palette.foreground } },
     legend: {
-      // Repères carrés (et non arrondis) : parti pris du DS, appliqué à tous les
-      // graphiques. `itemWidth === itemHeight` pour un carré franc.
-      icon: 'rect',
+      // Repères en carrés arrondis (parti pris du DS), appliqué à tous les
+      // graphiques. `itemWidth === itemHeight` pour un carré, `roundRect` pour
+      // l'arrondi (aligné sur l'arrondi des marques).
+      icon: 'roundRect',
       itemWidth: 12,
       itemHeight: 12,
       textStyle: { fontFamily: CHART_FONT_FAMILY, color: palette.mutedForeground },
