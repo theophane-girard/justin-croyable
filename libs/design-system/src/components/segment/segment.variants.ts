@@ -6,7 +6,7 @@ export const segmentVariants = cva(
     variants: {
       variant: {
         default: 'bg-muted',
-        accent: 'bg-accent',
+        accent: 'bg-muted',
       },
       size: {
         sm: 'h-8',
@@ -27,7 +27,7 @@ export const segmentIndicatorVariants = cva(
     variants: {
       variant: {
         default: 'bg-background',
-        accent: 'bg-primary',
+        accent: 'bg-accent',
       },
     },
     defaultVariants: {
@@ -56,7 +56,7 @@ export const segmentItemVariants = cva(
     },
     compoundVariants: [
       { variant: 'default', active: true, class: 'text-foreground' },
-      { variant: 'accent', active: true, class: 'text-primary-foreground' },
+      { variant: 'accent', active: true, class: 'text-accent-foreground' },
     ],
     defaultVariants: {
       size: 'default',
