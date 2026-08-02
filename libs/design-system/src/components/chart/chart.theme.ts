@@ -79,8 +79,10 @@ function baseOption(palette: ThemePalette): OptionObject {
 
 /** Couleur d'une série : explicite si fournie, sinon la couleur de palette de son rang. */
 function seriesColor(series: OptionObject, palette: ThemePalette, index: number): string {
-  const fromItem = isPlainObject(series.itemStyle) ? series.itemStyle.color : undefined;
-  const fromLine = isPlainObject(series.lineStyle) ? series.lineStyle.color : undefined;
+  const itemStyle = series['itemStyle'];
+  const lineStyle = series['lineStyle'];
+  const fromItem = isPlainObject(itemStyle) ? itemStyle['color'] : undefined;
+  const fromLine = isPlainObject(lineStyle) ? lineStyle['color'] : undefined;
   if (typeof fromItem === 'string') {
     return fromItem;
   }
@@ -116,20 +118,21 @@ function areaGradient(color: string): OptionObject {
 
 /** Injecte les partis pris du DS selon le type de série ; les valeurs de l'appelant priment. */
 function themeForSeries(series: OptionObject, palette: ThemePalette, index: number): OptionObject {
-  switch (series.type) {
+  switch (series['type']) {
     case 'bar': {
       const itemStyle: OptionObject = { borderRadius: MARK_RADIUS };
       // Écart entre segments seulement quand les barres sont empilées.
-      if (series.stack !== undefined && series.stack !== null && series.stack !== '') {
-        itemStyle.borderColor = palette.background;
-        itemStyle.borderWidth = SEGMENT_GAP;
+      const stack = series['stack'];
+      if (stack !== undefined && stack !== null && stack !== '') {
+        itemStyle['borderColor'] = palette.background;
+        itemStyle['borderWidth'] = SEGMENT_GAP;
       }
       return mergeDeep({ itemStyle }, series) as OptionObject;
     }
     case 'line': {
       const themed = mergeDeep({ smooth: true }, series) as OptionObject;
       // Dégradé d'aire uniquement là où une aire est demandée (sinon on en forcerait une).
-      if (series.areaStyle !== undefined && series.areaStyle !== null) {
+      if (series['areaStyle'] !== undefined && series['areaStyle'] !== null) {
         return mergeDeep(themed, {
           areaStyle: { color: areaGradient(seriesColor(series, palette, index)) },
         }) as OptionObject;
@@ -165,14 +168,14 @@ function themeForSeries(series: OptionObject, palette: ThemePalette, index: numb
  */
 export function applyChartTheme(option: EChartsCoreOption, palette: ThemePalette): EChartsCoreOption {
   const merged = mergeDeep(baseOption(palette), option) as OptionObject;
-  const { series } = merged;
+  const series = merged['series'];
 
   if (Array.isArray(series)) {
-    merged.series = series.map((item, index) =>
+    merged['series'] = series.map((item, index) =>
       isPlainObject(item) ? themeForSeries(item, palette, index) : item,
     );
   } else if (isPlainObject(series)) {
-    merged.series = themeForSeries(series, palette, 0);
+    merged['series'] = themeForSeries(series, palette, 0);
   }
 
   return merged as unknown as EChartsCoreOption;
