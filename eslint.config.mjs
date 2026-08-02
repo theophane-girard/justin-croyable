@@ -36,7 +36,13 @@ export default [
       '**/*.cjs',
       '**/*.mjs',
     ],
-    // Override or add rules here
-    rules: {},
+    rules: {
+      'dot-notation': [
+        'warn',
+        {
+          allowKeywords: true,
+        },
+      ],
+    },
   },
 ];
