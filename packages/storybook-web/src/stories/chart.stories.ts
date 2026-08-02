@@ -23,6 +23,17 @@ const barres: EChartsCoreOption = {
   ],
 };
 
+const barresEmpilees: EChartsCoreOption = {
+  tooltip: { trigger: 'axis' },
+  legend: { data: ['Inscriptions', 'Désabonnements'] },
+  xAxis: { type: 'category', data: mois },
+  yAxis: { type: 'value' },
+  series: [
+    { name: 'Inscriptions', type: 'bar', stack: 'total', data: [820, 932, 901, 1290, 1330, 1520] },
+    { name: 'Désabonnements', type: 'bar', stack: 'total', data: [120, 132, 101, 134, 90, 230] },
+  ],
+};
+
 const jauge: EChartsCoreOption = {
   series: [
     {
@@ -233,17 +244,18 @@ export const MultipleSeries: Story = {
 
 /**
  * Exemple d'assemblage : un tableau de bord de 4 cartes en grille 2×2
- * (histogramme, jauge, courbe, camembert), chacune enveloppant un `app-chart`.
- * Illustre l'usage du composant en situation réelle, pas seulement isolé.
+ * (histogramme empilé, jauge, courbe, camembert), chacune enveloppant un
+ * `app-chart`. Illustre l'usage du composant en situation réelle et le thème du
+ * DS (police, arrondis, écarts entre segments, dégradé d'aire, jauge épurée).
  */
 export const Dashboard: Story = {
   render: () => ({
-    props: { barres, jauge, courbe, camembert },
+    props: { barresEmpilees, jauge, courbe, camembert },
     template: `
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div class="border-border rounded-lg border p-4">
-          <h3 class="text-foreground mb-3 text-sm font-medium">Inscriptions & désabonnements</h3>
-          <app-chart [options]="barres" height="15rem" />
+          <h3 class="text-foreground mb-3 text-sm font-medium">Inscriptions & désabonnements (empilé)</h3>
+          <app-chart [options]="barresEmpilees" height="15rem" />
         </div>
         <div class="border-border rounded-lg border p-4">
           <h3 class="text-foreground mb-3 text-sm font-medium">Taux de satisfaction</h3>

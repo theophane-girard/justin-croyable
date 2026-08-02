@@ -3,9 +3,11 @@ import type { ClassValue } from 'clsx';
 import type { EChartsCoreOption } from 'echarts/core';
 import { NgxEchartsDirective } from 'ngx-echarts';
 
-import { ThemePaletteService, type ThemePalette } from '../../core/services/theme-palette.service';
+import { ThemePaletteService } from '../../core/services/theme-palette.service';
 import { CHART_DEFAULTS } from '../../providers/tokens';
 import { mergeClasses } from '../../utils/merge-classes';
+
+import { applyChartTheme } from './chart.theme';
 
 /** Forme du skeleton affiché pendant le chargement, selon le type de graphique. */
 export type ChartSkeletonType = 'bar' | 'pie' | 'gauge' | 'line' | 'curve';
@@ -117,38 +119,13 @@ export class ChartComponent {
   protected readonly skeletonBars = [45, 70, 55, 85, 60, 95, 50, 75] as const;
 
   /**
-   * ECharts rend dans un canvas : il ne résout pas `var(--primary)`. Les couleurs
-   * du thème sont donc injectées en valeurs concrètes, et recalculées quand le
-   * thème change puisque la palette est un signal.
+   * Options finales : le thème du DS (couleurs, police, arrondis, écarts entre
+   * segments, dégradé d'aire, jauge sans aiguille…) appliqué aux options de
+   * l'appelant. Recalculé quand le thème change, la palette étant un signal.
    *
-   * Les options de l'appelant sont fusionnées par-dessus, il garde le dernier mot.
+   * Voir `chart.theme.ts` : les options de l'appelant priment sur les défauts.
    */
-  protected readonly themedOptions = computed<EChartsCoreOption>(() => ({
-    ...themeBase(this.palette.palette()),
-    ...this.options(),
-  }));
-}
-
-function themeBase(palette: ThemePalette): EChartsCoreOption {
-  const axis = {
-    axisLine: { lineStyle: { color: palette.border } },
-    axisTick: { lineStyle: { color: palette.border } },
-    axisLabel: { color: palette.mutedForeground },
-    splitLine: { lineStyle: { color: palette.border, type: 'dashed' as const } },
-  };
-
-  return {
-    color: palette.series,
-    backgroundColor: 'transparent',
-    textStyle: { color: palette.foreground },
-    title: { textStyle: { color: palette.foreground } },
-    legend: { textStyle: { color: palette.mutedForeground } },
-    tooltip: {
-      backgroundColor: palette.popover,
-      borderColor: palette.border,
-      textStyle: { color: palette.popoverForeground },
-    },
-    xAxis: axis,
-    yAxis: axis,
-  };
+  protected readonly themedOptions = computed<EChartsCoreOption>(() =>
+    applyChartTheme(this.options(), this.palette.palette()),
+  );
 }
