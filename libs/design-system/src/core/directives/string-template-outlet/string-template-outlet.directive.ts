@@ -100,7 +100,7 @@ export class StringTemplateOutletDirective<T = unknown> implements OnDestroy {
     }
 
     if (!isTemplateRef(stringTemplateOutlet)) {
-      this.context['$implicit'] = stringTemplateOutlet as T;
+      this.context.$implicit = stringTemplateOutlet as T;
     }
 
     const recreateView = this.#shouldViewBeRecreated(stringTemplateOutlet, stringTemplateOutletContext);

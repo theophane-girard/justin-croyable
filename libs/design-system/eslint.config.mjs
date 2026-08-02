@@ -26,9 +26,22 @@ export default tseslint.config(
     files: ['**/*.ts'],
     extends: asWarnings(angular.configs.tsRecommended),
     processor: angular.processInlineTemplates,
+    languageOptions: {
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
     rules: {
+      '@typescript-eslint/dot-notation': [
+        'error',
+        {
+          allowKeywords: true,
+          allowIndexSignaturePropertyAccess: true,
+        },
+      ],
       'no-restricted-syntax': [
-        'warn',
+        'error',
         {
           selector:
             'CallExpression[callee.property.name=/^(get|addControl|removeControl|setControl|contains)$/][arguments.0.type="Literal"]',
