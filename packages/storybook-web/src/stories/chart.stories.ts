@@ -8,6 +8,7 @@ type ChartArgs = {
   height: string;
   loading: boolean;
   skeletonType: ChartSkeletonType;
+  seriesCount?: number;
 };
 
 const mois = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin'];
@@ -70,6 +71,50 @@ const camembert: EChartsCoreOption = {
   ],
 };
 
+type ChartSeriesItem = { type?: string; name?: string; data?: unknown[]; [key: string]: unknown };
+
+/**
+ * Régénère `count` séries à partir de la première comme gabarit (ou `count`
+ * secteurs pour un camembert). Renvoie les options telles quelles quand le
+ * nombre demandé égale celui d'origine, pour préserver les données par défaut.
+ */
+function withSeriesCount(options: EChartsCoreOption, count: number | undefined): EChartsCoreOption {
+  const series = (options as EChartsCoreOption & { series?: ChartSeriesItem[] }).series;
+  if (!count || count < 1 || !series || series.length === 0) {
+    return options;
+  }
+  const [template] = series;
+
+  if (template.type === 'pie') {
+    if (count === (template.data?.length ?? 0)) {
+      return options;
+    }
+    const data = Array.from({ length: count }, (_, index) => ({
+      value: 300 + ((index * 137) % 900),
+      name: `Série ${index + 1}`,
+    }));
+    return { ...options, series: [{ ...template, data }] } as EChartsCoreOption;
+  }
+
+  if (count === series.length) {
+    return options;
+  }
+  const generated = Array.from({ length: count }, (_, index) => ({
+    ...template,
+    name: `Série ${index + 1}`,
+    data: mois.map((_, position) => 200 + index * 120 + position * 30),
+  }));
+  return { ...options, series: generated } as EChartsCoreOption;
+}
+
+/** Contrôle « nombre de séries » attaché aux stories non-loading. */
+const seriesCountControl: Meta<ChartArgs>['argTypes'] = {
+  seriesCount: {
+    control: { type: 'number', min: 1, max: 12 },
+    description: 'Nombre de séries (courbes) affichées',
+  },
+};
+
 const meta: Meta<ChartArgs> = {
   title: 'Composants/Chart',
   component: ChartComponent,
@@ -91,7 +136,7 @@ const meta: Meta<ChartArgs> = {
   },
   args: { options: barres, height: '20rem', loading: false, skeletonType: 'bar' },
   render: args => ({
-    props: args,
+    props: { ...args, options: withSeriesCount(args.options, args.seriesCount) },
     template: `<app-chart [options]="options" [height]="height" [loading]="loading" [skeletonType]="skeletonType" />`,
   }),
 };
@@ -100,6 +145,8 @@ export default meta;
 type Story = StoryObj<ChartArgs>;
 
 export const Bars: Story = {
+  argTypes: seriesCountControl,
+  args: { seriesCount: 2 },
   /**
    * ECharts est chargé à la demande par `withCharts()`, d'où l'attente : le
    * canvas n'existe qu'une fois le bundle résolu. Le délai par défaut d'une
@@ -123,7 +170,9 @@ export const Bars: Story = {
 };
 
 export const Line: Story = {
+  argTypes: seriesCountControl,
   args: {
+    seriesCount: 1,
     options: {
       tooltip: { trigger: 'axis' },
       xAxis: { type: 'category', boundaryGap: false, data: mois },
@@ -136,8 +185,10 @@ export const Line: Story = {
 };
 
 export const Pie: Story = {
+  argTypes: seriesCountControl,
   args: {
     height: '22rem',
+    seriesCount: 4,
     options: {
       tooltip: { trigger: 'item' },
       legend: { bottom: 0 },
@@ -224,7 +275,9 @@ export const Reloading: Story = {
 };
 
 export const MultipleSeries: Story = {
+  argTypes: seriesCountControl,
   args: {
+    seriesCount: 5,
     options: {
       tooltip: { trigger: 'axis' },
       legend: {},
@@ -244,10 +297,15 @@ export const MultipleSeries: Story = {
  * (histogramme empilé, jauge, courbe, camembert), chacune enveloppant un
  * `app-chart`. Illustre l'usage du composant en situation réelle et le thème du
  * DS (police, arrondis, écarts entre segments, dégradé d'aire, jauge épurée).
+ *
+ * Le contrôle « seriesCount » pilote ici le nombre de courbes de la carte
+ * « Sessions (tendance) ».
  */
 export const Dashboard: Story = {
-  render: () => ({
-    props: { barresEmpilees, jauge, courbe, camembert },
+  argTypes: seriesCountControl,
+  args: { seriesCount: 1 },
+  render: args => ({
+    props: { barresEmpilees, jauge, courbe: withSeriesCount(courbe, args.seriesCount), camembert },
     template: `
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div class="border-border rounded-lg border p-4">
