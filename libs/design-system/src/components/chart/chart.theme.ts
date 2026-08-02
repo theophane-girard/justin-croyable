@@ -41,6 +41,13 @@ const MARK_RADIUS = 6;
  */
 const SEGMENT_GAP = 3;
 
+/**
+ * Débord du secteur survolé, vers l'extérieur uniquement : ECharts n'applique
+ * `scaleSize` qu'au rayon externe, le rayon interne d'un anneau ne bouge pas.
+ * Volontairement plus discret que les 5px par défaut d'ECharts.
+ */
+const PIE_EMPHASIS_SCALE_SIZE = 4;
+
 /** Type de la couleur d'aire d'une série ligne (accepte une chaîne ou un dégradé). */
 type AreaColor = NonNullable<NonNullable<LineSeriesOption['areaStyle']>['color']>;
 
@@ -156,20 +163,26 @@ function themeForSeries(series: SeriesOption, palette: ThemePalette, index: numb
       }
       return themed;
     }
-    case 'pie':
+    case 'pie': {
+      const itemStyle = {
+        borderRadius: MARK_RADIUS,
+        borderColor: palette.background,
+        borderWidth: SEGMENT_GAP,
+        ...series.itemStyle,
+      };
       return {
         ...series,
-        itemStyle: {
-          borderRadius: MARK_RADIUS,
-          borderColor: palette.background,
-          borderWidth: SEGMENT_GAP,
-          ...series.itemStyle,
-        },
+        itemStyle,
         emphasis: {
+          scale: true,
+          scaleSize: PIE_EMPHASIS_SCALE_SIZE,
           ...series.emphasis,
-          itemStyle: { color: 'inherit', borderColor: 'inherit', ...series.emphasis?.itemStyle },
+          // Habillage identique au repos : le secteur survolé déborde vers l'extérieur
+          // sans récupérer l'écart qui le sépare de ses voisins ni perdre ses arrondis.
+          itemStyle: { ...itemStyle, color: 'inherit', ...series.emphasis?.itemStyle },
         },
       };
+    }
     case 'gauge':
       return {
         ...series,
