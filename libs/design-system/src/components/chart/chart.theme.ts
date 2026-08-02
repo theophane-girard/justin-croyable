@@ -133,10 +133,20 @@ function themeForSeries(series: SeriesOption, palette: ThemePalette, index: numb
           ...(stacked ? { borderColor: palette.background, borderWidth: SEGMENT_GAP / 2 } : {}),
           ...series.itemStyle,
         },
+        emphasis: {
+          ...series.emphasis,
+          itemStyle: { color: 'inherit', borderColor: 'inherit', ...series.emphasis?.itemStyle },
+        },
       };
     }
     case 'line': {
-      const themed: LineSeriesOption = { smooth: true, ...series };
+      const emphasis = {
+        ...series.emphasis,
+        lineStyle: { color: 'inherit', ...series.emphasis?.lineStyle },
+        itemStyle: { color: 'inherit', ...series.emphasis?.itemStyle },
+        areaStyle: { color: 'inherit', ...series.emphasis?.areaStyle },
+      };
+      const themed: LineSeriesOption = { smooth: true, ...series, emphasis };
       // Dégradé d'aire uniquement là où une aire est demandée (sinon on en forcerait une).
       if (series.areaStyle) {
         return {
@@ -155,6 +165,10 @@ function themeForSeries(series: SeriesOption, palette: ThemePalette, index: numb
           borderWidth: SEGMENT_GAP,
           ...series.itemStyle,
         },
+        emphasis: {
+          ...series.emphasis,
+          itemStyle: { color: 'inherit', borderColor: 'inherit', ...series.emphasis?.itemStyle },
+        },
       };
     case 'gauge':
       return {
@@ -162,7 +176,12 @@ function themeForSeries(series: SeriesOption, palette: ThemePalette, index: numb
         pointer: { show: false, ...series.pointer },
         anchor: { show: false, ...series.anchor },
         progress: { show: true, roundCap: true, ...series.progress },
-        axisLine: { roundCap: true, ...series.axisLine },
+        axisLine: {
+          roundCap: true,
+          ...series.axisLine,
+          // Piste non remplie : couleur du thème (s'adapte clair/sombre) au lieu du gris clair par défaut d'ECharts.
+          lineStyle: { color: [[1, palette.border]], ...series.axisLine?.lineStyle },
+        },
         // Graduations masquées (ticks, séparateurs et libellés numériques de l'échelle).
         axisTick: { show: false, ...series.axisTick },
         splitLine: { show: false, ...series.splitLine },
