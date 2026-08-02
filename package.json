@@ -88,6 +88,7 @@
   ],
   "dependencies": {
     "@jsverse/transloco": "^8.4.0",
+    "@ng-icons/phosphor-icons": "^33.4.0",
     "ag-grid-angular": "^36.0.2",
     "ag-grid-community": "^36.0.2",
     "class-variance-authority": "^0.7.1",
