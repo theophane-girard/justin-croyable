@@ -153,7 +153,7 @@ type SelectValue = string | string[] | null;
     DatePickerComponent,
   ],
   template: `
-    <div class="h-[42rem] overflow-hidden border">
+    <div class="h-dvh overflow-hidden">
       <app-layout direction="horizontal" class="h-full">
         <app-sidebar
           [width]="220"
@@ -189,7 +189,7 @@ type SelectValue = string | string[] | null;
             </div>
           </app-header>
 
-          <app-content class="p-4">
+          <app-content class="min-h-0 p-4">
             @switch (activeTab()) {
               @case (tab.dashboard) {
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
