@@ -173,6 +173,11 @@ function themeForSeries(series: SeriesOption, palette: ThemePalette, index: numb
       return {
         ...series,
         itemStyle,
+        // Les libellés rattachés à un secteur échappent au `textStyle` global :
+        // ECharts leur choisit une couleur sombre et un halo déduit de la couleur
+        // de fond du canvas — transparente ici, donc supposée blanche. Couleur du
+        // thème et halo supprimé, pour rester lisible en clair comme en sombre.
+        label: { color: palette.foreground, textBorderWidth: 0, ...series.label },
         emphasis: {
           scale: true,
           scaleSize: PIE_EMPHASIS_SCALE_SIZE,
