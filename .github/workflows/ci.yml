@@ -19,6 +19,7 @@ jobs:
   ci:
     name: Vérifications et déploiement
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
       pull-requests: write
@@ -48,6 +49,7 @@ jobs:
         working-directory: packages/storybook-web
 
       - name: Tests
+        timeout-minutes: 6
         run: npx nx run-many -t test
 
       - name: Build du Storybook web
