@@ -60,11 +60,15 @@
   --border: var(--color-border);
   --input: var(--color-border);
   --ring: var(--color-action);
+  /* Palette des graphiques : les familles chromatiques du DS au pas 500,
+     réparties sur la roue en évitant les teintes sémantiques (error, warning,
+     success, info). Décoratives par nature : aucune ne porte de sens état. */
   --chart-1: var(--primary-500);
-  --chart-2: var(--primary-300);
-  --chart-3: var(--primary-700);
-  --chart-4: var(--info);
-  --chart-5: var(--success);
+  --chart-2: var(--cyan-500);
+  --chart-3: var(--orange-500);
+  --chart-4: var(--violet-500);
+  --chart-5: var(--lime-500);
+  --chart-6: var(--rose-500);
   --sidebar: var(--color-surface);
   --sidebar-foreground: var(--color-text);
   --sidebar-primary: var(--color-action);
@@ -94,11 +98,7 @@
   --border: var(--color-border);
   --input: var(--color-border);
   --ring: var(--color-action);
-  --chart-1: var(--primary-400);
-  --chart-2: var(--primary-200);
-  --chart-3: var(--primary-600);
-  --chart-4: var(--info);
-  --chart-5: var(--success);
+  /* --chart-* : hérités de :root (nuances 500, identiques en clair et sombre). */
   --sidebar: var(--color-surface);
   --sidebar-foreground: var(--color-text);
   --sidebar-primary: var(--color-action);
@@ -133,6 +133,7 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);

@@ -30,10 +30,11 @@ const SSR_PALETTE: ThemePalette = {
   popoverForeground: 'oklch(0.33 0.008 323)',
   series: [
     'oklch(0.64 0.16 323)',
-    'oklch(0.808 0.128 323)',
-    'oklch(0.485 0.131 323)',
-    'oklch(0.55 0.15 250)',
-    'oklch(0.55 0.15 145)',
+    'oklch(0.64 0.106 197)',
+    'oklch(0.64 0.16 51)',
+    'oklch(0.64 0.16 286)',
+    'oklch(0.64 0.134 108)',
+    'oklch(0.64 0.16 355)',
   ],
 };
 
@@ -84,7 +85,7 @@ export class ThemePaletteService {
       primary: read('--primary', SSR_PALETTE.primary),
       popover: read('--popover', SSR_PALETTE.popover),
       popoverForeground: read('--popover-foreground', SSR_PALETTE.popoverForeground),
-      series: [1, 2, 3, 4, 5].map((index, position) =>
+      series: [1, 2, 3, 4, 5, 6].map((index, position) =>
         read(`--chart-${index}`, SSR_PALETTE.series[position]),
       ),
     };
