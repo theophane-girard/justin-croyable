@@ -41,7 +41,6 @@ const jauge: EChartsCoreOption = {
       progress: { show: true, width: 10 },
       axisLine: { lineStyle: { width: 10 } },
       detail: { valueAnimation: true, formatter: '{value}%', fontSize: 20 },
-      title: { offsetCenter: [0, '72%'] },
       data: [{ value: 72, name: 'Satisfaction' }],
     },
   ],

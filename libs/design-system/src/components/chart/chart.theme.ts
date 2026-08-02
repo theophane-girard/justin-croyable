@@ -186,9 +186,14 @@ function themeForSeries(series: SeriesOption, palette: ThemePalette, index: numb
         axisTick: { show: false, ...series.axisTick },
         splitLine: { show: false, ...series.splitLine },
         axisLabel: { show: false, ...series.axisLabel },
-        // Valeur numérique recentrée ; le libellé passe sous le centre.
-        detail: { offsetCenter: [0, 0], fontFamily: CHART_FONT_FAMILY, ...series.detail },
-        title: { offsetCenter: [0, '28%'], fontFamily: CHART_FONT_FAMILY, ...series.title },
+        // Valeur numérique recentrée, libellé juste en dessous ; couleurs du thème (adaptées clair/sombre).
+        detail: { offsetCenter: [0, 0], fontFamily: CHART_FONT_FAMILY, color: palette.foreground, ...series.detail },
+        title: {
+          offsetCenter: [0, '28%'],
+          fontFamily: CHART_FONT_FAMILY,
+          color: palette.mutedForeground,
+          ...series.title,
+        },
       };
     default:
       return series;
