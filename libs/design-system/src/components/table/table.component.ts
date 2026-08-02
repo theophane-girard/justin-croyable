@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output, ViewEncapsulation } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  Injector,
+  input,
+  output,
+  ViewEncapsulation,
+} from '@angular/core';
 import { AgGridAngular } from 'ag-grid-angular';
 import {
   colorSchemeDark,
@@ -15,6 +24,8 @@ import { ThemeService } from '../../core/services/theme.service';
 import { TABLE_DEFAULTS } from '../../providers/tokens';
 import { mergeClasses } from '../../utils/merge-classes';
 
+import { buildLazyLoadDatasource, type LazyLoadConfig } from './lazy-load';
+
 @Component({
   selector: 'app-table',
   imports: [AgGridAngular],
@@ -22,7 +33,7 @@ import { mergeClasses } from '../../utils/merge-classes';
     <ag-grid-angular
       class="size-full"
       [theme]="theme()"
-      [rowData]="rowData()"
+      [rowData]="effectiveRowData()"
       [columnDefs]="columnDefs()"
       [defaultColDef]="resolvedDefaultColDef()"
       [gridOptions]="resolvedGridOptions()"
@@ -41,11 +52,13 @@ import { mergeClasses } from '../../utils/merge-classes';
 export class TableComponent<TRow = unknown> {
   private readonly themeService = inject(ThemeService);
   private readonly defaults = inject(TABLE_DEFAULTS);
+  private readonly injector = inject(Injector);
 
   readonly rowData = input<TRow[]>([]);
   readonly columnDefs = input<ColDef<TRow>[]>([]);
   readonly defaultColDef = input<ColDef<TRow> | undefined>(undefined);
   readonly gridOptions = input<GridOptions<TRow> | undefined>(undefined);
+  readonly lazyloadConfig = input<LazyLoadConfig<TRow> | undefined>(undefined);
   readonly height = input<string>('24rem');
   readonly class = input<ClassValue>('');
 
@@ -53,6 +66,10 @@ export class TableComponent<TRow = unknown> {
   readonly rowSelected = output<RowSelectedEvent<TRow>>();
 
   protected readonly classes = computed(() => mergeClasses('block w-full', this.class()));
+
+  private readonly lazyDatasource = buildLazyLoadDatasource<TRow>(this.lazyloadConfig, this.injector);
+
+  protected readonly effectiveRowData = computed(() => (this.lazyloadConfig() ? undefined : this.rowData()));
 
   /**
    * AG Grid est du DOM, pas un canvas : ses paramètres de thème acceptent donc
@@ -86,11 +103,28 @@ export class TableComponent<TRow = unknown> {
     ...this.defaultColDef(),
   }));
 
-  protected readonly resolvedGridOptions = computed<GridOptions<TRow>>(() => ({
-    rowHeight: this.defaults.rowHeight,
-    headerHeight: this.defaults.headerHeight,
-    pagination: this.defaults.pagination,
-    paginationPageSize: this.defaults.paginationPageSize,
-    ...this.gridOptions(),
-  }));
+  protected readonly resolvedGridOptions = computed<GridOptions<TRow>>(() => {
+    const base: GridOptions<TRow> = {
+      rowHeight: this.defaults.rowHeight,
+      headerHeight: this.defaults.headerHeight,
+      pagination: this.defaults.pagination,
+      paginationPageSize: this.defaults.paginationPageSize,
+    };
+
+    const lazy = this.lazyloadConfig();
+    if (lazy) {
+      return {
+        ...base,
+        rowModelType: 'infinite',
+        datasource: this.lazyDatasource.datasource,
+        cacheBlockSize: lazy.blockSize ?? this.defaults.paginationPageSize,
+        maxConcurrentDatasourceRequests: lazy.maxConcurrentRequests ?? 1,
+        infiniteInitialRowCount: lazy.initialRowCount ?? 1,
+        maxBlocksInCache: lazy.maxBlocksInCache,
+        ...this.gridOptions(),
+      };
+    }
+
+    return { ...base, ...this.gridOptions() };
+  });
 }
