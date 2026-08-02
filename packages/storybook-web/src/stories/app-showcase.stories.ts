@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import {
   BadgeComponent,
   ButtonComponent,
@@ -16,6 +16,7 @@ import {
   SwitchComponent,
   TableComponent,
   TextareaComponent,
+  ThemeService,
   type ComboboxOption,
   type TabItem,
 } from '@justin-croyable/design-system';
@@ -184,7 +185,16 @@ type SelectValue = string | string[] | null;
               <p class="text-sm font-medium">Espace Justin</p>
               <app-badge type="secondary">Démo</app-badge>
             </div>
-            <div class="ml-auto">
+            <div class="ml-auto flex items-center gap-2">
+              <button
+                appButton
+                variant="ghost"
+                size="icon-sm"
+                (click)="theme.toggle()"
+                [attr.aria-label]="theme.isDark() ? 'Passer en thème clair' : 'Passer en thème sombre'"
+              >
+                <ng-icon [name]="theme.isDark() ? 'lucideSun' : 'lucideMoon'" class="size-4" />
+              </button>
               <button appButton size="sm">Nouveau</button>
             </div>
           </app-header>
@@ -350,6 +360,8 @@ class AppShowcaseComponent {
   protected readonly jauge = jauge;
   protected readonly courbe = courbe;
   protected readonly camembert = camembert;
+
+  protected readonly theme = inject(ThemeService);
 
   protected readonly activeTab = signal<TabSlug>(TAB.dashboard);
   protected readonly sidebarCollapsed = signal<boolean>(false);
