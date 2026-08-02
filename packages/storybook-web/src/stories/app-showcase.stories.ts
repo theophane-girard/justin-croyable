@@ -155,17 +155,24 @@ type SelectValue = string | string[] | null;
   template: `
     <div class="h-[42rem] overflow-hidden border">
       <app-layout direction="horizontal" class="h-full">
-        <app-sidebar [width]="220" [collapsible]="true">
+        <app-sidebar
+          [width]="220"
+          [collapsible]="true"
+          [collapsed]="sidebarCollapsed()"
+          (collapsedChange)="sidebarCollapsed.set($event)"
+        >
           <app-sidebar-group class="p-3">
-            <app-sidebar-group-label>Navigation</app-sidebar-group-label>
+            <app-sidebar-group-label [class.hidden]="sidebarCollapsed()">Navigation</app-sidebar-group-label>
             @for (item of navItems; track item.slug) {
               <button
                 type="button"
                 (click)="select(item.slug)"
                 [class]="navItemClass(activeTab() === item.slug)"
+                [class.justify-center]="sidebarCollapsed()"
+                [attr.title]="sidebarCollapsed() ? item.label : null"
               >
                 <ng-icon [name]="item.icon" class="size-4 shrink-0" />
-                <span>{{ item.label }}</span>
+                <span [class.hidden]="sidebarCollapsed()">{{ item.label }}</span>
               </button>
             }
           </app-sidebar-group>
@@ -345,6 +352,7 @@ class AppShowcaseComponent {
   protected readonly camembert = camembert;
 
   protected readonly activeTab = signal<TabSlug>(TAB.dashboard);
+  protected readonly sidebarCollapsed = signal<boolean>(false);
 
   protected readonly role = signal<SelectValue>('user');
   protected readonly framework = signal<string | null>('angular');
