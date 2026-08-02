@@ -154,7 +154,7 @@ type SelectValue = string | string[] | null;
     DatePickerComponent,
   ],
   template: `
-    <div class="h-dvh overflow-hidden">
+    <div class="bg-background text-foreground h-dvh overflow-hidden">
       <app-layout direction="horizontal" class="h-full">
         <app-sidebar
           [width]="220"
