@@ -30,7 +30,7 @@ const barresEmpilees: EChartsCoreOption = {
   yAxis: { type: 'value' },
   series: [
     { name: 'Inscriptions', type: 'bar', stack: 'total', data: [820, 932, 901, 1290, 1330, 1520] },
-    { name: 'Désabonnements', type: 'bar', stack: 'total', data: [120, 132, 101, 134, 90, 230] },
+    { name: 'Désabonnements', type: 'bar', stack: 'total', data: [120, 210, 190, 134, 200, 230] },
   ],
 };
 
