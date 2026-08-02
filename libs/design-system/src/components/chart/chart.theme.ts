@@ -11,8 +11,9 @@ import type { ThemePalette } from '../../core/services/theme-palette.service';
  * recalculé à chaque bascule de thème (la palette est un signal).
  *
  * Deux niveaux :
- *  - un socle global (couleurs, police, axes, tooltip…) fusionné sous les options
- *    de l'appelant ;
+ *  - un socle global (couleurs, police, tooltip…) fusionné sous les options de
+ *    l'appelant, l'habillage des axes n'étant appliqué qu'aux axes réellement
+ *    fournis (les graphiques radiaux n'en reçoivent pas) ;
  *  - des réglages par type de série (barres, courbes, secteurs, jauges) injectés
  *    dans chaque série pour porter les partis pris visuels du DS (arrondis, écarts
  *    entre segments, dégradé d'aire, jauge sans aiguille…).
@@ -30,24 +31,21 @@ export const CHART_FONT_FAMILY =
 const MARK_RADIUS = 6;
 
 /**
- * Épaisseur du liseré, couleur de fond, qui sépare les segments adjacents.
- * Volontairement partagée par les barres empilées et les secteurs : à épaisseur
- * égale, l'écart *visible* entre deux segments est le même dans les deux cas.
+ * Écart *visible* cible, couleur de fond, entre segments adjacents.
+ *
+ * Le liseré est rendu différemment selon la marque : sur les barres empilées il
+ * est compté deux fois (un par segment, ils s'ajoutent), sur les secteurs une
+ * seule fois (les liserés se superposent sur l'arête commune). Les barres
+ * utilisent donc la moitié de cette valeur, les secteurs sa pleine valeur, pour
+ * un écart perçu identique.
  */
 const SEGMENT_GAP = 3;
 
 /** Type de la couleur d'aire d'une série ligne (accepte une chaîne ou un dégradé). */
 type AreaColor = NonNullable<NonNullable<LineSeriesOption['areaStyle']>['color']>;
 
-/** Socle global appliqué à tous les graphiques. */
+/** Socle global appliqué à tous les graphiques (hors axes, propres aux repères cartésiens). */
 function baseOption(palette: ThemePalette): EChartsCoreOption {
-  const axis = {
-    axisLine: { lineStyle: { color: palette.border } },
-    axisTick: { lineStyle: { color: palette.border } },
-    axisLabel: { color: palette.mutedForeground },
-    splitLine: { lineStyle: { color: palette.border, type: 'dashed' as const } },
-  };
-
   return {
     color: palette.series,
     backgroundColor: 'transparent',
@@ -59,9 +57,26 @@ function baseOption(palette: ThemePalette): EChartsCoreOption {
       borderColor: palette.border,
       textStyle: { fontFamily: CHART_FONT_FAMILY, color: palette.popoverForeground },
     },
-    xAxis: axis,
-    yAxis: axis,
   };
+}
+
+/**
+ * Habillage des axes cartésiens. Appliqué uniquement aux axes fournis par
+ * l'appelant : les graphiques sans repère (secteurs, jauges) n'en reçoivent donc
+ * pas — sinon ECharts dessinerait des axes en fond.
+ */
+function axisStyle(palette: ThemePalette) {
+  return {
+    axisLine: { lineStyle: { color: palette.border } },
+    axisTick: { lineStyle: { color: palette.border } },
+    axisLabel: { color: palette.mutedForeground },
+    splitLine: { lineStyle: { color: palette.border, type: 'dashed' as const } },
+  };
+}
+
+/** Fusionne l'habillage sous un axe (ou une liste d'axes) fourni par l'appelant. */
+function styleAxis(axis: unknown, style: ReturnType<typeof axisStyle>): unknown {
+  return Array.isArray(axis) ? axis.map(item => mergeDeep(style, item)) : mergeDeep(style, axis);
 }
 
 /** Couleur d'une série ligne : explicite si fournie, sinon la couleur de palette de son rang. */
@@ -114,7 +129,8 @@ function themeForSeries(series: SeriesOption, palette: ThemePalette, index: numb
         ...series,
         itemStyle: {
           borderRadius: MARK_RADIUS,
-          ...(stacked ? { borderColor: palette.background, borderWidth: SEGMENT_GAP } : {}),
+          // Moitié de l'écart : le liseré est compté deux fois entre deux segments empilés.
+          ...(stacked ? { borderColor: palette.background, borderWidth: SEGMENT_GAP / 2 } : {}),
           ...series.itemStyle,
         },
       };
@@ -147,6 +163,10 @@ function themeForSeries(series: SeriesOption, palette: ThemePalette, index: numb
         anchor: { show: false, ...series.anchor },
         progress: { show: true, roundCap: true, ...series.progress },
         axisLine: { roundCap: true, ...series.axisLine },
+        // Graduations masquées (ticks, séparateurs et libellés numériques de l'échelle).
+        axisTick: { show: false, ...series.axisTick },
+        splitLine: { show: false, ...series.splitLine },
+        axisLabel: { show: false, ...series.axisLabel },
         // Valeur numérique recentrée ; le libellé passe sous le centre.
         detail: { offsetCenter: [0, 0], fontFamily: CHART_FONT_FAMILY, ...series.detail },
         title: { offsetCenter: [0, '28%'], fontFamily: CHART_FONT_FAMILY, ...series.title },
@@ -179,13 +199,26 @@ function mergeDeep(base: unknown, override: unknown): unknown {
  * chaque série, puis socle global fusionné dessous (l'appelant gardant la main).
  */
 export function applyChartTheme(option: EChartsCoreOption, palette: ThemePalette): EChartsCoreOption {
-  const raw = (option as { series?: SeriesOption | SeriesOption[] }).series;
+  const opt = option as {
+    xAxis?: unknown;
+    yAxis?: unknown;
+    series?: SeriesOption | SeriesOption[];
+  };
+
+  const raw = opt.series;
   const series = Array.isArray(raw)
     ? raw.map((item, index) => themeForSeries(item, palette, index))
     : raw
       ? themeForSeries(raw, palette, 0)
       : undefined;
 
-  const withSeries = series === undefined ? option : { ...option, series };
-  return mergeDeep(baseOption(palette), withSeries) as EChartsCoreOption;
+  const axis = axisStyle(palette);
+  const overrides = {
+    ...option,
+    ...(series !== undefined ? { series } : {}),
+    ...(opt.xAxis !== undefined ? { xAxis: styleAxis(opt.xAxis, axis) } : {}),
+    ...(opt.yAxis !== undefined ? { yAxis: styleAxis(opt.yAxis, axis) } : {}),
+  };
+
+  return mergeDeep(baseOption(palette), overrides) as EChartsCoreOption;
 }

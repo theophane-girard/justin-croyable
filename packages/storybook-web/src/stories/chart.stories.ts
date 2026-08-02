@@ -40,8 +40,6 @@ const jauge: EChartsCoreOption = {
       type: 'gauge',
       progress: { show: true, width: 10 },
       axisLine: { lineStyle: { width: 10 } },
-      axisTick: { show: false },
-      splitLine: { length: 12 },
       detail: { valueAnimation: true, formatter: '{value}%', fontSize: 20 },
       title: { offsetCenter: [0, '72%'] },
       data: [{ value: 72, name: 'Satisfaction' }],
