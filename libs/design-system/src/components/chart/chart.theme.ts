@@ -58,7 +58,15 @@ function baseOption(palette: ThemePalette): EChartsCoreOption {
     backgroundColor: 'transparent',
     textStyle: { fontFamily: CHART_FONT_FAMILY, color: palette.foreground },
     title: { textStyle: { fontFamily: CHART_FONT_FAMILY, color: palette.foreground } },
-    legend: { textStyle: { fontFamily: CHART_FONT_FAMILY, color: palette.mutedForeground } },
+    legend: {
+      // Repères en carrés arrondis (parti pris du DS), appliqué à tous les
+      // graphiques. `itemWidth === itemHeight` pour un carré, `roundRect` pour
+      // l'arrondi (aligné sur l'arrondi des marques).
+      icon: 'roundRect',
+      itemWidth: 12,
+      itemHeight: 12,
+      textStyle: { fontFamily: CHART_FONT_FAMILY, color: palette.mutedForeground },
+    },
     tooltip: {
       backgroundColor: palette.popover,
       borderColor: palette.border,
@@ -171,6 +179,9 @@ function themeForSeries(series: SeriesOption, palette: ThemePalette, index: numb
         ...series.itemStyle,
       };
       return {
+        // Anneau légèrement remonté : dégage la légende du bas pour qu'elle
+        // respire sous le graphique. Défaut du thème, l'appelant peut le surcharger.
+        center: ['50%', '45%'],
         ...series,
         itemStyle,
         // Les libellés rattachés à un secteur échappent au `textStyle` global :
@@ -191,6 +202,10 @@ function themeForSeries(series: SeriesOption, palette: ThemePalette, index: numb
     case 'gauge':
       return {
         ...series,
+        // Sans état de survol explicite, ECharts applique un `emphasis` par défaut
+        // qui efface la barre de progression au survol. On le neutralise (rien de
+        // pertinent à mettre en avant sur une jauge mono-valeur).
+        emphasis: { disabled: true, ...series.emphasis },
         pointer: { show: false, ...series.pointer },
         anchor: { show: false, ...series.anchor },
         progress: { show: true, roundCap: true, ...series.progress },
