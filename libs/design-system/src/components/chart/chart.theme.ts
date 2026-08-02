@@ -1,4 +1,5 @@
 import type { EChartsCoreOption } from 'echarts/core';
+import type { LineSeriesOption, SeriesOption } from 'echarts';
 
 import type { ThemePalette } from '../../core/services/theme-palette.service';
 
@@ -35,25 +36,11 @@ const MARK_RADIUS = 6;
  */
 const SEGMENT_GAP = 3;
 
-type OptionObject = Record<string, unknown>;
+/** Type de la couleur d'aire d'une série ligne (accepte une chaîne ou un dégradé). */
+type AreaColor = NonNullable<NonNullable<LineSeriesOption['areaStyle']>['color']>;
 
-function isPlainObject(value: unknown): value is OptionObject {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-/** Fusion profonde ; l'objet de droite l'emporte, les tableaux sont remplacés. */
-function mergeDeep(base: unknown, override: unknown): unknown {
-  if (!isPlainObject(base) || !isPlainObject(override)) {
-    return override === undefined ? base : override;
-  }
-  const result: OptionObject = { ...base };
-  for (const key of Object.keys(override)) {
-    result[key] = mergeDeep(base[key], override[key]);
-  }
-  return result;
-}
-
-function baseOption(palette: ThemePalette): OptionObject {
+/** Socle global appliqué à tous les graphiques. */
+function baseOption(palette: ThemePalette): EChartsCoreOption {
   const axis = {
     axisLine: { lineStyle: { color: palette.border } },
     axisTick: { lineStyle: { color: palette.border } },
@@ -77,17 +64,15 @@ function baseOption(palette: ThemePalette): OptionObject {
   };
 }
 
-/** Couleur d'une série : explicite si fournie, sinon la couleur de palette de son rang. */
-function seriesColor(series: OptionObject, palette: ThemePalette, index: number): string {
-  const itemStyle = series['itemStyle'];
-  const lineStyle = series['lineStyle'];
-  const fromItem = isPlainObject(itemStyle) ? itemStyle['color'] : undefined;
-  const fromLine = isPlainObject(lineStyle) ? lineStyle['color'] : undefined;
-  if (typeof fromItem === 'string') {
-    return fromItem;
+/** Couleur d'une série ligne : explicite si fournie, sinon la couleur de palette de son rang. */
+function seriesColor(series: LineSeriesOption, palette: ThemePalette, index: number): string {
+  const itemColor = series.itemStyle?.color;
+  const lineColor = series.lineStyle?.color;
+  if (typeof itemColor === 'string') {
+    return itemColor;
   }
-  if (typeof fromLine === 'string') {
-    return fromLine;
+  if (typeof lineColor === 'string') {
+    return lineColor;
   }
   return palette.series[index % palette.series.length];
 }
@@ -102,8 +87,8 @@ function withAlpha(color: string, alpha: number): string {
 }
 
 /** Dégradé vertical d'opacité sur la couleur de l'aire, du haut (opaque) vers le bas (transparent). */
-function areaGradient(color: string): OptionObject {
-  return {
+function areaGradient(color: string): AreaColor {
+  const gradient: AreaColor = {
     type: 'linear',
     x: 0,
     y: 0,
@@ -114,69 +99,93 @@ function areaGradient(color: string): OptionObject {
       { offset: 1, color: withAlpha(color, 0) },
     ],
   };
+  return gradient;
 }
 
-/** Injecte les partis pris du DS selon le type de série ; les valeurs de l'appelant priment. */
-function themeForSeries(series: OptionObject, palette: ThemePalette, index: number): OptionObject {
-  switch (series['type']) {
+/**
+ * Injecte les partis pris du DS selon le type de série. Les valeurs de l'appelant
+ * priment : ses réglages sont fusionnés par-dessus les défauts.
+ */
+function themeForSeries(series: SeriesOption, palette: ThemePalette, index: number): SeriesOption {
+  switch (series.type) {
     case 'bar': {
-      const itemStyle: OptionObject = { borderRadius: MARK_RADIUS };
-      // Écart entre segments seulement quand les barres sont empilées.
-      const stack = series['stack'];
-      if (stack !== undefined && stack !== null && stack !== '') {
-        itemStyle['borderColor'] = palette.background;
-        itemStyle['borderWidth'] = SEGMENT_GAP;
-      }
-      return mergeDeep({ itemStyle }, series) as OptionObject;
+      const stacked = series.stack !== undefined && series.stack !== '';
+      return {
+        ...series,
+        itemStyle: {
+          borderRadius: MARK_RADIUS,
+          ...(stacked ? { borderColor: palette.background, borderWidth: SEGMENT_GAP } : {}),
+          ...series.itemStyle,
+        },
+      };
     }
     case 'line': {
-      const themed = mergeDeep({ smooth: true }, series) as OptionObject;
+      const themed: LineSeriesOption = { smooth: true, ...series };
       // Dégradé d'aire uniquement là où une aire est demandée (sinon on en forcerait une).
-      if (series['areaStyle'] !== undefined && series['areaStyle'] !== null) {
-        return mergeDeep(themed, {
-          areaStyle: { color: areaGradient(seriesColor(series, palette, index)) },
-        }) as OptionObject;
+      if (series.areaStyle) {
+        return {
+          ...themed,
+          areaStyle: { ...series.areaStyle, color: areaGradient(seriesColor(series, palette, index)) },
+        };
       }
       return themed;
     }
     case 'pie':
-      return mergeDeep(
-        { itemStyle: { borderRadius: MARK_RADIUS, borderColor: palette.background, borderWidth: SEGMENT_GAP } },
-        series,
-      ) as OptionObject;
-    case 'gauge':
-      return mergeDeep(
-        {
-          pointer: { show: false },
-          anchor: { show: false },
-          progress: { show: true, roundCap: true },
-          axisLine: { roundCap: true },
-          // Valeur numérique recentrée ; le libellé passe sous le centre.
-          detail: { offsetCenter: [0, 0], fontFamily: CHART_FONT_FAMILY },
-          title: { offsetCenter: [0, '28%'], fontFamily: CHART_FONT_FAMILY },
+      return {
+        ...series,
+        itemStyle: {
+          borderRadius: MARK_RADIUS,
+          borderColor: palette.background,
+          borderWidth: SEGMENT_GAP,
+          ...series.itemStyle,
         },
-        series,
-      ) as OptionObject;
+      };
+    case 'gauge':
+      return {
+        ...series,
+        pointer: { show: false, ...series.pointer },
+        anchor: { show: false, ...series.anchor },
+        progress: { show: true, roundCap: true, ...series.progress },
+        axisLine: { roundCap: true, ...series.axisLine },
+        // Valeur numérique recentrée ; le libellé passe sous le centre.
+        detail: { offsetCenter: [0, 0], fontFamily: CHART_FONT_FAMILY, ...series.detail },
+        title: { offsetCenter: [0, '28%'], fontFamily: CHART_FONT_FAMILY, ...series.title },
+      };
     default:
       return series;
   }
 }
 
+type OptionRecord = Record<string, unknown>;
+
+function isPlainObject(value: unknown): value is OptionRecord {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/** Fusion profonde générique ; l'objet de droite l'emporte, les tableaux sont remplacés. */
+function mergeDeep(base: unknown, override: unknown): unknown {
+  if (!isPlainObject(base) || !isPlainObject(override)) {
+    return override === undefined ? base : override;
+  }
+  const result: OptionRecord = { ...base };
+  for (const key of Object.keys(override)) {
+    result[key] = mergeDeep(base[key], override[key]);
+  }
+  return result;
+}
+
 /**
- * Applique le thème du DS à des options ECharts : socle global fusionné dessous,
- * puis réglages par type injectés dans chaque série.
+ * Applique le thème du DS à des options ECharts : réglages par type injectés dans
+ * chaque série, puis socle global fusionné dessous (l'appelant gardant la main).
  */
 export function applyChartTheme(option: EChartsCoreOption, palette: ThemePalette): EChartsCoreOption {
-  const merged = mergeDeep(baseOption(palette), option) as OptionObject;
-  const series = merged['series'];
+  const raw = (option as { series?: SeriesOption | SeriesOption[] }).series;
+  const series = Array.isArray(raw)
+    ? raw.map((item, index) => themeForSeries(item, palette, index))
+    : raw
+      ? themeForSeries(raw, palette, 0)
+      : undefined;
 
-  if (Array.isArray(series)) {
-    merged['series'] = series.map((item, index) =>
-      isPlainObject(item) ? themeForSeries(item, palette, index) : item,
-    );
-  } else if (isPlainObject(series)) {
-    merged['series'] = themeForSeries(series, palette, 0);
-  }
-
-  return merged as unknown as EChartsCoreOption;
+  const withSeries = series === undefined ? option : { ...option, series };
+  return mergeDeep(baseOption(palette), withSeries) as EChartsCoreOption;
 }
