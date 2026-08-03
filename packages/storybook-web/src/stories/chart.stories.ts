@@ -366,7 +366,7 @@ class CustomColorsChartDemo {
  * état. Les couleurs sont lues sur `ThemePaletteService` (résolues en valeurs
  * concrètes pour le canvas ECharts) et suivent la bascule de thème.
  */
-export const CustomColors: Story = {
+export const WithCustomColor: Story = {
   render: () => ({
     template: `<app-custom-colors-chart-demo />`,
     moduleMetadata: { imports: [CustomColorsChartDemo] },
