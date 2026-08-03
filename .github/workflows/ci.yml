@@ -24,6 +24,9 @@ jobs:
       contents: read
       pull-requests: write
       checks: write
+      # nrwl/nx-set-shas interroge l'API Actions sur un push master pour
+      # trouver le dernier run réussi (base du diff affected).
+      actions: read
 
     steps:
       - name: Checkout
@@ -43,6 +46,8 @@ jobs:
       # ou dernier run réussi sur master pour un push.
       - name: SHAs de base pour nx affected
         uses: nrwl/nx-set-shas@v4
+        with:
+          main-branch-name: master
 
       - name: Install dependencies
         run: npm ci
