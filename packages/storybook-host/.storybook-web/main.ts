@@ -1,80 +1,46 @@
-import type { StorybookConfig } from '@storybook/react-webpack5';
 import { resolve } from 'path';
+import { mergeConfig } from 'vite';
+import tailwindcss from 'tailwindcss';
+import autoprefixer from 'autoprefixer';
+import type { StorybookConfig } from '@storybook/react-native-web-vite';
 
-const workspaceRoot = resolve(__dirname, '../../..');
+const tailwindConfig = resolve(import.meta.dirname, '../tailwind.config.js');
 
 /**
- * Storybook **web** (navigateur) du Design System.
+ * Storybook **web** (navigateur) du Design System mobile.
  *
- * Réutilise les mêmes stories que l'app on-device, via :
- *  - le builder webpack5 + l'addon react-native-web (alias react-native → react-native-web)
- *  - `nativewind/babel` injecté dans le babel-loader (transforme `className`)
- *  - PostCSS + Tailwind sur `global.css` pour générer le CSS des utilitaires.
+ * Réutilise les mêmes stories que l'app on-device, via le builder Vite
+ * `@storybook/react-native-web-vite` (et non plus webpack) :
+ *  - il alias `react-native` → `react-native-web` et strippe le Flow des
+ *    dépendances React Native, ce que faisait auparavant l'addon
+ *    `@storybook/addon-react-native-web` ;
+ *  - `nativewind/babel` est injecté dans le plugin React pour transformer
+ *    `className` ;
+ *  - PostCSS + Tailwind traitent `global-web.css` pour générer les utilitaires.
  */
 const config: StorybookConfig = {
   stories: ['../../../libs/mobile-ds/src/**/*.stories.@(ts|tsx)'],
-  addons: [
-    '@storybook/addon-essentials',
-    {
-      name: '@storybook/addon-react-native-web',
-      options: {
-        projectRoot: workspaceRoot,
-        modulesToTranspile: [
-          'nativewind',
-          'react-native-css-interop',
-          'react-native-reanimated',
-          'phosphor-react-native',
-          'react-native-svg',
-        ],
-        babelPresets: ['nativewind/babel'],
+  addons: ['@storybook/addon-docs'],
+  framework: {
+    name: '@storybook/react-native-web-vite',
+    options: {
+      pluginReactOptions: {
+        babel: {
+          babelrc: false,
+          configFile: false,
+          presets: ['nativewind/babel'],
+        },
       },
     },
-  ],
-  framework: {
-    name: '@storybook/react-webpack5',
-    options: {},
   },
-  webpackFinal: async (cfg) => {
-    const tailwindcss = require('tailwindcss');
-    const autoprefixer = require('autoprefixer');
-    const tailwindConfig = resolve(__dirname, '../tailwind.config.js');
-
-    cfg.module?.rules?.forEach((rule) => {
-      if (
-        rule &&
-        typeof rule === 'object' &&
-        rule.test instanceof RegExp &&
-        rule.test.test('x.css') &&
-        Array.isArray(rule.use)
-      ) {
-        rule.use.push({
-          loader: require.resolve('postcss-loader'),
-          options: {
-            postcssOptions: {
-              plugins: [tailwindcss(tailwindConfig), autoprefixer],
-            },
-          },
-        });
-      }
-    });
-
-    // Outils de test : jamais nécessaires dans un bundle Storybook web.
-    cfg.resolve = cfg.resolve ?? {};
-    cfg.resolve.alias = {
-      ...cfg.resolve.alias,
-      '@testing-library/react-native': false,
-      'react-test-renderer': false,
-    };
-    // Pas de polyfills node côté navigateur.
-    cfg.resolve.fallback = {
-      ...cfg.resolve.fallback,
-      console: false,
-      fs: false,
-      path: false,
-    };
-
-    return cfg;
-  },
+  viteFinal: async (viteConfig) =>
+    mergeConfig(viteConfig, {
+      css: {
+        postcss: {
+          plugins: [tailwindcss(tailwindConfig), autoprefixer()],
+        },
+      },
+    }),
 };
 
 export default config;

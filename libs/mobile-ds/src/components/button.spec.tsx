@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react-native';
+import { describe, it, expect } from 'vitest';
+import { render, screen } from '@testing-library/react';
 
 import { Button } from './button';
 import { ThemeProvider } from '../theme/theme-provider';
@@ -20,6 +21,6 @@ describe('Button', () => {
       </ThemeProvider>
     );
     const button = screen.getByRole('button');
-    expect(button.props.accessibilityState.disabled).toBe(true);
+    expect(button.getAttribute('aria-disabled')).toBe('true');
   });
 });

@@ -23,8 +23,7 @@
     "src/**/*.stories.ts",
     "src/**/*.stories.tsx",
     "src/test-setup.ts",
-    "jest.config.ts",
-    "jest.config.cts",
+    "vitest.config.mts",
     "eslint.config.js",
     "eslint.config.cjs",
     "eslint.config.mjs"
