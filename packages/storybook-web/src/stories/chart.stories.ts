@@ -1,4 +1,5 @@
-import { ChartComponent, type ChartSkeletonType } from '@justin-croyable/design-system';
+import { ChartComponent, ThemePaletteService, type ChartSkeletonType } from '@justin-croyable/design-system';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import type { EChartsCoreOption } from 'echarts/core';
 import type { Meta, StoryObj } from '@storybook/angular-vite';
 import { expect, waitFor } from 'storybook/test';
@@ -73,11 +74,6 @@ const camembert: EChartsCoreOption = {
 
 type ChartSeriesItem = { type?: string; name?: string; data?: unknown[]; [key: string]: unknown };
 
-/**
- * Régénère `count` séries à partir de la première comme gabarit (ou `count`
- * secteurs pour un camembert). Renvoie les options telles quelles quand le
- * nombre demandé égale celui d'origine, pour préserver les données par défaut.
- */
 function withSeriesCount(options: EChartsCoreOption, count: number | undefined): EChartsCoreOption {
   const series = (options as EChartsCoreOption & { series?: ChartSeriesItem[] }).series;
   if (!count || count < 1 || !series || series.length === 0) {
@@ -107,7 +103,6 @@ function withSeriesCount(options: EChartsCoreOption, count: number | undefined):
   return { ...options, series: generated } as EChartsCoreOption;
 }
 
-/** Contrôle « nombre de séries » attaché aux stories non-loading. */
 const seriesCountControl: Meta<ChartArgs>['argTypes'] = {
   seriesCount: {
     control: { type: 'number', min: 1, max: 12 },
@@ -147,12 +142,6 @@ type Story = StoryObj<ChartArgs>;
 export const Bars: Story = {
   argTypes: seriesCountControl,
   args: { seriesCount: 2 },
-  /**
-   * ECharts est chargé à la demande par `withCharts()`, d'où l'attente : le
-   * canvas n'existe qu'une fois le bundle résolu. Le délai par défaut d'une
-   * seconde n'y suffit pas au premier chargement, quand le module n'est encore
-   * ni bundlé ni en cache.
-   */
   play: async ({ canvasElement }) => {
     const canvas = await waitFor(
       () => {
@@ -207,11 +196,6 @@ export const Pie: Story = {
   },
 };
 
-/**
- * Vérifie qu'en chargement le composant affiche le skeleton attendu, pour le
- * type demandé. Le skeleton est superposé en overlay : le chart ECharts reste
- * monté dessous (préservation de l'état), on ne vérifie donc pas son absence.
- */
 const expectSkeleton = (type: ChartSkeletonType) => async ({ canvasElement }: { canvasElement: HTMLElement }) => {
   const skeleton = await waitFor(() => {
     const found = canvasElement.querySelector('[data-slot="chart-skeleton"]');
@@ -250,11 +234,6 @@ export const LoadingGauge: Story = {
 
 export const Reloading: Story = {
   args: { loading: true, skeletonType: 'bar' },
-  /**
-   * Cas « rechargement » : le skeleton est superposé au-dessus d'un chart déjà
-   * monté. On vérifie que le canvas ECharts et le skeleton coexistent — l'instance
-   * n'est pas détruite pendant le chargement, donc son état est préservé.
-   */
   play: async ({ canvasElement }) => {
     const canvas = await waitFor(
       () => {
@@ -291,15 +270,73 @@ export const MultipleSeries: Story = {
   },
 };
 
-/**
- * Exemple d'assemblage : un tableau de bord de 4 cartes en grille 2×2
- * (histogramme empilé, jauge, courbe, camembert), chacune enveloppant un
- * `app-chart`. Illustre l'usage du composant en situation réelle et le thème du
- * DS (police, arrondis, écarts entre segments, dégradé d'aire, jauge épurée).
- *
- * Le contrôle « seriesCount » pilote ici le nombre de courbes de la carte
- * « Sessions (tendance) ».
- */
+@Component({
+  selector: 'app-custom-colors-chart-demo',
+  imports: [ChartComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div class="border-border rounded-lg border p-4">
+        <h3 class="text-foreground mb-3 text-sm font-medium">Couleurs choisies par teinte</h3>
+        <app-chart [options]="teintesChoisies()" height="18rem" />
+      </div>
+      <div class="border-border rounded-lg border p-4">
+        <h3 class="text-foreground mb-3 text-sm font-medium">Couleurs sémantiques (états)</h3>
+        <app-chart [options]="etatsSemantiques()" height="18rem" />
+      </div>
+    </div>
+  `,
+})
+class CustomColorsChartDemo {
+  private readonly palette = inject(ThemePaletteService);
+
+  protected readonly teintesChoisies = computed<EChartsCoreOption>(() => {
+    const { chart } = this.palette.palette();
+    return {
+      tooltip: { trigger: 'item' },
+      legend: { bottom: 0 },
+      color: [chart.orange, chart.violet, chart.cyan],
+      series: [
+        {
+          type: 'pie',
+          radius: ['45%', '70%'],
+          data: [
+            { value: 1048, name: 'Mobile' },
+            { value: 735, name: 'Desktop' },
+            { value: 580, name: 'Tablette' },
+          ],
+        },
+      ],
+    };
+  });
+
+  protected readonly etatsSemantiques = computed<EChartsCoreOption>(() => {
+    const { semantic } = this.palette.palette();
+    return {
+      tooltip: { trigger: 'axis' },
+      xAxis: { type: 'category', data: ['Réussis', 'En attente', 'Échecs'] },
+      yAxis: { type: 'value' },
+      series: [
+        {
+          type: 'bar',
+          data: [
+            { value: 420, itemStyle: { color: semantic.success } },
+            { value: 120, itemStyle: { color: semantic.warning } },
+            { value: 60, itemStyle: { color: semantic.error } },
+          ],
+        },
+      ],
+    };
+  });
+}
+
+export const WithCustomColor: Story = {
+  render: () => ({
+    template: `<app-custom-colors-chart-demo />`,
+    moduleMetadata: { imports: [CustomColorsChartDemo] },
+  }),
+};
+
 export const Dashboard: Story = {
   argTypes: seriesCountControl,
   args: { seriesCount: 1 },
