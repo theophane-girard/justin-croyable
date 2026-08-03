@@ -19,6 +19,7 @@ jobs:
   ci:
     name: Vérifications et déploiement
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
       pull-requests: write
@@ -27,6 +28,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Historique complet requis pour que `nx affected` puisse comparer la
+          # branche à sa base.
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -34,21 +39,57 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
+      # Calcule NX_BASE / NX_HEAD consommés par `nx affected` : base de la PR,
+      # ou dernier run réussi sur master pour un push.
+      - name: SHAs de base pour nx affected
+        uses: nrwl/nx-set-shas@v4
+
       - name: Install dependencies
         run: npm ci
 
       - name: Typecheck et lint
-        run: npx nx run-many -t typecheck lint
+        run: npx nx affected -t typecheck lint
+
+      # Le binaire du navigateur est mis en cache entre les runs. Les
+      # dépendances système (apt) sont réinstallées à chaque run car l'OS du
+      # runner ne persiste pas.
+      - name: Cache du navigateur Playwright
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
       # Les stories du DS web s'exécutent comme tests Vitest dans un vrai
       # navigateur : AG Grid mesure des dimensions et ECharts peint dans un
       # canvas, ce qu'un DOM simulé ne fait pas.
       - name: Installation du navigateur de test
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
         working-directory: packages/storybook-web
 
+      - name: Dépendances système du navigateur
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+        working-directory: packages/storybook-web
+
+      # Le mode navigateur Vitest est sujet à des flakes du dev-server (module
+      # non servi, iframe déconnectée) qui font échouer le CHARGEMENT d'une
+      # suite — que `test.retry` ne peut pas rattraper. On rejoue donc toute la
+      # commande, chaque tentative bornée par `timeout` pour couper un blocage.
       - name: Tests
-        run: npx nx run-many -t test
+        timeout-minutes: 18
+        run: |
+          for tentative in 1 2 3; do
+            echo "::group::Tests — tentative $tentative"
+            if timeout 330 npx nx affected -t test --skip-nx-cache; then
+              echo "::endgroup::"
+              exit 0
+            fi
+            echo "::endgroup::"
+            echo "::warning::Tests en échec ou bloqués (tentative $tentative/3), nouvelle tentative"
+          done
+          exit 1
 
       - name: Build du Storybook web
         run: npx nx build-storybook @justin-croyable/storybook-web

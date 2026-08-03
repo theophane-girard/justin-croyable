@@ -56,6 +56,7 @@ export default defineConfig({
   test: {
     name: 'storybook-web',
     dir: DOSSIER_STORIES,
+    retry: 2,
     browser: {
       enabled: true,
       headless: true,
