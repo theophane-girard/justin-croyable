@@ -47,6 +47,7 @@ export * from './components/popover';
 export * from './components/progress';
 export * from './components/radio-group';
 export * from './components/select';
+export * from './components/segment';
 export * from './components/separator';
 export * from './components/sheet';
 export * from './components/skeleton';
