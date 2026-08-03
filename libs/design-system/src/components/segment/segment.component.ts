@@ -63,7 +63,7 @@ type OnChangeType = (value: string) => void;
           role="radio"
           data-slot="segment-item"
           [attr.aria-checked]="activeIndex() === index"
-          [attr.aria-label]="item.ariaLabel"
+          [attr.aria-label]="item.ariaLabel ?? item.label"
           [attr.data-state]="activeIndex() === index ? 'on' : 'off'"
           [attr.tabindex]="activeIndex() === index ? 0 : -1"
           [class]="itemClasses()[index]"
@@ -71,10 +71,10 @@ type OnChangeType = (value: string) => void;
           (click)="select(item)"
         >
           @if (item.icon) {
-            <ng-icon [name]="item.icon" />
+            <ng-icon class="shrink-0" [name]="item.icon" />
           }
           @if (item.label) {
-            <span>{{ item.label }}</span>
+            <span [class]="item.icon ? 'hidden sm:inline' : ''">{{ item.label }}</span>
           } @else if (!item.icon) {
             <span>{{ item.value }}</span>
           }
