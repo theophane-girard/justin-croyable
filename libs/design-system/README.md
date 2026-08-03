@@ -74,17 +74,24 @@ Points d'entrée exportés :
 | --- | --- |
 | `@justin-croyable/design-system/theme.css` | Le preset : rôles, bascule dark, `@theme inline`, couche `base`. Importe `primitives.css` + la palette `fuchsia` par défaut. |
 | `@justin-croyable/design-system/primitives.css` | Valeurs **partagées** entre palettes : sémantiques, décoratives, typo, rayon. Importé par `theme.css`. |
-| `@justin-croyable/design-system/palettes/<nom>.css` | Une **palette** (identité de marque) : rampes `brand`/`primary`/`gray` + rôles, clair et sombre. `fuchsia`, `emerald`. |
+| `@justin-croyable/design-system/palettes/<nom>.css` | Une **palette** (identité de marque) : rampes `brand`/`primary`/`gray` + rôles + série de graphiques (`--chart-1..6`), clair et sombre. `fuchsia`, `emerald`. |
 | `@justin-croyable/design-system/tailwind.preset` | Preset **JS** de compatibilité (Tailwind v3, `@config`, outillage). |
 
 ### Palettes
 
-Une **palette** ne porte que l'identité chromatique de marque (rampes `brand` /
-`primary` / `gray` + rôles `--color-*`, en clair et en sombre). Les sémantiques
-(`--success`…), les décoratives (orange/lime/cyan/violet/rose) et la typo sont
-**partagées** (`primitives.css`) : elles ne changent pas d'une palette à l'autre —
-c'est voulu, ces teintes sont placées à des valeurs absolues pour ne pas se
-confondre entre elles ni avec la marque.
+Une **palette** porte l'identité chromatique de marque (rampes `brand` /
+`primary` / `gray` + rôles `--color-*`, en clair et en sombre) **et la série des
+graphiques** (`--chart-1..6`), ancrée sur la teinte de marque : les charts
+tournent donc avec la palette (fuchsia → magenta/cyan/orange/violet/lime/rose ;
+emerald → la même roue tournée vers le vert). Les sémantiques (`--success`…), les
+décoratives (orange/lime/cyan/violet/rose) et la typo sont **partagées**
+(`primitives.css`) : elles ne changent pas d'une palette à l'autre — c'est voulu,
+ces teintes sont placées à des valeurs absolues pour ne pas se confondre entre
+elles ni avec la marque.
+
+La série des graphiques est en **valeurs littérales** (pas de
+`calc(var(--brand-hue)…)`) : `ThemePaletteService` les lit via `getComputedStyle`
+pour peindre le canvas ECharts, qui exige des couleurs concrètes.
 
 | Palette | Teinte | Rôle |
 | --- | --- | --- |
@@ -104,7 +111,7 @@ comparer, sans rebuild. Voir la story `Design System/Tokens › Palette`.
 ### Tokens
 
 - `primitives.css` — les valeurs **partagées** : sémantiques (`--success`, `--warning`,
-  `--error`, `--info`), palette décorative (orange, lime, cyan, violet, rose, magenta), typo
+  `--error`, `--info`), palette décorative (orange, lime, cyan, violet, rose), typo
   (`--font-display`, `--font-body`, `--font-mono`) et rayon. Les écarts de perception qui
   justifient les cinq teintes décoratives sont documentés dans le fichier.
 - `palettes/<nom>.css` — l'identité de marque **par palette** : rampes `--brand-*`,

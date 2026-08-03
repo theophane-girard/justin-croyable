@@ -291,11 +291,11 @@ class CustomColorsChartDemo {
   private readonly palette = inject(ThemePaletteService);
 
   protected readonly teintesChoisies = computed<EChartsCoreOption>(() => {
-    const { chart } = this.palette.palette();
+    const { decorative } = this.palette.palette();
     return {
       tooltip: { trigger: 'item' },
       legend: { bottom: 0 },
-      color: [chart.orange, chart.violet, chart.cyan],
+      color: [decorative.orange, decorative.violet, decorative.cyan],
       series: [
         {
           type: 'pie',

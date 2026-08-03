@@ -243,21 +243,6 @@ export const DecorativeRamps: Story = {
             'bg-rose-900',
           ],
         },
-        {
-          family: 'magenta',
-          swatches: [
-            'bg-magenta-50',
-            'bg-magenta-100',
-            'bg-magenta-200',
-            'bg-magenta-300',
-            'bg-magenta-400',
-            'bg-magenta-500',
-            'bg-magenta-600',
-            'bg-magenta-700',
-            'bg-magenta-800',
-            'bg-magenta-900',
-          ],
-        },
       ],
     },
     template: `

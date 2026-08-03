@@ -2,6 +2,7 @@ import {
   DESIGN_SYSTEM_DEFAULT_LANG,
   DESIGN_SYSTEM_LANGS,
   provideJustinCroyableDS,
+  ThemePaletteService,
   ThemeService,
   withCharts,
   withIcons,
@@ -76,6 +77,12 @@ type PaletteName = keyof typeof PALETTES;
 
 const PALETTE_STYLE_ID = 'ds-active-palette';
 
+// Les composants purement CSS suivent la palette injectée sans JS. `app-chart`
+// dessine dans un canvas et résout la palette en JS (via `ThemePaletteService`,
+// mémoïsé sur la bascule claire/sombre) : après un changement de palette, il faut
+// donc lui demander de relire les variables. Ref capturée à l'initialisation.
+let paletteServiceRef: ThemePaletteService | null = null;
+
 function applyPalette(name: PaletteName): void {
   const existing = document.getElementById(PALETTE_STYLE_ID);
   const style = existing instanceof HTMLStyleElement ? existing : document.createElement('style');
@@ -88,6 +95,7 @@ function applyPalette(name: PaletteName): void {
 
 const withPalette: Decorator = (storyFn, context) => {
   applyPalette(context.globals['palette'] === 'emerald' ? 'emerald' : 'fuchsia');
+  paletteServiceRef?.refresh();
   return storyFn();
 };
 
@@ -158,6 +166,10 @@ const preview: Preview = {
           // Le thème vient de la toolbar, pas du localStorage du service.
           themeRef = inject(ThemeService);
           themeRef.set(activeTheme);
+
+          // Réf du service de palette : permet à `withPalette` de forcer la
+          // relecture des charts après un changement de palette à chaud.
+          paletteServiceRef = inject(ThemePaletteService);
 
           const transloco = inject(TranslocoService);
           translocoRef = transloco;
