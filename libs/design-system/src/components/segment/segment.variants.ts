@@ -6,7 +6,7 @@ export const segmentVariants = cva(
     variants: {
       variant: {
         default: 'bg-muted',
-        accent: 'bg-muted',
+        accent: 'border border-border bg-background',
       },
       size: {
         sm: 'h-8',
