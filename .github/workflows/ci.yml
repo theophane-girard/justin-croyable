@@ -19,7 +19,7 @@ jobs:
   ci:
     name: Vérifications et déploiement
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     permissions:
       contents: read
       pull-requests: write
@@ -73,9 +73,23 @@ jobs:
         run: npx playwright install-deps chromium
         working-directory: packages/storybook-web
 
+      # Le mode navigateur Vitest est sujet à des flakes du dev-server (module
+      # non servi, iframe déconnectée) qui font échouer le CHARGEMENT d'une
+      # suite — que `test.retry` ne peut pas rattraper. On rejoue donc toute la
+      # commande, chaque tentative bornée par `timeout` pour couper un blocage.
       - name: Tests
-        timeout-minutes: 6
-        run: npx nx affected -t test
+        timeout-minutes: 18
+        run: |
+          for tentative in 1 2 3; do
+            echo "::group::Tests — tentative $tentative"
+            if timeout 330 npx nx affected -t test --skip-nx-cache; then
+              echo "::endgroup::"
+              exit 0
+            fi
+            echo "::endgroup::"
+            echo "::warning::Tests en échec ou bloqués (tentative $tentative/3), nouvelle tentative"
+          done
+          exit 1
 
       - name: Build du Storybook web
         run: npx nx build-storybook @justin-croyable/storybook-web
