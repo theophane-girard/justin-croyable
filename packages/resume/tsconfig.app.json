@@ -1,0 +1,22 @@
+{
+  "//": "Typecheck Nx de l'app. La compilation réelle (AOT Angular) passe par tsconfig.build.json. La lib DS se résout vers ses sources via le champ `exports` du package et la condition `@justin-croyable/source` de la base, sans mapping de chemins ici.",
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": ".",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["es2022", "dom", "dom.iterable"],
+    "types": ["node"],
+    "experimentalDecorators": true,
+    "noUnusedLocals": false,
+    "tsBuildInfoFile": "dist/tsconfig.app.tsbuildinfo"
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["dist", "out-tsc", "src/**/*.spec.ts"],
+  "references": [
+    {
+      "path": "../../libs/design-system/tsconfig.lib.json"
+    }
+  ]
+}

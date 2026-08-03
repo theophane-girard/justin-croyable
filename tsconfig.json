@@ -14,6 +14,9 @@
     },
     {
       "path": "./packages/storybook-web"
+    },
+    {
+      "path": "./packages/resume"
     }
   ]
 }

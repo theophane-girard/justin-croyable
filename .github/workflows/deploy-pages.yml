@@ -1,0 +1,65 @@
+name: Deploy resume to GitHub Pages
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+# Le token intégré suffit : aucun secret à configurer, contrairement au
+# déploiement Firebase du workflow CI.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Une seule publication Pages à la fois ; on ne coupe pas un déploiement en
+# cours (recommandation de actions/deploy-pages).
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build de l'app resume
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # base-href = /<repo>/ car le site est publié sous
+      # https://<owner>.github.io/<repo>/ ; sans ça les assets pointeraient sur
+      # la racine du domaine et ne chargeraient pas.
+      - name: Build
+        env:
+          RESUME_BASE_HREF: /${{ github.event.repository.name }}/
+        run: npm run build -w @justin-croyable/resume
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/packages/resume
+
+  deploy:
+    name: Déploiement sur GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

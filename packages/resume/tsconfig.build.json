@@ -1,0 +1,41 @@
+{
+  "//": "tsconfig de compilation de l'app par @analogjs/vite-plugin-angular (AOT). Comme .storybook/tsconfig.json dans storybook-web : la lib DS est source-only, ses sources doivent appartenir au même programme TypeScript que l'app, via le mapping de chemins vers le dépôt réel et non le lien node_modules. Émet du JS, donc neutralise le mode composite/déclarations hérité de la base.",
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@justin-croyable/design-system": [
+        "../../libs/design-system/src/index.ts"
+      ],
+      "@justin-croyable/design-system/package.json": [
+        "../../libs/design-system/package.json"
+      ],
+      "@justin-croyable/design-system/*": ["../../libs/design-system/src/*"]
+    },
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "emitDeclarationOnly": false,
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["es2022", "dom", "dom.iterable"],
+    "types": ["node"],
+    "experimentalDecorators": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noUnusedLocals": false,
+    "resolveJsonModule": true
+  },
+  "angularCompilerOptions": {
+    "strictInjectionParameters": true,
+    "strictInputAccessModifiers": true,
+    "strictTemplates": true
+  },
+  "include": ["src/**/*.ts", "../../libs/design-system/src/**/*.ts"],
+  "exclude": ["dist", "out-tsc", "**/*.spec.ts"],
+  "references": [
+    {
+      "path": "../../libs/design-system/tsconfig.lib.json"
+    }
+  ]
+}

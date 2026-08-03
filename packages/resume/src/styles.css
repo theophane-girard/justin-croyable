@@ -1,0 +1,13 @@
+@layer ng-icon, theme, base, components, utilities;
+
+@import 'tailwindcss';
+@plugin "tailwindcss-animate";
+
+@import '@justin-croyable/design-system/theme.css';
+
+@source '../../../libs/design-system/src/components';
+@source './app';
+
+body {
+  @apply bg-background text-foreground;
+}
