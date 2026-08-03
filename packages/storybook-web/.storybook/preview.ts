@@ -23,7 +23,7 @@ import {
   lucideSun,
 } from '@ng-icons/lucide';
 import { inject, provideAppInitializer } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withDisabledInitialNavigation } from '@angular/router';
 import { applicationConfig, type Decorator, type Preview } from '@storybook/angular-vite';
 
 import designSystemPackage from '@justin-croyable/design-system/package.json';
@@ -113,9 +113,10 @@ const preview: Preview = {
           withCharts(),
           withTranslations(),
         ),
-        // Breadcrumb et header rendent des `routerLink` : sans Router injecté,
-        // ces stories lèvent une erreur au rendu.
-        provideRouter([]),
+        // Router injecté pour les `routerLink` (breadcrumb, header), navigation
+        // initiale désactivée : sinon elle réécrit l'URL `/iframe.html` de
+        // l'aperçu en `/` et un rechargement dur y charge le manager.
+        provideRouter([], withDisabledInitialNavigation()),
         provideAppInitializer(() => {
           // Le thème vient de la toolbar, pas du localStorage du service.
           themeRef = inject(ThemeService);
