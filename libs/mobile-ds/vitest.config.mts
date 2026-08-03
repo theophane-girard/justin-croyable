@@ -30,7 +30,7 @@ export default defineConfig({
         'react-native-web/dist/modules/AssetRegistry/index',
     },
   },
-  plugins: [react({ babel: { babelrc: false, configFile: false } })],
+  plugins: [react()],
   optimizeDeps: {
     esbuildOptions: {
       resolveExtensions: extensions,
