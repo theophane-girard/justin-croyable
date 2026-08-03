@@ -74,11 +74,6 @@ const camembert: EChartsCoreOption = {
 
 type ChartSeriesItem = { type?: string; name?: string; data?: unknown[]; [key: string]: unknown };
 
-/**
- * Régénère `count` séries à partir de la première comme gabarit (ou `count`
- * secteurs pour un camembert). Renvoie les options telles quelles quand le
- * nombre demandé égale celui d'origine, pour préserver les données par défaut.
- */
 function withSeriesCount(options: EChartsCoreOption, count: number | undefined): EChartsCoreOption {
   const series = (options as EChartsCoreOption & { series?: ChartSeriesItem[] }).series;
   if (!count || count < 1 || !series || series.length === 0) {
@@ -108,7 +103,6 @@ function withSeriesCount(options: EChartsCoreOption, count: number | undefined):
   return { ...options, series: generated } as EChartsCoreOption;
 }
 
-/** Contrôle « nombre de séries » attaché aux stories non-loading. */
 const seriesCountControl: Meta<ChartArgs>['argTypes'] = {
   seriesCount: {
     control: { type: 'number', min: 1, max: 12 },
@@ -148,12 +142,6 @@ type Story = StoryObj<ChartArgs>;
 export const Bars: Story = {
   argTypes: seriesCountControl,
   args: { seriesCount: 2 },
-  /**
-   * ECharts est chargé à la demande par `withCharts()`, d'où l'attente : le
-   * canvas n'existe qu'une fois le bundle résolu. Le délai par défaut d'une
-   * seconde n'y suffit pas au premier chargement, quand le module n'est encore
-   * ni bundlé ni en cache.
-   */
   play: async ({ canvasElement }) => {
     const canvas = await waitFor(
       () => {
@@ -208,11 +196,6 @@ export const Pie: Story = {
   },
 };
 
-/**
- * Vérifie qu'en chargement le composant affiche le skeleton attendu, pour le
- * type demandé. Le skeleton est superposé en overlay : le chart ECharts reste
- * monté dessous (préservation de l'état), on ne vérifie donc pas son absence.
- */
 const expectSkeleton = (type: ChartSkeletonType) => async ({ canvasElement }: { canvasElement: HTMLElement }) => {
   const skeleton = await waitFor(() => {
     const found = canvasElement.querySelector('[data-slot="chart-skeleton"]');
@@ -251,11 +234,6 @@ export const LoadingGauge: Story = {
 
 export const Reloading: Story = {
   args: { loading: true, skeletonType: 'bar' },
-  /**
-   * Cas « rechargement » : le skeleton est superposé au-dessus d'un chart déjà
-   * monté. On vérifie que le canvas ECharts et le skeleton coexistent — l'instance
-   * n'est pas détruite pendant le chargement, donc son état est préservé.
-   */
   play: async ({ canvasElement }) => {
     const canvas = await waitFor(
       () => {
@@ -292,14 +270,6 @@ export const MultipleSeries: Story = {
   },
 };
 
-/**
- * Démo « couleurs choisies » : un chart custom pioche des couleurs précises de la
- * palette par teinte (`palette().chart.*`, hors ordre par défaut) et un autre
- * colore ses barres par état via les couleurs sémantiques (`palette().semantic.*`).
- *
- * Les options sont dérivées de la palette (un signal) : elles se recalculent à
- * chaque bascule de thème, comme le socle du DS.
- */
 @Component({
   selector: 'app-custom-colors-chart-demo',
   imports: [ChartComponent],
@@ -360,12 +330,6 @@ class CustomColorsChartDemo {
   });
 }
 
-/**
- * Charts custom : couleurs piochées dans la palette par teinte (hors ordre par
- * défaut) et couleurs sémantiques `success` / `warning` / `error` pour porter un
- * état. Les couleurs sont lues sur `ThemePaletteService` (résolues en valeurs
- * concrètes pour le canvas ECharts) et suivent la bascule de thème.
- */
 export const WithCustomColor: Story = {
   render: () => ({
     template: `<app-custom-colors-chart-demo />`,
@@ -373,15 +337,6 @@ export const WithCustomColor: Story = {
   }),
 };
 
-/**
- * Exemple d'assemblage : un tableau de bord de 4 cartes en grille 2×2
- * (histogramme empilé, jauge, courbe, camembert), chacune enveloppant un
- * `app-chart`. Illustre l'usage du composant en situation réelle et le thème du
- * DS (police, arrondis, écarts entre segments, dégradé d'aire, jauge épurée).
- *
- * Le contrôle « seriesCount » pilote ici le nombre de courbes de la carte
- * « Sessions (tendance) ».
- */
 export const Dashboard: Story = {
   argTypes: seriesCountControl,
   args: { seriesCount: 1 },
