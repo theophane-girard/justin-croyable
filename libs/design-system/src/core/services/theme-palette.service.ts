@@ -3,16 +3,9 @@ import { computed, DOCUMENT, inject, Injectable, PLATFORM_ID } from '@angular/co
 
 import { ThemeService } from './theme.service';
 
-/**
- * Couleurs de graphique nommées par teinte, dans l'ordre des `--chart-1`…`--chart-6`
- * du thème. `brand` est la couleur de marque (`--chart-1`), les suivantes sont les
- * familles décoratives du DS. Permet de piocher une couleur précise pour un chart
- * custom, sans suivre l'ordre d'attribution par défaut.
- */
 export const CHART_COLOR_NAMES = ['brand', 'cyan', 'orange', 'violet', 'lime', 'rose'] as const;
 export type ChartColorName = (typeof CHART_COLOR_NAMES)[number];
 
-/** Couleurs sémantiques exposées aux charts custom (états : succès, alerte, erreur, info). */
 export const SEMANTIC_COLOR_NAMES = ['success', 'warning', 'error', 'info'] as const;
 export type SemanticColorName = (typeof SEMANTIC_COLOR_NAMES)[number];
 
@@ -25,15 +18,11 @@ export type ThemePalette = {
   primary: string;
   popover: string;
   popoverForeground: string;
-  /** Couleurs de graphique dans l'ordre d'attribution par défaut (`--chart-1`…`--chart-6`). */
   series: string[];
-  /** Mêmes couleurs, adressées par teinte pour un usage hors ordre par défaut. */
   chart: Record<ChartColorName, string>;
-  /** Couleurs sémantiques résolues (canvas ECharts ne lit pas les `var(--…)`). */
   semantic: Record<SemanticColorName, string>;
 };
 
-/** Variable CSS `--chart-N` correspondant à chaque couleur nommée, dans l'ordre. */
 const CHART_COLOR_VARIABLES: Record<ChartColorName, string> = {
   brand: '--chart-1',
   cyan: '--chart-2',
@@ -43,7 +32,6 @@ const CHART_COLOR_VARIABLES: Record<ChartColorName, string> = {
   rose: '--chart-6',
 };
 
-/** Variable CSS de chaque couleur sémantique. */
 const SEMANTIC_COLOR_VARIABLES: Record<SemanticColorName, string> = {
   success: '--success',
   warning: '--warning',
@@ -51,10 +39,6 @@ const SEMANTIC_COLOR_VARIABLES: Record<SemanticColorName, string> = {
   info: '--info',
 };
 
-/**
- * Repli utilisé côté serveur, où aucun style calculé n'existe. Les valeurs sont
- * celles du thème clair du DS.
- */
 const SSR_CHART_COLORS: Record<ChartColorName, string> = {
   brand: 'oklch(0.64 0.16 323)',
   cyan: 'oklch(0.64 0.106 197)',
@@ -85,18 +69,6 @@ const SSR_PALETTE: ThemePalette = {
   semantic: SSR_SEMANTIC_COLORS,
 };
 
-/**
- * Couleurs du thème résolues en valeurs concrètes.
- *
- * Nécessaire pour tout rendu qui ne passe pas par le CSS : ECharts dessine dans
- * un canvas et ne sait pas interpréter `var(--primary)`. AG Grid, lui, reste sur
- * les variables — c'est du DOM.
- *
- * La lecture se fait sur un élément sonde auquel on applique la classe `dark`
- * explicitement, et non sur la racine du document : le service du thème bascule
- * cette classe dans un effet, et lire la racine ferait dépendre le résultat de
- * l'ordre d'exécution des effets.
- */
 @Injectable({ providedIn: 'root' })
 export class ThemePaletteService {
   private readonly document = inject(DOCUMENT);
