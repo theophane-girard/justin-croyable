@@ -3,7 +3,7 @@ import { computed, DOCUMENT, inject, Injectable, PLATFORM_ID } from '@angular/co
 
 import { ThemeService } from './theme.service';
 
-export const CHART_COLOR_NAMES = ['brand', 'cyan', 'orange', 'violet', 'lime', 'rose'] as const;
+export const CHART_COLOR_NAMES = ['magenta', 'cyan', 'orange', 'violet', 'lime', 'rose'] as const;
 export type ChartColorName = (typeof CHART_COLOR_NAMES)[number];
 
 export const SEMANTIC_COLOR_NAMES = ['success', 'warning', 'error', 'info'] as const;
@@ -24,7 +24,7 @@ export type ThemePalette = {
 };
 
 const CHART_COLOR_VARIABLES: Record<ChartColorName, string> = {
-  brand: '--chart-1',
+  magenta: '--chart-1',
   cyan: '--chart-2',
   orange: '--chart-3',
   violet: '--chart-4',
@@ -40,7 +40,7 @@ const SEMANTIC_COLOR_VARIABLES: Record<SemanticColorName, string> = {
 };
 
 const SSR_CHART_COLORS: Record<ChartColorName, string> = {
-  brand: 'oklch(0.64 0.16 323)',
+  magenta: 'oklch(0.64 0.16 323)',
   cyan: 'oklch(0.64 0.106 197)',
   orange: 'oklch(0.64 0.16 51)',
   violet: 'oklch(0.64 0.16 286)',

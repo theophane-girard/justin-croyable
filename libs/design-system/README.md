@@ -104,7 +104,7 @@ comparer, sans rebuild. Voir la story `Design System/Tokens › Palette`.
 ### Tokens
 
 - `primitives.css` — les valeurs **partagées** : sémantiques (`--success`, `--warning`,
-  `--error`, `--info`), palette décorative (orange, lime, cyan, violet, rose), typo
+  `--error`, `--info`), palette décorative (orange, lime, cyan, violet, rose, magenta), typo
   (`--font-display`, `--font-body`, `--font-mono`) et rayon. Les écarts de perception qui
   justifient les cinq teintes décoratives sont documentés dans le fichier.
 - `palettes/<nom>.css` — l'identité de marque **par palette** : rampes `--brand-*`,

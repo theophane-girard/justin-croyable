@@ -4,7 +4,7 @@
  * Ce fichier ne contient QUE les valeurs stables d'une palette à l'autre :
  *   - le rayon (`--radius`),
  *   - les sémantiques d'état (`--success`, `--warning`, `--error`, `--info`),
- *   - la palette décorative (orange, lime, cyan, violet, rose),
+ *   - la palette décorative (orange, lime, cyan, violet, rose, magenta),
  *   - les tokens de typographie (`--font-display`, `--font-body`, `--font-mono`).
  *
  * L'identité chromatique (rampes `brand` / `primary` / `gray` + rôles) vit dans
@@ -44,7 +44,7 @@
      complète une roue de 10 familles à ~36° :
 
        28 error · 51 ORANGE · 75 warning · 108 LIME · 145 success
-       197 CYAN · 250 info · 286 VIOLET · 323 marque · 355 ROSE
+       197 CYAN · 250 info · 286 VIOLET · 323 MAGENTA · 355 ROSE
 
      Écart mesuré (ΔE OKLab ×100) au jeton réservé le plus proche, par pas —
      la barre de « non-confusable » est 15 :
@@ -126,4 +126,22 @@
   --rose-700: oklch(0.485 0.131 355);
   --rose-800: oklch(0.41 0.099 355);
   --rose-900: oklch(0.33 0.067 355);
+
+  /* Magenta — h323, la 6ᵉ famille décorative (le « slot marque » de la roue).
+     Fixe comme les autres décoratives : c'est elle qui sert de 1ʳᵉ couleur à la
+     série des graphiques, de sorte que cette série reste stable et cohérente
+     quelle que soit la palette active (elle ne suit PAS la teinte de marque —
+     un chart en emerald ne vire donc pas au vert au milieu de l'arc-en-ciel).
+     Ses valeurs coïncident avec la marque de la palette `fuchsia` : les charts
+     y sont donc inchangés. */
+  --magenta-50: oklch(0.972 0.029 323);
+  --magenta-100: oklch(0.94 0.054 323);
+  --magenta-200: oklch(0.885 0.093 323);
+  --magenta-300: oklch(0.808 0.128 323);
+  --magenta-400: oklch(0.72 0.152 323);
+  --magenta-500: oklch(0.64 0.16 323);
+  --magenta-600: oklch(0.56 0.152 323);
+  --magenta-700: oklch(0.485 0.131 323);
+  --magenta-800: oklch(0.41 0.099 323);
+  --magenta-900: oklch(0.33 0.067 323);
 }

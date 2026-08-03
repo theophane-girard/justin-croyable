@@ -114,6 +114,7 @@ module.exports = {
         cyan: ramp('cyan'),
         violet: ramp('violet'),
         rose: ramp('rose'),
+        magenta: ramp('magenta'),
       },
       borderRadius: {
         sm: 'calc(var(--radius) - 4px)',

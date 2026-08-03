@@ -71,8 +71,11 @@
   --ring: var(--color-action);
   /* Palette des graphiques : les familles chromatiques du DS au pas 500,
      réparties sur la roue en évitant les teintes sémantiques (error, warning,
-     success, info). Décoratives par nature : aucune ne porte de sens état. */
-  --chart-1: var(--primary-500);
+     success, info). Décoratives par nature : aucune ne porte de sens état.
+     Volontairement INDÉPENDANTE de la marque (chart-1 = magenta, pas primary) :
+     la série reste stable et cohérente d'une palette à l'autre, au lieu de faire
+     virer sa 1ʳᵉ couleur avec la teinte de marque au milieu de teintes fixes. */
+  --chart-1: var(--magenta-500);
   --chart-2: var(--cyan-500);
   --chart-3: var(--orange-500);
   --chart-4: var(--violet-500);
@@ -242,6 +245,18 @@
   --color-rose-700: var(--rose-700);
   --color-rose-800: var(--rose-800);
   --color-rose-900: var(--rose-900);
+
+  --color-magenta-*: initial;
+  --color-magenta-50: var(--magenta-50);
+  --color-magenta-100: var(--magenta-100);
+  --color-magenta-200: var(--magenta-200);
+  --color-magenta-300: var(--magenta-300);
+  --color-magenta-400: var(--magenta-400);
+  --color-magenta-500: var(--magenta-500);
+  --color-magenta-600: var(--magenta-600);
+  --color-magenta-700: var(--magenta-700);
+  --color-magenta-800: var(--magenta-800);
+  --color-magenta-900: var(--magenta-900);
 }
 
 @layer base {
