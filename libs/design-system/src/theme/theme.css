@@ -70,14 +70,14 @@
   --input: var(--color-border);
   --ring: var(--color-action);
   /* Palette des graphiques : la série `--chart-1..6` est définie PAR PALETTE
-     (cf. `palettes/<nom>.css`) — chaque palette pose sa série ancrée sur sa
-     propre teinte de marque. La série est donc solidaire de la palette active
-     (fuchsia → magenta/cyan/orange/violet/lime/rose ; emerald → la même roue
-     tournée vers le vert). Valeurs littérales et non `calc(var(--brand-hue)…)` :
-     lues via `getComputedStyle` pour le canvas ECharts, elles doivent être des
-     couleurs concrètes (un `calc` non résolu casserait le rendu canvas).
-     Décoratives par nature : aucune ne porte de sens état, et elles restent
-     toujours légendées. */
+     (cf. `palettes/<nom>.css`). Chaque palette CURE sa propre série catégorielle,
+     menant sur sa teinte de marque puis des accents choisis à la main pour être à
+     la fois harmonieux et discernables — une simple rotation de teinte à L/C
+     constants donne des assortiments disgracieux. Valeurs littérales et non
+     `calc(var(--brand-hue)…)` : lues via `getComputedStyle` pour le canvas
+     ECharts, elles doivent être des couleurs concrètes (un `calc` non résolu
+     casserait le rendu canvas). Décoratives par nature : aucune ne porte de sens
+     état, et elles restent toujours légendées. */
   --sidebar: var(--color-surface);
   --sidebar-foreground: var(--color-text);
   --sidebar-primary: var(--color-action);

@@ -80,18 +80,21 @@ Points d'entrée exportés :
 ### Palettes
 
 Une **palette** porte l'identité chromatique de marque (rampes `brand` /
-`primary` / `gray` + rôles `--color-*`, en clair et en sombre) **et la série des
-graphiques** (`--chart-1..6`), ancrée sur la teinte de marque : les charts
-tournent donc avec la palette (fuchsia → magenta/cyan/orange/violet/lime/rose ;
-emerald → la même roue tournée vers le vert). Les sémantiques (`--success`…), les
-décoratives (orange/lime/cyan/violet/rose) et la typo sont **partagées**
-(`primitives.css`) : elles ne changent pas d'une palette à l'autre — c'est voulu,
-ces teintes sont placées à des valeurs absolues pour ne pas se confondre entre
-elles ni avec la marque.
+`primary` / `gray` + rôles `--color-*`, en clair et en sombre) **et une série de
+graphiques** (`--chart-1..6`) : un jeu catégoriel **curé à la main** pour cette
+palette, menant sur sa teinte de marque. Les charts sont donc assortis à la
+palette active. Les sémantiques (`--success`…), les décoratives
+(orange/lime/cyan/violet/rose) et la typo sont **partagées** (`primitives.css`) :
+elles ne changent pas d'une palette à l'autre — c'est voulu, ces teintes sont
+placées à des valeurs absolues pour ne pas se confondre entre elles ni avec la
+marque.
 
-La série des graphiques est en **valeurs littérales** (pas de
-`calc(var(--brand-hue)…)`) : `ThemePaletteService` les lit via `getComputedStyle`
-pour peindre le canvas ECharts, qui exige des couleurs concrètes.
+La série de graphiques se **cure à la main** par palette : une rotation
+automatique de teinte (à L/C constants) donne des assortiments disgracieux. On
+fait varier luminosité **et** chroma, pas seulement la teinte. Valeurs
+**littérales** (pas de `calc(var(--brand-hue)…)`) : `ThemePaletteService` les lit
+via `getComputedStyle` pour peindre le canvas ECharts, qui exige des couleurs
+concrètes.
 
 | Palette | Teinte | Rôle |
 | --- | --- | --- |
@@ -102,7 +105,9 @@ pour peindre le canvas ECharts, qui exige des couleurs concrètes.
 « conf » côté Tailwind v4). Le preset JS (v3) lit les variables CSS, il suit donc
 la palette sans configuration supplémentaire. **Ajouter une palette** = déposer un
 `palettes/<nom>.css` sur le même contrat de tokens (prendre `fuchsia.css` comme
-gabarit et changer la teinte).
+gabarit et changer la teinte). Un point d'attention : la série `--chart-1..6` ne
+se déduit pas mécaniquement de la teinte de marque — la **curer à la main** pour
+qu'elle soit agréable et discernable.
 
 **Prévisualiser** : le Storybook web expose une toolbar « Palette » (fuchsia /
 emerald) qui bascule la palette au runtime sur toutes les stories — pratique pour
