@@ -36,8 +36,8 @@ import '../src/styles.css';
 // palette, injecté au runtime par le décorateur `withPalette` pour permettre de
 // basculer d'une palette à l'autre depuis la toolbar (cf. plus bas). On réutilise
 // les fichiers source, il n'y a donc aucune valeur de couleur dupliquée ici.
-import fuchsiaPalette from '../../../libs/design-system/src/theme/palettes/fuchsia.css?raw';
-import emeraldPalette from '../../../libs/design-system/src/theme/palettes/emerald.css?raw';
+import fuchsiaPalette from '@justin-croyable/design-system/palettes/fuchsia.css?raw';
+import emeraldPalette from '@justin-croyable/design-system/palettes/emerald.css?raw';
 
 const [major = '0', minor = '0', patch = '0'] = designSystemPackage.version.split('.');
 
