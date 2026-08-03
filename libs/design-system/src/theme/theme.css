@@ -20,18 +20,26 @@
  * le preset utilisable quel que soit l'endroit d'où il est consommé.
  *
  * Découpage :
- *   - `primitives.css` : les valeurs brutes (rampes de marque, neutres,
- *     sémantiques, palette décorative). Aucune n'est utilisée directement par
- *     les composants.
- *   - ce fichier : les *rôles* (`--background`, `--primary`, …) adossés aux
- *     primitives, leur bascule dark, puis l'exposition en utilitaires Tailwind
- *     via `@theme inline`.
+ *   - `primitives.css` : les valeurs PARTAGÉES (sémantiques, palette décorative,
+ *     typo, rayon), stables d'une palette à l'autre.
+ *   - `palettes/<nom>.css` : l'identité chromatique de marque (rampes `brand` /
+ *     `primary` / `gray` + rôles), en clair et en sombre. Ce fichier importe
+ *     `fuchsia` par défaut ; une app en choisit une autre en l'important après.
+ *   - ce fichier : les *rôles* (`--background`, `--primary`, `--brand`, …)
+ *     adossés aux primitives, leur bascule dark, puis l'exposition en utilitaires
+ *     Tailwind via `@theme inline`.
  *
- * Pour retheming : surcharger les primitives (ou les rôles) dans le CSS de
- * l'app, après cet import. Les composants ne référencent que des rôles, donc
+ * Choisir une palette (dans le CSS d'entrée de l'app, APRÈS cet import) :
+ *
+ *   @import '@justin-croyable/design-system/theme.css';
+ *   @import '@justin-croyable/design-system/palettes/emerald.css';
+ *
+ * Pour un retheming ad hoc : surcharger les primitives (ou les rôles) dans le CSS
+ * de l'app, après cet import. Les composants ne référencent que des rôles, donc
  * ils suivent sans modification.
  */
 @import './primitives.css';
+@import './palettes/fuchsia.css';
 
 /* Les classes des composants du DS vivent hors de l'arborescence de l'app : sans
    cette source, les utilitaires que seul le DS utilise seraient purgés. Attention,
@@ -48,6 +56,7 @@
   --card-foreground: var(--color-text);
   --popover: var(--color-surface);
   --popover-foreground: var(--color-text);
+  --brand: var(--color-brand);
   --primary: var(--color-action);
   --primary-foreground: var(--color-action-text);
   --secondary: var(--primary-100);
@@ -86,6 +95,7 @@
   --card-foreground: var(--color-text);
   --popover: var(--color-surface);
   --popover-foreground: var(--color-text);
+  --brand: var(--color-brand);
   --primary: var(--color-action);
   --primary-foreground: var(--color-action-text);
   --secondary: var(--primary-800);
@@ -116,6 +126,7 @@
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
+  --color-brand: var(--brand);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
@@ -146,6 +157,26 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Typographie — `font-display`, `font-body`, `font-mono`. Les valeurs viennent
+     de `primitives.css` (partagées entre palettes). Le chargement des fontes est
+     à la charge de l'app. */
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-mono: var(--font-mono);
+
+  /* Marque — rôle (`bg-brand`) + rampe (`bg-brand-600`). La rampe vient de la
+     palette sélectionnée (cf. `palettes/<nom>.css`). */
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-200: var(--brand-200);
+  --color-brand-300: var(--brand-300);
+  --color-brand-400: var(--brand-400);
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-brand-800: var(--brand-800);
+  --color-brand-900: var(--brand-900);
 
   /* Palette complémentaire (cf. primitives.css). Chaque espace de noms est
      d'abord remis à `initial` pour purger la rampe Tailwind par défaut : sans

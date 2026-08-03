@@ -59,6 +59,12 @@ module.exports = {
           DEFAULT: role('popover'),
           foreground: role('popover-foreground'),
         },
+        // Marque : rôle (`bg-brand`) + rampe (`bg-brand-600`). Les valeurs
+        // viennent de la palette sélectionnée (cf. `src/theme/palettes/*.css`).
+        brand: {
+          DEFAULT: role('brand'),
+          ...ramp('brand'),
+        },
         primary: {
           DEFAULT: role('primary'),
           foreground: role('primary-foreground'),
@@ -114,6 +120,13 @@ module.exports = {
         md: 'calc(var(--radius) - 2px)',
         lg: 'var(--radius)',
         xl: 'calc(var(--radius) + 4px)',
+      },
+      // Typographie — `font-display`, `font-body`, `font-mono`. Valeurs partagées
+      // (cf. `src/theme/primitives.css`) ; le chargement des fontes reste à l'app.
+      fontFamily: {
+        display: role('font-display'),
+        body: role('font-body'),
+        mono: role('font-mono'),
       },
     },
   },
