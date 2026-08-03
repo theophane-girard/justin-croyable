@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 
 import { ThemeProvider } from '../theme/theme-provider';
 import { Switch } from './switch';
@@ -30,21 +31,21 @@ function wrap(ui: ReactElement) {
 
 describe('Switch', () => {
   it('bascule la valeur au press', () => {
-    const onChange = jest.fn();
+    const onChange = vi.fn();
     wrap(<Switch value={false} onValueChange={onChange} />);
-    fireEvent.press(screen.getByRole('switch'));
+    fireEvent.click(screen.getByRole('switch'));
     expect(onChange).toHaveBeenCalledWith(true);
   });
 });
 
 describe('Checkbox', () => {
   it('affiche le libellé et bascule au press', () => {
-    const onChange = jest.fn();
+    const onChange = vi.fn();
     wrap(
       <Checkbox checked={false} onCheckedChange={onChange} label="Accepter" />
     );
     expect(screen.getByText('Accepter')).toBeTruthy();
-    fireEvent.press(screen.getByRole('checkbox'));
+    fireEvent.click(screen.getByRole('checkbox'));
     expect(onChange).toHaveBeenCalledWith(true);
   });
 });
@@ -69,16 +70,16 @@ describe('Modal', () => {
 
 describe('Segment', () => {
   it('change de valeur au press sur une option', () => {
-    const onChange = jest.fn();
+    const onChange = vi.fn();
     wrap(<Segment options={options} value="un" onValueChange={onChange} />);
-    fireEvent.press(screen.getByText('Deux'));
+    fireEvent.click(screen.getByText('Deux'));
     expect(onChange).toHaveBeenCalledWith('deux');
   });
 });
 
 describe('Select', () => {
   it('affiche le placeholder puis ouvre les options au press', () => {
-    const onChange = jest.fn();
+    const onChange = vi.fn();
     wrap(
       <Select
         options={options}
@@ -87,15 +88,15 @@ describe('Select', () => {
       />
     );
     expect(screen.getByText('Choisir')).toBeTruthy();
-    fireEvent.press(screen.getByText('Choisir'));
-    fireEvent.press(screen.getByText('Deux'));
+    fireEvent.click(screen.getByText('Choisir'));
+    fireEvent.click(screen.getByText('Deux'));
     expect(onChange).toHaveBeenCalledWith('deux');
   });
 });
 
 describe('MultiSelect', () => {
   it('ajoute une valeur sélectionnée', () => {
-    const onChange = jest.fn();
+    const onChange = vi.fn();
     wrap(
       <MultiSelect
         options={options}
@@ -104,18 +105,18 @@ describe('MultiSelect', () => {
         onValuesChange={onChange}
       />
     );
-    fireEvent.press(screen.getByText('Choisir'));
-    fireEvent.press(screen.getByText('Un'));
+    fireEvent.click(screen.getByText('Choisir'));
+    fireEvent.click(screen.getByText('Un'));
     expect(onChange).toHaveBeenCalledWith(['un']);
   });
 });
 
 describe('Header', () => {
   it('affiche le titre et déclenche le retour', () => {
-    const onBack = jest.fn();
+    const onBack = vi.fn();
     wrap(<Header title="Accueil" onBack={onBack} />);
     expect(screen.getByText('Accueil')).toBeTruthy();
-    fireEvent.press(screen.getByLabelText('Retour'));
+    fireEvent.click(screen.getByLabelText('Retour'));
     expect(onBack).toHaveBeenCalled();
   });
 });
@@ -133,11 +134,11 @@ describe('BottomSheet', () => {
 
 describe('Fab', () => {
   it('déclenche onPress', () => {
-    const onPress = jest.fn();
+    const onPress = vi.fn();
     wrap(
       <Fab icon={Plus} accessibilityLabel="Ajouter" onPress={onPress} />
     );
-    fireEvent.press(screen.getByLabelText('Ajouter'));
+    fireEvent.click(screen.getByLabelText('Ajouter'));
     expect(onPress).toHaveBeenCalled();
   });
 });
@@ -157,7 +158,7 @@ describe('Accordion', () => {
 
 describe('DatePicker', () => {
   it('ouvre le calendrier et sélectionne un jour', () => {
-    const onChange = jest.fn();
+    const onChange = vi.fn();
     wrap(
       <DatePicker
         value={new Date(2026, 5, 14)}
@@ -165,8 +166,8 @@ describe('DatePicker', () => {
         label="Date"
       />
     );
-    fireEvent.press(screen.getByText('14/06/2026'));
-    fireEvent.press(screen.getByText('20'));
+    fireEvent.click(screen.getByText('14/06/2026'));
+    fireEvent.click(screen.getByText('20'));
     expect(onChange).toHaveBeenCalled();
   });
 });
@@ -188,21 +189,21 @@ describe('Toast', () => {
         </ToastProvider>
       </ThemeProvider>
     );
-    fireEvent.press(screen.getByText('EF'));
+    fireEvent.click(screen.getByText('EF'));
     expect(screen.getByText('Bonjour')).toBeTruthy();
   });
 });
 
 describe('Radio', () => {
   it('sélectionne une option', () => {
-    const onChange = jest.fn();
+    const onChange = vi.fn();
     wrap(
       <RadioGroup value="a" onValueChange={onChange}>
         <Radio value="a" label="Option A" />
         <Radio value="b" label="Option B" />
       </RadioGroup>
     );
-    fireEvent.press(screen.getByText('Option B'));
+    fireEvent.click(screen.getByText('Option B'));
     expect(onChange).toHaveBeenCalledWith('b');
   });
 });
@@ -225,7 +226,7 @@ describe('Tabs', () => {
     );
     expect(screen.getByText('AA')).toBeTruthy();
     expect(screen.queryByText('BB')).toBeNull();
-    fireEvent.press(screen.getByText('Onglet B'));
+    fireEvent.click(screen.getByText('Onglet B'));
     expect(screen.getByText('BB')).toBeTruthy();
   });
 });

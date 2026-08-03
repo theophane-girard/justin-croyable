@@ -7,6 +7,7 @@
     "storybook-web": "storybook dev -c .storybook-web -p 6006",
     "build-storybook-web": "storybook build -c .storybook-web -o ../../dist/storybook-web"
   },
+  "//": "Le Storybook web passe du builder webpack5 (Storybook 8.6) au builder Vite `@storybook/react-native-web-vite`. Ce builder Vite pour React Native Web n'existe en version compatible vite@8 (imposé par la racine, dont dépend le Storybook Angular `storybook-web`) qu'à partir de Storybook 10. On épingle donc ici Storybook 10 pour le web : npm l'isole dans packages/storybook-host/node_modules, sans toucher au Storybook 8.6 racine du on-device (`@storybook/react-native`). Même schéma d'isolation que `packages/storybook-web`.",
   "dependencies": {
     "@justin-croyable/mobile-ds": "*",
     "@react-native-async-storage/async-storage": "*",
@@ -19,15 +20,22 @@
     "react-native-reanimated": "*",
     "react-native-safe-area-context": "*",
     "react-native-svg": "*",
+    "react-native-svg-web": "*",
+    "react-native-web": "*",
     "tailwindcss": "*"
   },
   "devDependencies": {
+    "@storybook/addon-docs": "^10.5.5",
     "@storybook/addon-ondevice-actions": "*",
     "@storybook/addon-ondevice-controls": "*",
     "@storybook/react": "*",
     "@storybook/react-native": "*",
-    "@testing-library/react-native": "*",
-    "react-test-renderer": "*",
-    "storybook": "*"
+    "@storybook/react-native-web-vite": "^10.5.5",
+    "@testing-library/react": "*",
+    "@vitejs/plugin-react": "*",
+    "autoprefixer": "*",
+    "jsdom": "*",
+    "storybook": "^10.5.5",
+    "vitest": "*"
   }
 }
