@@ -18,6 +18,98 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj;
 
+// Classes littérales (et non `bg-brand-${step}`) : le scanner Tailwind ne
+// détecte que les noms de classe présents tels quels dans le source.
+const brandRamp = [
+  'bg-brand-50',
+  'bg-brand-100',
+  'bg-brand-200',
+  'bg-brand-300',
+  'bg-brand-400',
+  'bg-brand-500',
+  'bg-brand-600',
+  'bg-brand-700',
+  'bg-brand-800',
+  'bg-brand-900',
+];
+
+export const Palette: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Identité de la palette active : la rampe de marque (`bg-brand-*`), le rôle `bg-brand`, et les neutres/action exposés en rôles (teintés vers la marque). Basculer la toolbar « Palette » retinte l'ensemble sans rebuild — la sélection réelle se fait à la compilation via `@import '.../palettes/<nom>.css'`. Les rôles `primary`/`secondary`/`muted` de la story « Roles » suivent la même bascule.",
+      },
+    },
+  },
+  render: () => ({
+    props: {
+      ramp: brandRamp,
+      neutrals: [
+        { name: 'background', className: 'bg-background text-foreground border' },
+        { name: 'card', className: 'bg-card text-card-foreground border' },
+        { name: 'muted', className: 'bg-muted text-muted-foreground' },
+        { name: 'primary', className: 'bg-primary text-primary-foreground' },
+      ],
+    },
+    template: `
+      <div class="flex flex-col gap-6">
+        <div class="flex items-center gap-4">
+          <div class="flex h-16 w-40 items-end rounded-lg bg-brand p-2">
+            <span class="text-xs font-medium text-white">bg-brand</span>
+          </div>
+          <span class="text-xs text-muted-foreground">rôle de marque (= brand-600)</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="w-16 text-xs text-muted-foreground">brand</span>
+          <div class="flex overflow-hidden rounded-md">
+            @for (swatch of ramp; track swatch) {
+              <div [class]="'size-10 ' + swatch" [title]="swatch"></div>
+            }
+          </div>
+        </div>
+        <div class="grid gap-3 sm:grid-cols-2">
+          @for (role of neutrals; track role.name) {
+            <div [class]="'flex h-16 flex-col justify-end rounded-lg p-3 ' + role.className">
+              <span class="text-xs font-medium">{{ role.name }}</span>
+            </div>
+          }
+        </div>
+      </div>
+    `,
+  }),
+};
+
+export const Typography: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Tokens de police (`font-display`, `font-body`, `font-mono`). Le DS expose les utilitaires ; le chargement des fontes (Space Grotesk, Inter, JetBrains Mono) reste à la charge de l’app — sans fichiers chargés, le rendu retombe sur `system-ui`.',
+      },
+    },
+  },
+  render: () => ({
+    props: {
+      fonts: [
+        { utility: 'font-display', label: 'Display — Space Grotesk' },
+        { utility: 'font-body', label: 'Body — Inter' },
+        { utility: 'font-mono', label: 'Mono — JetBrains Mono' },
+      ],
+    },
+    template: `
+      <div class="flex flex-col gap-5">
+        @for (font of fonts; track font.utility) {
+          <div class="flex flex-col gap-1">
+            <span class="text-xs text-muted-foreground">{{ font.utility }} · {{ font.label }}</span>
+            <span [class]="'text-2xl ' + font.utility">Justin croyable — 0123456789</span>
+          </div>
+        }
+      </div>
+    `,
+  }),
+};
+
 export const Roles: Story = {
   render: () => ({
     props: {

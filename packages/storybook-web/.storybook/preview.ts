@@ -32,6 +32,13 @@ import designSystemPackage from '@justin-croyable/design-system/package.json';
 // Vite qui le traite, en appliquant PostCSS et Tailwind v4 via `.postcssrc.json`.
 import '../src/styles.css';
 
+// Palettes du DS, importées en `?raw` : le contenu CSS réel des fichiers de
+// palette, injecté au runtime par le décorateur `withPalette` pour permettre de
+// basculer d'une palette à l'autre depuis la toolbar (cf. plus bas). On réutilise
+// les fichiers source, il n'y a donc aucune valeur de couleur dupliquée ici.
+import fuchsiaPalette from '../../../libs/design-system/src/theme/palettes/fuchsia.css?raw';
+import emeraldPalette from '../../../libs/design-system/src/theme/palettes/emerald.css?raw';
+
 const [major = '0', minor = '0', patch = '0'] = designSystemPackage.version.split('.');
 
 /**
@@ -52,6 +59,35 @@ let themeRef: ThemeService | null = null;
 const withColorScheme: Decorator = (storyFn, context) => {
   activeTheme = context.globals['theme'] === 'dark' ? 'dark' : 'light';
   themeRef?.set(activeTheme);
+  return storyFn();
+};
+
+/**
+ * Palette active du DS.
+ *
+ * Une palette réelle se choisit à la compilation, en important son fichier CSS
+ * (cf. README). Pour la visualiser sans rebuild, on injecte ici le CSS de la
+ * palette choisie dans un `<style>` unique de l'aperçu : ses blocs `:root` et
+ * `.dark` arrivent après le preset (fuchsia par défaut), donc ils l'emportent.
+ * Basculer la toolbar remplace le contenu de ce `<style>`.
+ */
+const PALETTES = { fuchsia: fuchsiaPalette, emerald: emeraldPalette } as const;
+type PaletteName = keyof typeof PALETTES;
+
+const PALETTE_STYLE_ID = 'ds-active-palette';
+
+function applyPalette(name: PaletteName): void {
+  const existing = document.getElementById(PALETTE_STYLE_ID);
+  const style = existing instanceof HTMLStyleElement ? existing : document.createElement('style');
+  style.id = PALETTE_STYLE_ID;
+  style.textContent = PALETTES[name];
+  if (!existing) {
+    document.head.appendChild(style);
+  }
+}
+
+const withPalette: Decorator = (storyFn, context) => {
+  applyPalette(context.globals['palette'] === 'emerald' ? 'emerald' : 'fuchsia');
   return storyFn();
 };
 
@@ -88,6 +124,7 @@ const withLocale: Decorator = (storyFn, context) => {
 
 const preview: Preview = {
   decorators: [
+    withPalette,
     withColorScheme,
     withLocale,
     applicationConfig({
@@ -131,6 +168,18 @@ const preview: Preview = {
     }),
   ],
   globalTypes: {
+    palette: {
+      description: 'Palette de couleurs du Design System',
+      toolbar: {
+        title: 'Palette',
+        icon: 'swatchbook',
+        items: [
+          { value: 'fuchsia', title: 'Fuchsia (323)' },
+          { value: 'emerald', title: 'Emerald (160)' },
+        ],
+        dynamicTitle: true,
+      },
+    },
     locale: {
       description: 'Langue des libellés du Design System',
       toolbar: {
@@ -154,6 +203,7 @@ const preview: Preview = {
     },
   },
   initialGlobals: {
+    palette: 'fuchsia',
     theme: 'light',
     locale: DESIGN_SYSTEM_DEFAULT_LANG,
     backgrounds: { value: 'ds-white' },

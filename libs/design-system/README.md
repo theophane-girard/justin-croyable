@@ -97,6 +97,10 @@ la palette sans configuration supplémentaire. **Ajouter une palette** = dépose
 `palettes/<nom>.css` sur le même contrat de tokens (prendre `fuchsia.css` comme
 gabarit et changer la teinte).
 
+**Prévisualiser** : le Storybook web expose une toolbar « Palette » (fuchsia /
+emerald) qui bascule la palette au runtime sur toutes les stories — pratique pour
+comparer, sans rebuild. Voir la story `Design System/Tokens › Palette`.
+
 ### Tokens
 
 - `primitives.css` — les valeurs **partagées** : sémantiques (`--success`, `--warning`,
