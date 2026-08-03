@@ -1,4 +1,5 @@
-import { ChartComponent, type ChartSkeletonType } from '@justin-croyable/design-system';
+import { ChartComponent, ThemePaletteService, type ChartSkeletonType } from '@justin-croyable/design-system';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import type { EChartsCoreOption } from 'echarts/core';
 import type { Meta, StoryObj } from '@storybook/angular-vite';
 import { expect, waitFor } from 'storybook/test';
@@ -289,6 +290,87 @@ export const MultipleSeries: Story = {
       })),
     },
   },
+};
+
+/**
+ * Démo « couleurs choisies » : un chart custom pioche des couleurs précises de la
+ * palette par teinte (`palette().chart.*`, hors ordre par défaut) et un autre
+ * colore ses barres par état via les couleurs sémantiques (`palette().semantic.*`).
+ *
+ * Les options sont dérivées de la palette (un signal) : elles se recalculent à
+ * chaque bascule de thème, comme le socle du DS.
+ */
+@Component({
+  selector: 'app-custom-colors-chart-demo',
+  imports: [ChartComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div class="border-border rounded-lg border p-4">
+        <h3 class="text-foreground mb-3 text-sm font-medium">Couleurs choisies par teinte</h3>
+        <app-chart [options]="teintesChoisies()" height="18rem" />
+      </div>
+      <div class="border-border rounded-lg border p-4">
+        <h3 class="text-foreground mb-3 text-sm font-medium">Couleurs sémantiques (états)</h3>
+        <app-chart [options]="etatsSemantiques()" height="18rem" />
+      </div>
+    </div>
+  `,
+})
+class CustomColorsChartDemo {
+  private readonly palette = inject(ThemePaletteService);
+
+  protected readonly teintesChoisies = computed<EChartsCoreOption>(() => {
+    const { chart } = this.palette.palette();
+    return {
+      tooltip: { trigger: 'item' },
+      legend: { bottom: 0 },
+      color: [chart.orange, chart.violet, chart.cyan],
+      series: [
+        {
+          type: 'pie',
+          radius: ['45%', '70%'],
+          data: [
+            { value: 1048, name: 'Mobile' },
+            { value: 735, name: 'Desktop' },
+            { value: 580, name: 'Tablette' },
+          ],
+        },
+      ],
+    };
+  });
+
+  protected readonly etatsSemantiques = computed<EChartsCoreOption>(() => {
+    const { semantic } = this.palette.palette();
+    return {
+      tooltip: { trigger: 'axis' },
+      xAxis: { type: 'category', data: ['Réussis', 'En attente', 'Échecs'] },
+      yAxis: { type: 'value' },
+      series: [
+        {
+          type: 'bar',
+          data: [
+            { value: 420, itemStyle: { color: semantic.success } },
+            { value: 120, itemStyle: { color: semantic.warning } },
+            { value: 60, itemStyle: { color: semantic.error } },
+          ],
+        },
+      ],
+    };
+  });
+}
+
+/**
+ * Charts custom : couleurs piochées dans la palette par teinte (hors ordre par
+ * défaut) et couleurs sémantiques `success` / `warning` / `error` pour porter un
+ * état. Les couleurs sont lues sur `ThemePaletteService` (résolues en valeurs
+ * concrètes pour le canvas ECharts) et suivent la bascule de thème.
+ */
+export const CustomColors: Story = {
+  render: () => ({
+    template: `<app-custom-colors-chart-demo />`,
+    moduleMetadata: { imports: [CustomColorsChartDemo] },
+  }),
 };
 
 /**
