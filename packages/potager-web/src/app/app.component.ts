@@ -12,6 +12,7 @@ import {
 import { NgIcon } from '@ng-icons/core';
 
 import { HarvestStore } from './core/harvest-store';
+import { PRICE_MODE } from './core/potager.model';
 import { APP_PATHS } from './app.routes';
 
 type NavItem = { readonly path: string; readonly link: string; readonly label: string; readonly icon: string };
@@ -82,7 +83,12 @@ const NAV_ITEM_IDLE_CLASS = `${NAV_ITEM_BASE_CLASS} text-muted-foreground hover:
               <p class="text-sm font-medium">Récoltes & économies</p>
             </div>
             <div class="ml-auto flex items-center gap-2">
-              @if (priceSourceLive()) {
+              @if (priceModeBio()) {
+                <app-badge type="secondary" class="gap-1">
+                  <ng-icon name="phosphorLeaf" />
+                  Prix bio (référence)
+                </app-badge>
+              } @else if (priceSourceLive()) {
                 <app-badge type="secondary" class="gap-1">
                   <ng-icon name="phosphorCloudArrowDown" />
                   Prix RNM en direct
@@ -117,6 +123,7 @@ export class AppComponent {
   protected readonly sidebarCollapsed = signal(false);
 
   protected readonly priceSourceLive = computed(() => this.#store.priceSource() === 'live');
+  protected readonly priceModeBio = computed(() => this.#store.priceMode() === PRICE_MODE.bio);
 
   protected readonly currentPath = toSignal(
     this.#router.events.pipe(

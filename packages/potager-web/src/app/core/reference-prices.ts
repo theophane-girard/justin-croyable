@@ -5,6 +5,11 @@ export const REFERENCE_PRICES: Readonly<Record<CropId, number>> = CROPS.reduce(
   {} as Record<CropId, number>,
 );
 
+export const REFERENCE_BIO_PRICES: Readonly<Record<CropId, number>> = CROPS.reduce(
+  (accumulator, crop) => ({ ...accumulator, [crop.id]: crop.referenceBioPricePerKg }),
+  {} as Record<CropId, number>,
+);
+
 export const RNM_LABEL_MATCHERS: readonly { readonly keyword: string; readonly cropId: CropId }[] = [
   { keyword: 'tomate', cropId: 'tomate' },
   { keyword: 'courgette', cropId: 'courgette' },

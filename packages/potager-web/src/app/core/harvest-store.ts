@@ -9,9 +9,12 @@ import {
   type HarvestEntry,
   type HarvestRow,
   isCropId,
+  PRICE_MODE,
+  type PriceMode,
+  type PriceSource,
 } from './potager.model';
 import { GovPriceService } from './gov-price.service';
-import { mergePrices } from './reference-prices';
+import { mergePrices, REFERENCE_BIO_PRICES } from './reference-prices';
 
 export const MONTHS_FR = [
   'Jan',
@@ -53,10 +56,20 @@ export class HarvestStore {
 
   readonly #entries = signal<readonly HarvestEntry[]>(this.#restore());
 
-  readonly entries = this.#entries.asReadonly();
-  readonly priceSource = this.#govPrices.priceSource;
+  readonly #priceMode = signal<PriceMode>(PRICE_MODE.conventional);
+  readonly priceMode = this.#priceMode.asReadonly();
 
-  readonly #effectivePrices = computed(() => mergePrices(this.#govPrices.livePrices()));
+  readonly entries = this.#entries.asReadonly();
+
+  readonly priceSource = computed<PriceSource>(() =>
+    this.#priceMode() === PRICE_MODE.bio ? 'reference' : this.#govPrices.priceSource(),
+  );
+
+  readonly #effectivePrices = computed<Record<CropId, number>>(() =>
+    this.#priceMode() === PRICE_MODE.bio
+      ? { ...REFERENCE_BIO_PRICES }
+      : mergePrices(this.#govPrices.livePrices()),
+  );
 
   readonly rows = computed<HarvestRow[]>(() => {
     const prices = this.#effectivePrices();
@@ -111,6 +124,10 @@ export class HarvestStore {
 
   remove(id: string): void {
     this.#entries.update(entries => entries.filter(entry => entry.id !== id));
+  }
+
+  setPriceMode(mode: PriceMode): void {
+    this.#priceMode.set(mode);
   }
 
   #toRow(entry: HarvestEntry, prices: Record<CropId, number>): HarvestRow {

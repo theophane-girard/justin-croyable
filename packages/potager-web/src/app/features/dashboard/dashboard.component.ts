@@ -7,14 +7,22 @@ import {
   ChartComponent,
   CountUpDirective,
   EmptyComponent,
+  SegmentComponent,
+  type SegmentItem,
 } from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
 import type { EChartsCoreOption } from 'echarts/core';
 
 import { HarvestStore, MONTHS_FR } from '../../core/harvest-store';
+import { PRICE_MODE, type PriceMode } from '../../core/potager.model';
 import { APP_PATHS } from '../../app.routes';
 
 const TOP_CROPS_COUNT = 8;
+
+const PRICE_MODE_ITEMS: SegmentItem[] = [
+  { value: PRICE_MODE.conventional, label: 'Conventionnel' },
+  { value: PRICE_MODE.bio, label: 'Bio', icon: 'phosphorLeaf' },
+];
 
 @Component({
   selector: 'app-dashboard',
@@ -26,8 +34,25 @@ const TOP_CROPS_COUNT = 8;
     CountUpDirective,
     ButtonComponent,
     EmptyComponent,
+    SegmentComponent,
   ],
   template: `
+    <div class="flex flex-col gap-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-col">
+          <h2 class="text-foreground text-lg font-semibold">Tableau de bord</h2>
+          <p class="text-muted-foreground text-sm">
+            Économies estimées d'après les prix moyens des fruits et légumes en France.
+          </p>
+        </div>
+        <app-segment
+          variant="accent"
+          [items]="priceModeItems"
+          [value]="store.priceMode()"
+          (valueChange)="onPriceModeChange($event)"
+        />
+      </div>
+
     @if (store.entryCount() === 0) {
       <app-empty
         icon="phosphorPlant"
@@ -123,6 +148,7 @@ const TOP_CROPS_COUNT = 8;
         </div>
       </div>
     }
+    </div>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -130,6 +156,12 @@ export class DashboardComponent {
   protected readonly store = inject(HarvestStore);
 
   protected readonly harvestsLink = `/${APP_PATHS.harvests}`;
+  protected readonly priceModeItems = PRICE_MODE_ITEMS;
+
+  protected onPriceModeChange(value: string): void {
+    const mode: PriceMode = value === PRICE_MODE.bio ? PRICE_MODE.bio : PRICE_MODE.conventional;
+    this.store.setPriceMode(mode);
+  }
 
   protected readonly monthlyOptions = computed<EChartsCoreOption>(() => ({
     tooltip: { trigger: 'axis' },
