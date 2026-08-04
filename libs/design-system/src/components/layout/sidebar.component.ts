@@ -3,7 +3,9 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   effect,
+  inject,
   input,
   output,
   signal,
@@ -22,12 +24,21 @@ import {
   sidebarVariants,
 } from './layout.variants';
 import { StringTemplateOutletDirective } from '../../core/directives/string-template-outlet/string-template-outlet.directive';
+import { SidebarService } from '../../core/services/sidebar.service';
 import { mergeClasses } from '../../utils/merge-classes';
 
 @Component({
   selector: 'app-sidebar',
   imports: [StringTemplateOutletDirective, NgIcon],
   template: `
+    @if (mobileOpen()) {
+      <div
+        class="fixed inset-0 z-40 bg-black/50 md:hidden"
+        aria-hidden="true"
+        (click)="closeMobile()"
+      ></div>
+    }
+
     <aside [class]="classes()" [style.width.px]="currentWidth()" [attr.data-collapsed]="collapsed()">
       <div class="flex-1 overflow-auto">
         <ng-content />
@@ -69,11 +80,22 @@ export class SidebarComponent {
   readonly collapsedChange = output<boolean>();
 
   private readonly internalCollapsed = signal(false);
+  private readonly sidebarService = inject(SidebarService);
+  private readonly destroyRef = inject(DestroyRef);
+
+  protected readonly mobileOpen = this.sidebarService.mobileOpen;
 
   constructor() {
+    this.sidebarService.registerSidebar();
+    this.destroyRef.onDestroy(() => this.sidebarService.unregisterSidebar());
+
     effect(() => {
       this.internalCollapsed.set(this.collapsed());
     });
+  }
+
+  protected closeMobile(): void {
+    this.sidebarService.closeMobile();
   }
 
   protected readonly currentWidth = computed(() => {
@@ -97,9 +119,19 @@ export class SidebarComponent {
     return collapsed ? icons[1] : icons[0];
   });
 
-  protected readonly classes = computed(() => mergeClasses(sidebarVariants(), this.class()));
+  protected readonly mobileClasses = computed(() =>
+    this.mobileOpen()
+      ? 'max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-50 max-md:w-72! max-md:shadow-xl'
+      : 'max-md:hidden',
+  );
 
-  protected readonly triggerClasses = computed(() => mergeClasses(sidebarTriggerVariants()));
+  protected readonly classes = computed(() =>
+    mergeClasses(sidebarVariants(), this.mobileClasses(), this.class()),
+  );
+
+  protected readonly triggerClasses = computed(() =>
+    mergeClasses(sidebarTriggerVariants(), 'max-md:hidden'),
+  );
 
   toggleCollapsed(): void {
     const newState = !this.collapsed();

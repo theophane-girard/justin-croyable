@@ -25,7 +25,7 @@ const meta: Meta<LayoutArgs> = {
     docs: {
       description: {
         component:
-          "Coquille applicative : `app-layout` (conteneur flex), `app-sidebar` (repliable, largeur pilotée), `app-header` (avec onglets optionnels, en lien routeur ou en bouton), `app-content` et `app-footer`. Les `app-layout` s'imbriquent : un layout horizontal pour la barre latérale, un vertical pour la colonne de contenu.",
+          "Coquille applicative : `app-layout` (conteneur flex), `app-sidebar` (repliable, largeur pilotée), `app-header` (avec onglets optionnels, en lien routeur ou en bouton), `app-content` et `app-footer`. Les `app-layout` s'imbriquent : un layout horizontal pour la barre latérale, un vertical pour la colonne de contenu. En mobile (sous `md`), la barre latérale est masquée et `app-header` affiche un bouton burger qui l'ouvre en surimpression (drawer avec fond) ; la coordination passe par `SidebarService`. Réduire la fenêtre du navigateur pour l'observer.",
       },
     },
   },
