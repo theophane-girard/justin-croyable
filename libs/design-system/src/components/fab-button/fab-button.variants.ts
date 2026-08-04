@@ -49,6 +49,51 @@ export const fabButtonVariants = cva(
   },
 );
 
+export const fabContainerVariants = cva('w-fit', {
+  variants: {
+    position: {
+      static: 'relative',
+      'bottom-right': 'fixed bottom-6 right-6 z-50',
+      'bottom-left': 'fixed bottom-6 left-6 z-50',
+      'top-right': 'fixed top-6 right-6 z-50',
+      'top-left': 'fixed top-6 left-6 z-50',
+    },
+  },
+  defaultVariants: {
+    position: 'bottom-right',
+  },
+});
+
+export const fabListVariants = cva(
+  mergeClasses(
+    'absolute flex items-center gap-3',
+    '[&>*]:transition-all [&>*]:duration-200 [&>*]:ease-out [&>*]:origin-center [&>*]:motion-reduce:transition-none',
+  ),
+  {
+    variants: {
+      side: {
+        top: 'bottom-full left-1/2 -translate-x-1/2 mb-3 flex-col-reverse',
+        bottom: 'top-full left-1/2 -translate-x-1/2 mt-3 flex-col',
+        start: 'right-full top-1/2 -translate-y-1/2 mr-3 flex-row-reverse',
+        end: 'left-full top-1/2 -translate-y-1/2 ml-3 flex-row',
+      },
+      open: {
+        true: mergeClasses(
+          'pointer-events-auto',
+          '[&>*]:scale-100 [&>*]:opacity-100',
+          '[&>*:nth-child(2)]:delay-[40ms] [&>*:nth-child(3)]:delay-[80ms]',
+          '[&>*:nth-child(4)]:delay-[120ms] [&>*:nth-child(5)]:delay-[160ms]',
+        ),
+        false: 'pointer-events-none [&>*]:scale-0 [&>*]:opacity-0',
+      },
+    },
+    defaultVariants: {
+      side: 'top',
+      open: false,
+    },
+  },
+);
+
 export type FabButtonType = NonNullable<
   VariantProps<typeof fabButtonVariants>['type']
 >;
@@ -57,4 +102,7 @@ export type FabButtonSize = NonNullable<
 >;
 export type FabButtonPosition = NonNullable<
   VariantProps<typeof fabButtonVariants>['position']
+>;
+export type FabListSide = NonNullable<
+  VariantProps<typeof fabListVariants>['side']
 >;
