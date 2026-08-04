@@ -31,7 +31,7 @@ export const CHART_FONT_FAMILY =
 const MARK_RADIUS = 6;
 
 /**
- * Écart *visible* cible, couleur de fond, entre segments adjacents.
+ * Écart *visible* cible, couleur de la surface, entre segments adjacents.
  *
  * Le liseré est rendu différemment selon la marque : sur les barres empilées il
  * est compté deux fois (un par segment, ils s'ajoutent), sur les secteurs une
@@ -145,7 +145,7 @@ function themeForSeries(series: SeriesOption, palette: ThemePalette, index: numb
         itemStyle: {
           borderRadius: MARK_RADIUS,
           // Moitié de l'écart : le liseré est compté deux fois entre deux segments empilés.
-          ...(stacked ? { borderColor: palette.background, borderWidth: SEGMENT_GAP / 2 } : {}),
+          ...(stacked ? { borderColor: palette.card, borderWidth: SEGMENT_GAP / 2 } : {}),
           ...series.itemStyle,
         },
         emphasis: {
@@ -174,7 +174,11 @@ function themeForSeries(series: SeriesOption, palette: ThemePalette, index: numb
     case 'pie': {
       const itemStyle = {
         borderRadius: MARK_RADIUS,
-        borderColor: palette.background,
+        // Écart entre secteurs peint dans la couleur de la surface qui porte le
+        // graphique (carte/popover), pas le fond de page : le canvas est
+        // transparent et les cartes ont une surface distincte du fond en sombre,
+        // où un liseré au fond de page apparaîtrait comme des traits sombres.
+        borderColor: palette.card,
         borderWidth: SEGMENT_GAP,
         ...series.itemStyle,
       };

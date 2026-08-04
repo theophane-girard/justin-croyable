@@ -11,6 +11,7 @@ export type DecorativeColorName = (typeof DECORATIVE_COLOR_NAMES)[number];
 
 export type ThemePalette = {
   background: string;
+  card: string;
   foreground: string;
   muted: string;
   mutedForeground: string;
@@ -73,6 +74,7 @@ const SSR_SEMANTIC_COLORS: Record<SemanticColorName, string> = {
 
 const SSR_PALETTE: ThemePalette = {
   background: 'oklch(0.972 0.006 323)',
+  card: 'oklch(0.995 0.002 323)',
   foreground: 'oklch(0.33 0.008 323)',
   muted: 'oklch(0.94 0.007 323)',
   mutedForeground: 'oklch(0.545 0 323)',
@@ -137,6 +139,7 @@ export class ThemePaletteService {
 
     const palette: ThemePalette = {
       background: read('--background', SSR_PALETTE.background),
+      card: read('--card', SSR_PALETTE.card),
       foreground: read('--foreground', SSR_PALETTE.foreground),
       muted: read('--muted', SSR_PALETTE.muted),
       mutedForeground: read('--muted-foreground', SSR_PALETTE.mutedForeground),
