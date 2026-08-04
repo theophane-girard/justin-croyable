@@ -1,13 +1,18 @@
 import {
   FabButtonComponent,
+  FabContainerComponent,
+  FabListComponent,
   type FabButtonPosition,
   type FabButtonSize,
   type FabButtonType,
 } from '@justin-croyable/design-system';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
+  phosphorCamera,
+  phosphorHeart,
   phosphorPencilSimple,
   phosphorPlus,
+  phosphorShareNetwork,
   phosphorTrash,
 } from '@ng-icons/phosphor-icons/regular';
 import {
@@ -33,7 +38,14 @@ const meta: Meta<FabButtonArgs> = {
     moduleMetadata({ imports: [NgIcon] }),
     applicationConfig({
       providers: [
-        provideIcons({ phosphorPlus, phosphorPencilSimple, phosphorTrash }),
+        provideIcons({
+          phosphorPlus,
+          phosphorPencilSimple,
+          phosphorTrash,
+          phosphorCamera,
+          phosphorHeart,
+          phosphorShareNetwork,
+        }),
       ],
     }),
   ],
@@ -141,4 +153,105 @@ export const Loading: Story = {
 
 export const Disabled: Story = {
   args: { fabDisabled: true },
+};
+
+export const SpeedDial: Story = {
+  name: 'Speed dial (sous-boutons)',
+  parameters: {
+    controls: { disable: true },
+    docs: {
+      description: {
+        story:
+          "Regroupe plusieurs sous-actions derrière un FAB déclencheur (`app-fab` + `app-fab-list`). Au clic, l'icône se transforme en croix et les sous-boutons apparaissent en cascade. La liste se referme au clic sur une action, à l'échappement ou au clic extérieur. `side` (`top`, `bottom`, `start`, `end`) contrôle la direction de déploiement.",
+      },
+    },
+  },
+  decorators: [
+    moduleMetadata({ imports: [FabContainerComponent, FabListComponent] }),
+  ],
+  render: () => ({
+    template: `
+      <div class="relative h-96 w-full overflow-hidden rounded-lg border border-border">
+        <app-fab position="bottom-right" triggerLabel="Ouvrir les actions">
+          <app-fab-list side="top">
+            <button appFabButton size="sm" variant="secondary" aria-label="Partager">
+              <ng-icon name="phosphorShareNetwork" />
+            </button>
+            <button appFabButton size="sm" variant="secondary" aria-label="Photo">
+              <ng-icon name="phosphorCamera" />
+            </button>
+            <button appFabButton size="sm" variant="secondary" aria-label="Favori">
+              <ng-icon name="phosphorHeart" />
+            </button>
+          </app-fab-list>
+        </app-fab>
+      </div>
+    `,
+  }),
+};
+
+export const SpeedDialSides: Story = {
+  name: 'Speed dial — directions',
+  parameters: { controls: { disable: true } },
+  decorators: [
+    moduleMetadata({ imports: [FabContainerComponent, FabListComponent] }),
+  ],
+  render: () => ({
+    template: `
+      <div class="grid h-96 w-full grid-cols-2 grid-rows-2 gap-4">
+        <div class="relative rounded-lg border border-border p-4">
+          <span class="text-sm text-muted-foreground">side="end"</span>
+          <app-fab position="static" triggerLabel="Actions">
+            <app-fab-list side="end">
+              <button appFabButton size="sm" variant="secondary" aria-label="Éditer">
+                <ng-icon name="phosphorPencilSimple" />
+              </button>
+              <button appFabButton size="sm" variant="destructive" aria-label="Supprimer">
+                <ng-icon name="phosphorTrash" />
+              </button>
+            </app-fab-list>
+          </app-fab>
+        </div>
+        <div class="relative flex justify-end rounded-lg border border-border p-4">
+          <span class="text-sm text-muted-foreground">side="start"</span>
+          <app-fab position="static" triggerLabel="Actions">
+            <app-fab-list side="start">
+              <button appFabButton size="sm" variant="secondary" aria-label="Éditer">
+                <ng-icon name="phosphorPencilSimple" />
+              </button>
+              <button appFabButton size="sm" variant="destructive" aria-label="Supprimer">
+                <ng-icon name="phosphorTrash" />
+              </button>
+            </app-fab-list>
+          </app-fab>
+        </div>
+        <div class="relative flex items-end rounded-lg border border-border p-4">
+          <span class="text-sm text-muted-foreground">side="top"</span>
+          <app-fab position="static" triggerLabel="Actions">
+            <app-fab-list side="top">
+              <button appFabButton size="sm" variant="secondary" aria-label="Éditer">
+                <ng-icon name="phosphorPencilSimple" />
+              </button>
+              <button appFabButton size="sm" variant="destructive" aria-label="Supprimer">
+                <ng-icon name="phosphorTrash" />
+              </button>
+            </app-fab-list>
+          </app-fab>
+        </div>
+        <div class="relative flex items-start justify-end rounded-lg border border-border p-4">
+          <span class="text-sm text-muted-foreground">side="bottom"</span>
+          <app-fab position="static" triggerLabel="Actions">
+            <app-fab-list side="bottom">
+              <button appFabButton size="sm" variant="secondary" aria-label="Éditer">
+                <ng-icon name="phosphorPencilSimple" />
+              </button>
+              <button appFabButton size="sm" variant="destructive" aria-label="Supprimer">
+                <ng-icon name="phosphorTrash" />
+              </button>
+            </app-fab-list>
+          </app-fab>
+        </div>
+      </div>
+    `,
+  }),
 };
