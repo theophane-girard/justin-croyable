@@ -166,25 +166,44 @@ export class DialogOptions<T, U> {
     :host {
       --app-dialog-duration: 100ms;
       opacity: 1;
-      transform: scale(1);
       transition:
         opacity var(--app-dialog-duration) ease-out,
-        transform var(--app-dialog-duration) ease-out;
+        transform var(--app-dialog-duration) ease-out,
+        translate var(--app-dialog-duration) ease-out;
     }
 
     @starting-style {
       :host {
         opacity: 0;
-        transform: scale(0.9);
+        translate: 0 100%;
       }
     }
 
     :host.dialog-leave {
       opacity: 0;
-      transform: scale(0.9);
+      translate: 0 100%;
       transition:
         opacity var(--app-dialog-duration) ease-in,
-        transform var(--app-dialog-duration) ease-in;
+        translate var(--app-dialog-duration) ease-in;
+    }
+
+    @media (min-width: 640px) {
+      @starting-style {
+        :host {
+          opacity: 0;
+          transform: scale(0.9);
+          translate: -50% -50%;
+        }
+      }
+
+      :host.dialog-leave {
+        opacity: 0;
+        transform: scale(0.9);
+        translate: -50% -50%;
+        transition:
+          opacity var(--app-dialog-duration) ease-in,
+          transform var(--app-dialog-duration) ease-in;
+      }
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
