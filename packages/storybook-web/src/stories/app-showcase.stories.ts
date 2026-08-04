@@ -162,7 +162,7 @@ type SelectValue = string | string[] | null;
           [collapsed]="sidebarCollapsed()"
           (collapsedChange)="sidebarCollapsed.set($event)"
         >
-          <app-sidebar-group class="p-3">
+          <app-sidebar-group class="px-1 py-3">
             <app-sidebar-group-label [class.hidden]="sidebarCollapsed()">Navigation</app-sidebar-group-label>
             @for (item of navItems; track item.slug) {
               <button
@@ -387,7 +387,7 @@ class AppShowcaseComponent {
   }
 
   protected navItemClass(active: boolean): string {
-    const base = 'flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm transition-colors';
+    const base = 'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors';
     if (active) {
       return `${base} bg-muted text-foreground font-medium`;
     }

@@ -38,7 +38,7 @@ export const contentVariants = cva(
 
 // Sidebar Variants
 export const sidebarVariants = cva(
-  'relative flex flex-col h-full transition-all duration-300 ease-in-out border-r shrink-0 p-6 bg-sidebar text-sidebar-foreground border-sidebar-border',
+  'relative flex flex-col h-full transition-all duration-300 ease-in-out border-r shrink-0 px-3 py-6 bg-sidebar text-sidebar-foreground border-sidebar-border',
 );
 
 export const sidebarTriggerVariants = cva(
@@ -46,7 +46,7 @@ export const sidebarTriggerVariants = cva(
 );
 
 // Sidebar Group Variants
-export const sidebarGroupVariants = cva('flex flex-col gap-2');
+export const sidebarGroupVariants = cva('flex flex-col gap-1');
 
 export const sidebarGroupLabelVariants = cva(
   'flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium text-sidebar-foreground/70 outline-hidden transition-[margin,opacity] duration-200 ease-linear focus-visible:ring-2 focus-visible:ring-sidebar-ring [&>svg]:size-4 [&>svg]:shrink-0',
