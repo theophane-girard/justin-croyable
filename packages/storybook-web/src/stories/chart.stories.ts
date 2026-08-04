@@ -291,9 +291,6 @@ class CustomColorsChartDemo {
   private readonly palette = inject(ThemePaletteService);
 
   protected readonly teintesChoisies = computed<EChartsCoreOption>(() => {
-    // Couleurs spécifiques prises dans la série de la palette ACTIVE : elles
-    // suivent donc la palette (fuchsia ↔ emerald). Pour des accents fixes,
-    // identiques dans toutes les palettes, piocher plutôt dans `decorative`.
     const { series } = this.palette.palette();
     return {
       tooltip: { trigger: 'item' },

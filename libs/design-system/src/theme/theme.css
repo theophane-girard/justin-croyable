@@ -1,50 +1,6 @@
-/*
- * Preset Tailwind (v4) du Design System — @justin-croyable/design-system
- *
- * Tailwind v4 n'a plus de « preset » JavaScript : le preset d'un DS est un
- * fichier CSS que l'application importe après `tailwindcss`.
- *
- * À FOURNIR PAR L'APPLICATION, dans son CSS d'entrée et dans cet ordre :
- *
- *   @layer ng-icon, theme, base, components, utilities;  // ng-icon avant base
- *   @import 'tailwindcss';
- *   @plugin "tailwindcss-animate";                       // animations du DS
- *   @import '@justin-croyable/design-system/theme.css';  // ce fichier
- *
- * Pourquoi ce n'est pas ce fichier qui importe `tailwindcss` et le plugin :
- * les `@import`/`@plugin` d'un CSS se résolvent depuis le dossier du fichier
- * qui les contient. Un preset qui importerait ses propres outils exigerait donc
- * que `tailwindcss` soit résolvable depuis `libs/design-system` — faux dans ce
- * monorepo, où la racine hoiste Tailwind 3 pour le track NativeWind pendant que
- * le DS web tourne sur Tailwind 4. Laisser l'app posséder ces deux lignes rend
- * le preset utilisable quel que soit l'endroit d'où il est consommé.
- *
- * Découpage :
- *   - `primitives.css` : les valeurs PARTAGÉES (sémantiques, palette décorative,
- *     typo, rayon), stables d'une palette à l'autre.
- *   - `palettes/<nom>.css` : l'identité chromatique de marque (rampes `brand` /
- *     `primary` / `gray` + rôles), en clair et en sombre. Ce fichier importe
- *     `fuchsia` par défaut ; une app en choisit une autre en l'important après.
- *   - ce fichier : les *rôles* (`--background`, `--primary`, `--brand`, …)
- *     adossés aux primitives, leur bascule dark, puis l'exposition en utilitaires
- *     Tailwind via `@theme inline`.
- *
- * Choisir une palette (dans le CSS d'entrée de l'app, APRÈS cet import) :
- *
- *   @import '@justin-croyable/design-system/theme.css';
- *   @import '@justin-croyable/design-system/palettes/emerald.css';
- *
- * Pour un retheming ad hoc : surcharger les primitives (ou les rôles) dans le CSS
- * de l'app, après cet import. Les composants ne référencent que des rôles, donc
- * ils suivent sans modification.
- */
 @import './primitives.css';
 @import './palettes/fuchsia.css';
 
-/* Les classes des composants du DS vivent hors de l'arborescence de l'app : sans
-   cette source, les utilitaires que seul le DS utilise seraient purgés. Attention,
-   ce chemin est ignoré quand le DS est consommé depuis `node_modules` (Tailwind
-   respecte `.gitignore`) : dans ce cas l'app doit redéclarer la source. */
 @source '../components';
 
 @custom-variant dark (&:is(.dark *));
@@ -69,14 +25,7 @@
   --border: var(--color-border);
   --input: var(--color-border);
   --ring: var(--color-action);
-  /* Palette des graphiques : la série `--chart-1..6` est définie PAR PALETTE
-     (cf. `palettes/<nom>.css`). Chaque palette choisit ses couleurs ET leur ordre
-     pour que des séries voisines restent bien distinctes — un ordre séquentiel de
-     teintes proches (ou une rotation mécanique) tasse le rendu. Valeurs littérales
-     et non `calc(var(--brand-hue)…)` : lues via `getComputedStyle` pour le canvas
-     ECharts, elles doivent être des couleurs concrètes (un `calc` non résolu
-     casserait le rendu canvas). Décoratives par nature : aucune ne porte de sens
-     état, et elles restent toujours légendées. */
+
   --sidebar: var(--color-surface);
   --sidebar-foreground: var(--color-text);
   --sidebar-primary: var(--color-action);
@@ -107,7 +56,7 @@
   --border: var(--color-border);
   --input: var(--color-border);
   --ring: var(--color-action);
-  /* --chart-* : hérités de :root (nuances 500, identiques en clair et sombre). */
+
   --sidebar: var(--color-surface);
   --sidebar-foreground: var(--color-text);
   --sidebar-primary: var(--color-action);
@@ -157,15 +106,10 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  /* Typographie — `font-display`, `font-body`, `font-mono`. Les valeurs viennent
-     de `primitives.css` (partagées entre palettes). Le chargement des fontes est
-     à la charge de l'app. */
   --font-display: var(--font-display);
   --font-body: var(--font-body);
   --font-mono: var(--font-mono);
 
-  /* Marque — rôle (`bg-brand`) + rampe (`bg-brand-600`). La rampe vient de la
-     palette sélectionnée (cf. `palettes/<nom>.css`). */
   --color-brand-50: var(--brand-50);
   --color-brand-100: var(--brand-100);
   --color-brand-200: var(--brand-200);
@@ -177,11 +121,6 @@
   --color-brand-800: var(--brand-800);
   --color-brand-900: var(--brand-900);
 
-  /* Palette complémentaire (cf. primitives.css). Chaque espace de noms est
-     d'abord remis à `initial` pour purger la rampe Tailwind par défaut : sans
-     ça, les pas que nous ne définissons pas (950) continueraient à résoudre
-     vers une teinte hors système. Un `orange-950` devient donc une erreur de
-     build plutôt qu'une couleur silencieusement fausse. */
   --color-orange-*: initial;
   --color-orange-50: var(--orange-50);
   --color-orange-100: var(--orange-100);

@@ -1,25 +1,6 @@
-/*
- * Palette « fuchsia » — teinte de marque 323 (magenta).
- *
- * Palette HISTORIQUE et par défaut du DS : `theme.css` l'importe d'office, donc
- * un consommateur qui ne fait rien reste sur ce thème.
- *
- * Une palette ne définit que l'identité chromatique de marque : rampes
- * `--brand-*` / `--primary-*` / `--gray-*` et rôles (`--color-*`), en clair et
- * en sombre. Tout le reste (sémantiques, décoratives, typo, rayon) est partagé
- * et vit dans `primitives.css`.
- *
- * Sélectionner une autre palette = importer son fichier APRÈS `theme.css` :
- *
- *   @import '@justin-croyable/design-system/theme.css';
- *   @import '@justin-croyable/design-system/palettes/emerald.css';
- */
 :root {
   --brand-hue: 323;
 
-  /* Marque — rampe dédiée. Alignée sur `--primary-*` (mêmes valeurs) : la marque
-     et l'action partagent aujourd'hui la même teinte. Le token existe pour les
-     découpler proprement le jour où elles divergent. */
   --brand-50: oklch(0.972 0.029 323);
   --brand-100: oklch(0.94 0.054 323);
   --brand-200: oklch(0.885 0.093 323);
@@ -31,7 +12,6 @@
   --brand-800: oklch(0.41 0.099 323);
   --brand-900: oklch(0.33 0.067 323);
 
-  /* Action / primaire */
   --primary-50: oklch(0.972 0.029 323);
   --primary-100: oklch(0.94 0.054 323);
   --primary-200: oklch(0.885 0.093 323);
@@ -43,7 +23,6 @@
   --primary-800: oklch(0.41 0.099 323);
   --primary-900: oklch(0.33 0.067 323);
 
-  /* Neutres — teintés vers la marque */
   --gray-50: oklch(0.972 0.006 323);
   --gray-100: oklch(0.94 0.007 323);
   --gray-200: oklch(0.885 0.009 323);
@@ -55,7 +34,6 @@
   --gray-800: oklch(0.41 0.009 323);
   --gray-900: oklch(0.33 0.008 323);
 
-  /* Rôles — valeurs validées AA */
   --color-brand: var(--brand-600);
   --color-surface: oklch(0.995 0.002 323);
   --color-bg: var(--gray-50);
@@ -65,9 +43,6 @@
   --color-action: oklch(0.58 0.16 323);
   --color-action-text: oklch(1 0 0);
 
-  /* Série des graphiques — ancrée sur la marque (h323). Reprend les familles
-     décoratives historiques du DS (cyan 197, orange 51, violet 286, lime 108,
-     rose 355) : rendu inchangé sur cette palette. */
   --chart-1: oklch(0.64 0.16 323);
   --chart-2: oklch(0.64 0.106 197);
   --chart-3: oklch(0.64 0.16 51);

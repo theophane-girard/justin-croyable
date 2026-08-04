@@ -18,8 +18,6 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj;
 
-// Classes littérales (et non `bg-brand-${step}`) : le scanner Tailwind ne
-// détecte que les noms de classe présents tels quels dans le source.
 const brandRamp = [
   'bg-brand-50',
   'bg-brand-100',

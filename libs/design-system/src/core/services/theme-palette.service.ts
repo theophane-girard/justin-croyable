@@ -6,9 +6,6 @@ import { ThemeService } from './theme.service';
 export const SEMANTIC_COLOR_NAMES = ['success', 'warning', 'error', 'info'] as const;
 export type SemanticColorName = (typeof SEMANTIC_COLOR_NAMES)[number];
 
-// Familles décoratives NOMMÉES (pas 500) — fixes et indépendantes de la palette,
-// pour choisir délibérément « la orange »/« la cyan ». À distinguer de `series`,
-// le cycle catégoriel ordonné qui, lui, tourne avec la marque.
 export const DECORATIVE_COLOR_NAMES = ['orange', 'lime', 'cyan', 'violet', 'rose'] as const;
 export type DecorativeColorName = (typeof DECORATIVE_COLOR_NAMES)[number];
 
@@ -26,9 +23,6 @@ export type ThemePalette = {
   semantic: Record<SemanticColorName, string>;
 };
 
-// Série des graphiques, lue par index depuis --chart-1..6. Ces variables sont
-// générées dans theme.css par rotation depuis --brand-hue : la série est donc
-// solidaire de la palette active, sans couleur nommée en dur ici.
 const CHART_SERIES_VARIABLES = [
   '--chart-1',
   '--chart-2',
@@ -53,9 +47,6 @@ const SEMANTIC_COLOR_VARIABLES: Record<SemanticColorName, string> = {
   info: '--info',
 };
 
-// Repli SSR : la série ancrée sur la palette par défaut (fuchsia, teinte 323),
-// avec les mêmes décalages que theme.css. Au navigateur, les valeurs résolues en
-// direct priment.
 const SSR_CHART_SERIES = [
   'oklch(0.64 0.16 323)',
   'oklch(0.64 0.106 197)',
@@ -100,9 +91,6 @@ export class ThemePaletteService {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly themeService = inject(ThemeService);
 
-  // Bumpé par `refresh()` pour forcer une relecture quand la palette change à
-  // chaud (import d'un autre `palettes/*.css`) : contrairement à la bascule
-  // claire/sombre, ce changement n'a pas de signal propre.
   readonly #revision = signal(0);
 
   readonly palette = computed<ThemePalette>(() => {
@@ -116,7 +104,6 @@ export class ThemePaletteService {
     return this.readPalette(isDark);
   });
 
-  /** Force la relecture de la palette (recolore le canvas des charts) après un changement de palette à chaud. */
   refresh(): void {
     this.#revision.update(revision => revision + 1);
   }
