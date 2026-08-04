@@ -162,7 +162,7 @@ type SelectValue = string | string[] | null;
           [collapsed]="sidebarCollapsed()"
           (collapsedChange)="sidebarCollapsed.set($event)"
         >
-          <app-sidebar-group class="p-3">
+          <app-sidebar-group class="px-1 py-3">
             <app-sidebar-group-label [class.hidden]="sidebarCollapsed()">Navigation</app-sidebar-group-label>
             @for (item of navItems; track item.slug) {
               <button

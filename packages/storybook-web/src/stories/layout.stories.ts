@@ -51,7 +51,7 @@ const meta: Meta<LayoutArgs> = {
       <div class="h-[32rem] overflow-hidden border">
         <app-layout [direction]="direction" class="h-full">
           <app-sidebar [width]="sidebarWidth" [collapsible]="collapsible" [collapsed]="collapsed">
-            <app-sidebar-group class="p-3">
+            <app-sidebar-group class="px-1 py-3">
               <app-sidebar-group-label>Espace</app-sidebar-group-label>
               <a class="rounded-md px-2 py-1.5 text-sm hover:bg-muted">Tableau de bord</a>
               <a class="rounded-md px-2 py-1.5 text-sm hover:bg-muted">Projets</a>
