@@ -130,9 +130,16 @@ export class AppComponent {
     const active = this.currentPath();
     return NAV_ITEMS.map(item => ({
       ...item,
-      cssClass: item.path === active ? NAV_ITEM_ACTIVE_CLASS : NAV_ITEM_IDLE_CLASS,
+      cssClass: this.#isActive(item.path, active) ? NAV_ITEM_ACTIVE_CLASS : NAV_ITEM_IDLE_CLASS,
     }));
   });
+
+  #isActive(path: string, active: string): boolean {
+    if (path === '') {
+      return active === '';
+    }
+    return active === path || active.startsWith(`${path}/`);
+  }
 
   #normalizePath(url: string): string {
     const path = url.split('?')[0]?.split('#')[0] ?? url;
