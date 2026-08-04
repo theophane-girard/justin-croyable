@@ -1,0 +1,29 @@
+{
+  "//": "tsconfig dédié au builder @angular/build:application (AOT esbuild). Non-composite et sans project references : le builder ne les supporte pas. Le typecheck Nx passe par tsconfig.app.json (composite).",
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "emitDeclarationOnly": false,
+    "outDir": "dist",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["es2022", "dom", "dom.iterable"],
+    "types": [],
+    "experimentalDecorators": true,
+    "noUnusedLocals": false
+  },
+  "angularCompilerOptions": {
+    "strictInjectionParameters": true,
+    "strictInputAccessModifiers": true,
+    "strictTemplates": false
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["dist", "out-tsc"],
+  "references": [
+    {
+      "path": "../../libs/design-system/tsconfig.lib.json"
+    }
+  ]
+}

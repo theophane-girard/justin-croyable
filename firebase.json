@@ -47,7 +47,7 @@
     },
     {
       "target": "potager",
-      "public": "dist/potager-web",
+      "public": "dist/potager-web/browser",
       "predeploy": ["npx nx build @justin-croyable/potager-web"],
       "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
       "rewrites": [

@@ -4,9 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "build": "nx build @justin-croyable/potager-web",
+    "serve": "nx serve @justin-croyable/potager-web"
   },
   "//": "Versions épinglées ici comme dans storybook-web : le track React Native de la racine tient sur Tailwind 3, alors que le DS web tient sur Angular 21 + Tailwind 4. npm isole donc ce jeu dans packages/potager-web/node_modules. Application zoneless : zone.js n'est volontairement pas listé (provideZonelessChangeDetection).",
   "dependencies": {
@@ -30,12 +29,11 @@
     "tslib": "^2.3.0"
   },
   "devDependencies": {
-    "@analogjs/vite-plugin-angular": "^2.6.4",
+    "@angular/build": "^21.2.0",
     "@angular/compiler-cli": "^21.2.0",
-    "@tailwindcss/vite": "^4.3.3",
+    "@tailwindcss/postcss": "^4.3.3",
     "tailwindcss": "^4.3.3",
     "tailwindcss-animate": "^1.0.7",
-    "typescript": "~5.9.2",
-    "vite": "^8.0.0"
+    "typescript": "~5.9.2"
   }
 }

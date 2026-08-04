@@ -1,0 +1,46 @@
+{
+  "name": "@justin-croyable/potager-web",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "packages/potager-web/src",
+  "targets": {
+    "build": {
+      "executor": "@angular/build:application",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/potager-web",
+        "index": "packages/potager-web/index.html",
+        "browser": "packages/potager-web/src/main.ts",
+        "tsConfig": "packages/potager-web/tsconfig.build.json",
+        "styles": ["packages/potager-web/src/styles.css"]
+      },
+      "configurations": {
+        "production": {
+          "outputHashing": "all"
+        },
+        "development": {
+          "optimization": false,
+          "extractLicenses": false,
+          "sourceMap": true
+        }
+      },
+      "defaultConfiguration": "production"
+    },
+    "serve": {
+      "executor": "@angular/build:dev-server",
+      "options": {
+        "buildTarget": "@justin-croyable/potager-web:build",
+        "port": 4300
+      },
+      "configurations": {
+        "development": {
+          "buildTarget": "@justin-croyable/potager-web:build:development"
+        },
+        "production": {
+          "buildTarget": "@justin-croyable/potager-web:build:production"
+        }
+      },
+      "defaultConfiguration": "development"
+    }
+  }
+}
