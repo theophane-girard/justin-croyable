@@ -37,6 +37,7 @@ export * from './i18n';
 export * from './providers';
 export * from './components/divider';
 export * from './components/empty';
+export * from './components/fab-button';
 export * from './components/input';
 export * from './components/input-group';
 export * from './components/kbd';
