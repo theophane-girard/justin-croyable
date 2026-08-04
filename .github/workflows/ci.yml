@@ -52,6 +52,20 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Détermine les sites impactés pour ne (re)builder et (re)déployer que
+      # ceux-là. S'appuie sur NX_BASE / NX_HEAD posés plus haut. En cas d'échec
+      # de détection, on retombe sur « tout affecté » pour ne rien manquer.
+      - name: Sites affectés
+        id: affected
+        run: |
+          if AFFECTED=$(npx nx show projects --affected --json 2>/dev/null); then
+            echo "storybook=$(echo "$AFFECTED" | grep -q 'storybook-web' && echo true || echo false)" >> "$GITHUB_OUTPUT"
+            echo "potager=$(echo "$AFFECTED" | grep -q 'potager-web' && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          else
+            echo "storybook=true" >> "$GITHUB_OUTPUT"
+            echo "potager=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Typecheck et lint
         run: npx nx affected -t typecheck lint
 
@@ -97,9 +111,11 @@ jobs:
           exit 1
 
       - name: Build du Storybook web
+        if: steps.affected.outputs.storybook == 'true'
         run: npx nx build-storybook @justin-croyable/storybook-web
 
       - name: Build de l'app potager
+        if: steps.affected.outputs.potager == 'true'
         run: npx nx build @justin-croyable/potager-web
 
       - name: Firebase est-il configuré ?
@@ -115,7 +131,7 @@ jobs:
           fi
 
       - name: Déploiement du Storybook sur le canal live
-        if: steps.firebase.outputs.ready == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master'
+        if: steps.firebase.outputs.ready == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master' && steps.affected.outputs.storybook == 'true'
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
@@ -125,7 +141,7 @@ jobs:
           channelId: live
 
       - name: Déploiement de l'app potager sur le canal live
-        if: steps.firebase.outputs.ready == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master'
+        if: steps.firebase.outputs.ready == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master' && steps.affected.outputs.potager == 'true'
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
@@ -135,7 +151,7 @@ jobs:
           channelId: live
 
       - name: Prévisualisation du Storybook
-        if: steps.firebase.outputs.ready == 'true' && github.event_name == 'pull_request'
+        if: steps.firebase.outputs.ready == 'true' && github.event_name == 'pull_request' && steps.affected.outputs.storybook == 'true'
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
@@ -145,7 +161,7 @@ jobs:
           expires: 7d
 
       - name: Prévisualisation de l'app potager
-        if: steps.firebase.outputs.ready == 'true' && github.event_name == 'pull_request'
+        if: steps.firebase.outputs.ready == 'true' && github.event_name == 'pull_request' && steps.affected.outputs.potager == 'true'
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}

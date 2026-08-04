@@ -3,7 +3,6 @@
     {
       "target": "storybook",
       "public": "dist/storybook-web",
-      "predeploy": ["npx nx build-storybook @justin-croyable/storybook-web"],
       "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
       "rewrites": [
         {
@@ -48,7 +47,6 @@
     {
       "target": "potager",
       "public": "dist/potager-web/browser",
-      "predeploy": ["npx nx build @justin-croyable/potager-web"],
       "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
       "rewrites": [
         {
