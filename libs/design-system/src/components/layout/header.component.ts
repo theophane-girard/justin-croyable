@@ -2,15 +2,20 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  inject,
   input,
   output,
   ViewEncapsulation,
 } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { phosphorList } from '@ng-icons/phosphor-icons/regular';
 import type { ClassValue } from 'clsx';
 
 import { headerVariants } from './layout.variants';
+import { ButtonComponent } from '../button';
+import { SidebarService } from '../../core/services/sidebar.service';
 import { mergeClasses } from '../../utils/merge-classes';
 
 export type TabItem = {
@@ -26,7 +31,8 @@ export type TabItem = {
 
 @Component({
   selector: 'app-header',
-  imports: [RouterLink, RouterLinkActive],
+  imports: [RouterLink, RouterLinkActive, NgIcon, ButtonComponent],
+  viewProviders: [provideIcons({ phosphorList })],
   template: `
     <header [class]="classes()">
       <div
@@ -35,6 +41,20 @@ export type TabItem = {
         [class.pt-3]="tabs().length"
         [class.pb-1]="tabs().length"
       >
+        @if (showMenuButton()) {
+          <button
+            type="button"
+            appButton
+            variant="ghost"
+            size="icon-sm"
+            class="mr-2 md:hidden"
+            aria-label="Ouvrir le menu de navigation"
+            (click)="toggleSidebar()"
+          >
+            <ng-icon name="phosphorList" class="size-5!" />
+          </button>
+        }
+
         <ng-content />
       </div>
 
@@ -82,6 +102,14 @@ export class HeaderComponent {
   readonly activeSlug = input<string | null>(null);
 
   readonly tabClicked = output<string>();
+
+  private readonly sidebarService = inject(SidebarService);
+
+  protected readonly showMenuButton = computed(() => this.sidebarService.hasSidebar());
+
+  protected toggleSidebar(): void {
+    this.sidebarService.toggleMobile();
+  }
 
   protected readonly classes = computed(() =>
     mergeClasses(
