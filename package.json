@@ -4,8 +4,11 @@
   "license": "MIT",
   "scripts": {
     "build:storybook-web": "nx build-storybook @justin-croyable/storybook-web",
-    "deploy:storybook-web": "firebase deploy --only hosting",
-    "deploy:storybook-web:preview": "firebase hosting:channel:deploy preview --expires 7d"
+    "build:potager-web": "nx build @justin-croyable/potager-web",
+    "deploy:storybook-web": "firebase deploy --only hosting:storybook",
+    "deploy:storybook-web:preview": "firebase hosting:channel:deploy preview --only storybook --expires 7d",
+    "deploy:potager-web": "firebase deploy --only hosting:potager",
+    "deploy:potager-web:preview": "firebase hosting:channel:deploy preview --only potager --expires 7d"
   },
   "private": true,
   "devDependencies": {
