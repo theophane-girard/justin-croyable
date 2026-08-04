@@ -277,7 +277,7 @@ export const MultipleSeries: Story = {
   template: `
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <div class="border-border rounded-lg border p-4">
-        <h3 class="text-foreground mb-3 text-sm font-medium">Couleurs choisies par teinte</h3>
+        <h3 class="text-foreground mb-3 text-sm font-medium">Couleurs choisies dans la palette</h3>
         <app-chart [options]="teintesChoisies()" height="18rem" />
       </div>
       <div class="border-border rounded-lg border p-4">
@@ -291,11 +291,14 @@ class CustomColorsChartDemo {
   private readonly palette = inject(ThemePaletteService);
 
   protected readonly teintesChoisies = computed<EChartsCoreOption>(() => {
-    const { decorative } = this.palette.palette();
+    // Couleurs spécifiques prises dans la série de la palette ACTIVE : elles
+    // suivent donc la palette (fuchsia ↔ emerald). Pour des accents fixes,
+    // identiques dans toutes les palettes, piocher plutôt dans `decorative`.
+    const { series } = this.palette.palette();
     return {
       tooltip: { trigger: 'item' },
       legend: { bottom: 0 },
-      color: [decorative.orange, decorative.violet, decorative.cyan],
+      color: [series[0], series[1], series[3]],
       series: [
         {
           type: 'pie',
