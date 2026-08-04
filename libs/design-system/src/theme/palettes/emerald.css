@@ -60,17 +60,16 @@
   --color-action: oklch(0.53 0.16 160);
   --color-action-text: oklch(1 0 0);
 
-  /* Série des graphiques — jeu catégoriel CURÉ à la main pour emerald (et non
-     une rotation automatique de teinte : à L/C constants, le résultat était
-     disgracieux). Mène sur le vert de marque, puis des accents chauds et froids
-     choisis pour aller ensemble tout en restant discernables — luminosité ET
-     chroma variés, pas seulement la teinte. */
-  --chart-1: oklch(0.65 0.15 160); /* émeraude (marque) */
-  --chart-2: oklch(0.78 0.13 78); /* ambre */
-  --chart-3: oklch(0.58 0.11 250); /* bleu ardoise */
-  --chart-4: oklch(0.66 0.15 32); /* corail */
-  --chart-5: oklch(0.7 0.1 195); /* teal */
-  --chart-6: oklch(0.55 0.13 330); /* prune */
+  /* Série des graphiques — les couleurs de la palette d'origine, RÉORDONNÉES.
+     Leur ordre séquentiel (160/205/266/295…) tassait le rendu : le vert de
+     marque suivi de trois froids voisins. On alterne donc chaud/froid et on
+     écarte les teintes proches, en gardant le vert en tête. */
+  --chart-1: oklch(0.62 0.15 160); /* vert (marque) */
+  --chart-2: oklch(0.62 0.15 41); /* orange */
+  --chart-3: oklch(0.62 0.15 266); /* bleu-violet */
+  --chart-4: oklch(0.62 0.15 340); /* magenta */
+  --chart-5: oklch(0.62 0.15 86); /* jaune */
+  --chart-6: oklch(0.62 0.15 205); /* teal */
 }
 
 .dark {

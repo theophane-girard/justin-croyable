@@ -89,12 +89,12 @@ elles ne changent pas d'une palette à l'autre — c'est voulu, ces teintes sont
 placées à des valeurs absolues pour ne pas se confondre entre elles ni avec la
 marque.
 
-La série de graphiques se **cure à la main** par palette : une rotation
-automatique de teinte (à L/C constants) donne des assortiments disgracieux. On
-fait varier luminosité **et** chroma, pas seulement la teinte. Valeurs
-**littérales** (pas de `calc(var(--brand-hue)…)`) : `ThemePaletteService` les lit
-via `getComputedStyle` pour peindre le canvas ECharts, qui exige des couleurs
-concrètes.
+La série de graphiques est **choisie et ordonnée à la main** par palette : les
+couleurs *et* leur ordre sont pensés pour que des séries voisines restent
+distinctes (un ordre séquentiel de teintes proches, ou une rotation mécanique,
+tasse le rendu). Valeurs **littérales** (pas de `calc(var(--brand-hue)…)`) :
+`ThemePaletteService` les lit via `getComputedStyle` pour peindre le canvas
+ECharts, qui exige des couleurs concrètes.
 
 | Palette | Teinte | Rôle |
 | --- | --- | --- |
@@ -106,8 +106,8 @@ concrètes.
 la palette sans configuration supplémentaire. **Ajouter une palette** = déposer un
 `palettes/<nom>.css` sur le même contrat de tokens (prendre `fuchsia.css` comme
 gabarit et changer la teinte). Un point d'attention : la série `--chart-1..6` ne
-se déduit pas mécaniquement de la teinte de marque — la **curer à la main** pour
-qu'elle soit agréable et discernable.
+se déduit pas mécaniquement de la teinte de marque — **choisir les couleurs et
+leur ordre à la main** pour que des séries voisines restent discernables.
 
 **Prévisualiser** : le Storybook web expose une toolbar « Palette » (fuchsia /
 emerald) qui bascule la palette au runtime sur toutes les stories — pratique pour

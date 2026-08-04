@@ -70,11 +70,10 @@
   --input: var(--color-border);
   --ring: var(--color-action);
   /* Palette des graphiques : la série `--chart-1..6` est définie PAR PALETTE
-     (cf. `palettes/<nom>.css`). Chaque palette CURE sa propre série catégorielle,
-     menant sur sa teinte de marque puis des accents choisis à la main pour être à
-     la fois harmonieux et discernables — une simple rotation de teinte à L/C
-     constants donne des assortiments disgracieux. Valeurs littérales et non
-     `calc(var(--brand-hue)…)` : lues via `getComputedStyle` pour le canvas
+     (cf. `palettes/<nom>.css`). Chaque palette choisit ses couleurs ET leur ordre
+     pour que des séries voisines restent bien distinctes — un ordre séquentiel de
+     teintes proches (ou une rotation mécanique) tasse le rendu. Valeurs littérales
+     et non `calc(var(--brand-hue)…)` : lues via `getComputedStyle` pour le canvas
      ECharts, elles doivent être des couleurs concrètes (un `calc` non résolu
      casserait le rendu canvas). Décoratives par nature : aucune ne porte de sens
      état, et elles restent toujours légendées. */
