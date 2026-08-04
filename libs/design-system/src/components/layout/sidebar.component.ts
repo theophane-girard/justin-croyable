@@ -35,13 +35,7 @@ import { mergeClasses } from '../../utils/merge-classes';
   selector: 'app-sidebar',
   imports: [StringTemplateOutletDirective, NgIcon],
   template: `
-    @if (mobileOpen()) {
-      <div
-        class="fixed inset-0 z-40 bg-black/50 md:hidden"
-        aria-hidden="true"
-        (click)="closeMobile()"
-      ></div>
-    }
+    <div [class]="backdropClasses()" aria-hidden="true" (click)="closeMobile()"></div>
 
     <aside [class]="classes()" [style.width.px]="currentWidth()" [attr.data-collapsed]="collapsed()">
       <div class="flex-1 overflow-auto">
@@ -132,9 +126,17 @@ export class SidebarComponent {
   });
 
   protected readonly mobileClasses = computed(() =>
-    this.mobileOpen()
-      ? 'max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-50 max-md:w-72! max-md:shadow-xl'
-      : 'max-md:hidden',
+    mergeClasses(
+      'max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-50 max-md:w-72! max-md:shadow-xl',
+      this.mobileOpen() ? 'max-md:translate-x-0' : 'max-md:-translate-x-full',
+    ),
+  );
+
+  protected readonly backdropClasses = computed(() =>
+    mergeClasses(
+      'fixed inset-0 z-40 bg-black/50 transition-opacity duration-300 ease-in-out md:hidden',
+      this.mobileOpen() ? 'opacity-100' : 'pointer-events-none opacity-0',
+    ),
   );
 
   protected readonly classes = computed(() =>
