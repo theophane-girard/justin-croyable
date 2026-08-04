@@ -24,6 +24,7 @@
     },
     "./theme.css": "./src/theme/theme.css",
     "./primitives.css": "./src/theme/primitives.css",
+    "./palettes/*.css": "./src/theme/palettes/*.css",
     "./tailwind.preset": "./tailwind.preset.js",
     "./package.json": "./package.json"
   },

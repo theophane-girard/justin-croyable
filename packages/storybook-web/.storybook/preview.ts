@@ -2,6 +2,7 @@ import {
   DESIGN_SYSTEM_DEFAULT_LANG,
   DESIGN_SYSTEM_LANGS,
   provideJustinCroyableDS,
+  ThemePaletteService,
   ThemeService,
   withCharts,
   withIcons,
@@ -28,24 +29,13 @@ import { applicationConfig, type Decorator, type Preview } from '@storybook/angu
 
 import designSystemPackage from '@justin-croyable/design-system/package.json';
 
-// Le CSS global est importé ici, et non déclaré dans un builder Angular : c'est
-// Vite qui le traite, en appliquant PostCSS et Tailwind v4 via `.postcssrc.json`.
 import '../src/styles.css';
+
+import fuchsiaPalette from '@justin-croyable/design-system/palettes/fuchsia.css?raw';
+import emeraldPalette from '@justin-croyable/design-system/palettes/emerald.css?raw';
 
 const [major = '0', minor = '0', patch = '0'] = designSystemPackage.version.split('.');
 
-/**
- * Bascule light/dark, pilotée par le `ThemeService` du DS et non par la classe
- * `.dark` en direct.
- *
- * C'est ce qui rend le thème observable : `app-chart` et `app-table` réagissent
- * au signal `isDark()` du service. Poser la classe soi-même les laisserait sur
- * le thème du démarrage, et se battrait avec l'effet du service.
- *
- * Même mécanique que pour la langue : le décorateur mémorise le choix, un
- * initialiseur d'application l'applique au démarrage, et la référence permet de
- * l'appliquer à l'instance vivante quand la story est seulement re-rendue.
- */
 let activeTheme: Theme = 'light';
 let themeRef: ThemeService | null = null;
 
@@ -55,18 +45,29 @@ const withColorScheme: Decorator = (storyFn, context) => {
   return storyFn();
 };
 
-/**
- * Langue active du DS.
- *
- * Changer un global re-rend la story mais ne re-bootstrappe pas l'application
- * Angular : appliquer la langue depuis le seul initialiseur d'application ne
- * suffit donc pas, elle resterait figée sur celle du premier rendu. On garde une
- * référence au service pour l'appliquer à l'instance vivante à chaque rendu, et
- * la variable sert d'amorce quand une nouvelle application démarre.
- *
- * Un décorateur n'a pas accès à l'injecteur de la story, d'où cette référence de
- * module plutôt qu'une injection.
- */
+const PALETTES = { fuchsia: fuchsiaPalette, emerald: emeraldPalette } as const;
+type PaletteName = keyof typeof PALETTES;
+
+const PALETTE_STYLE_ID = 'ds-active-palette';
+
+let paletteServiceRef: ThemePaletteService | null = null;
+
+function applyPalette(name: PaletteName): void {
+  const existing = document.getElementById(PALETTE_STYLE_ID);
+  const style = existing instanceof HTMLStyleElement ? existing : document.createElement('style');
+  style.id = PALETTE_STYLE_ID;
+  style.textContent = PALETTES[name];
+  if (!existing) {
+    document.head.appendChild(style);
+  }
+}
+
+const withPalette: Decorator = (storyFn, context) => {
+  applyPalette(context.globals['palette'] === 'emerald' ? 'emerald' : 'fuchsia');
+  paletteServiceRef?.refresh();
+  return storyFn();
+};
+
 let activeLang: DesignSystemLang = DESIGN_SYSTEM_DEFAULT_LANG;
 let translocoRef: TranslocoService | null = null;
 
@@ -76,8 +77,7 @@ function applyLang(lang: DesignSystemLang): void {
     return;
   }
   translocoRef.setActiveLang(lang);
-  // `translate()` est synchrone : sans ce chargement, une langue jamais affichée
-  // rendrait la clé brute côté pipes et directives.
+
   translocoRef.load(lang).subscribe({ error: () => undefined });
 }
 
@@ -88,16 +88,14 @@ const withLocale: Decorator = (storyFn, context) => {
 
 const preview: Preview = {
   decorators: [
+    withPalette,
     withColorScheme,
     withLocale,
     applicationConfig({
       providers: [
-        // Configuration du DS par fonctionnalités. `provideZard()` y est inclus
-        // d'office : select, command et sidebar dépendent de ses plugins d'event
-        // manager pour la syntaxe `(keydown.{arrowdown,enter,escape}.prevent)`.
+
         provideJustinCroyableDS(
-          // Les composants du DS déclarent les icônes de leurs propres templates.
-          // Seules celles passées par nom à une entrée ont besoin d'être ici.
+
           withIcons({
             lucideCalendar,
             lucideFileText,
@@ -113,14 +111,13 @@ const preview: Preview = {
           withCharts(),
           withTranslations(),
         ),
-        // Router injecté pour les `routerLink` (breadcrumb, header), navigation
-        // initiale désactivée : sinon elle réécrit l'URL `/iframe.html` de
-        // l'aperçu en `/` et un rechargement dur y charge le manager.
+
         provideRouter([], withDisabledInitialNavigation()),
         provideAppInitializer(() => {
-          // Le thème vient de la toolbar, pas du localStorage du service.
           themeRef = inject(ThemeService);
           themeRef.set(activeTheme);
+
+          paletteServiceRef = inject(ThemePaletteService);
 
           const transloco = inject(TranslocoService);
           translocoRef = transloco;
@@ -131,6 +128,18 @@ const preview: Preview = {
     }),
   ],
   globalTypes: {
+    palette: {
+      description: 'Palette de couleurs du Design System',
+      toolbar: {
+        title: 'Palette',
+        icon: 'swatchbook',
+        items: [
+          { value: 'fuchsia', title: 'Fuchsia (323)' },
+          { value: 'emerald', title: 'Emerald (160)' },
+        ],
+        dynamicTitle: true,
+      },
+    },
     locale: {
       description: 'Langue des libellés du Design System',
       toolbar: {
@@ -154,12 +163,12 @@ const preview: Preview = {
     },
   },
   initialGlobals: {
+    palette: 'fuchsia',
     theme: 'light',
     locale: DESIGN_SYSTEM_DEFAULT_LANG,
     backgrounds: { value: 'ds-white' },
   },
   parameters: {
-    // Version de la lib DS, affichée dans la toolbar par `storybook-version`.
     version: { major, minor, patch },
     layout: 'centered',
     controls: {

@@ -1,77 +1,15 @@
 :root {
   --radius: 0.625rem;
 
-  /* Rôles — valeurs validées AA */
-  --color-surface: oklch(0.995 0.002 323);
-  --color-bg: var(--gray-50);
-  --color-text: oklch(0.33 0.008 323);
-  --color-muted: oklch(0.545 0 323);
-  --color-border: var(--gray-200);
-  --color-action: oklch(0.58 0.16 323);
-  --color-action-text: oklch(1 0 0);
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
-  /* Marque */
-  --brand-hue: 323;
-  --primary-50: oklch(0.972 0.029 323);
-  --primary-100: oklch(0.94 0.054 323);
-  --primary-200: oklch(0.885 0.093 323);
-  --primary-300: oklch(0.808 0.128 323);
-  --primary-400: oklch(0.72 0.152 323);
-  --primary-500: oklch(0.64 0.16 323);
-  --primary-600: oklch(0.56 0.152 323);
-  --primary-700: oklch(0.485 0.131 323);
-  --primary-800: oklch(0.41 0.099 323);
-  --primary-900: oklch(0.33 0.067 323);
-
-  /* Neutres */
-  --gray-50: oklch(0.972 0.006 323);
-  --gray-100: oklch(0.94 0.007 323);
-  --gray-200: oklch(0.885 0.009 323);
-  --gray-300: oklch(0.808 0.011 323);
-  --gray-400: oklch(0.72 0.012 323);
-  --gray-500: oklch(0.64 0.012 323);
-  --gray-600: oklch(0.56 0.012 323);
-  --gray-700: oklch(0.485 0.011 323);
-  --gray-800: oklch(0.41 0.009 323);
-  --gray-900: oklch(0.33 0.008 323);
-
-  /* Sémantiques */
   --success: oklch(0.55 0.15 145);
   --warning: oklch(0.62 0.13 75);
   --error: oklch(0.55 0.18 28);
   --info: oklch(0.55 0.15 250);
 
-  /* ------------------------------------------------------------------------
-     Palette complémentaire — décorative, jamais sémantique.
-
-     Même échelle de L et même courbe de chroma que --primary-* (pic 0.16 au
-     pas 500, écrêté au gamut sRGB quand la teinte ne peut pas suivre : c'est
-     pourquoi lime et cyan plafonnent plus bas). Les 5 teintes sont placées au
-     milieu des intervalles laissés libres par les teintes réservées, ce qui
-     complète une roue de 10 familles à ~36° :
-
-       28 error · 51 ORANGE · 75 warning · 108 LIME · 145 success
-       197 CYAN · 250 info · 286 VIOLET · 323 marque · 355 ROSE
-
-     Écart mesuré (ΔE OKLab ×100) au jeton réservé le plus proche, par pas —
-     la barre de « non-confusable » est 15 :
-
-       pas          50   100   200   300   400   500   600   700   800   900
-       orange     36.9  33.5  27.5  19.5  11.8   7.0   7.5  10.5  17.0  25.1
-       lime       36.8  33.2  27.5  20.2  12.9   7.8   9.1  11.3  17.0  24.4
-       cyan       37.7  35.9  33.0  28.6  20.9  14.9  11.9  13.5  18.5  25.2
-       violet     36.4  33.0  27.3  19.6  12.7  10.2   9.4  11.0  16.7  24.3
-       rose       36.3  32.8  26.8  18.9  11.8   8.8   8.9  11.9  17.9  25.5
-
-     Donc : les pas 50–200 et 800–900 sont libres partout. Les pas 300–700
-     sont sous la barre — cinq teintes réservées occupent déjà la roue, aucun
-     placement ne peut faire mieux à luminosité égale. À ces pas, ne jamais
-     faire porter un sens état/statut à la couleur seule (icône + libellé), et
-     éviter de coller orange-500 à côté d'un --warning ou rose-500 à côté
-     d'un --color-action : c'est la proximité immédiate qui crée le doute.
-     ------------------------------------------------------------------------ */
-
-  /* Orange — h51, entre --error et --warning */
   --orange-50: oklch(0.972 0.015 51);
   --orange-100: oklch(0.94 0.033 51);
   --orange-200: oklch(0.885 0.066 51);
@@ -83,7 +21,6 @@
   --orange-800: oklch(0.41 0.099 51);
   --orange-900: oklch(0.33 0.067 51);
 
-  /* Lime — h108, entre --warning et --success */
   --lime-50: oklch(0.972 0.029 108);
   --lime-100: oklch(0.94 0.054 108);
   --lime-200: oklch(0.885 0.093 108);
@@ -95,7 +32,6 @@
   --lime-800: oklch(0.41 0.087 108);
   --lime-900: oklch(0.33 0.067 108);
 
-  /* Cyan — h197, entre --success et --info */
   --cyan-50: oklch(0.972 0.029 197);
   --cyan-100: oklch(0.94 0.054 197);
   --cyan-200: oklch(0.885 0.093 197);
@@ -107,7 +43,6 @@
   --cyan-800: oklch(0.41 0.068 197);
   --cyan-900: oklch(0.33 0.055 197);
 
-  /* Violet — h286, entre --info et la marque */
   --violet-50: oklch(0.972 0.013 286);
   --violet-100: oklch(0.94 0.029 286);
   --violet-200: oklch(0.885 0.057 286);
@@ -119,7 +54,6 @@
   --violet-800: oklch(0.41 0.099 286);
   --violet-900: oklch(0.33 0.067 286);
 
-  /* Rose — h355, entre la marque et --error */
   --rose-50: oklch(0.972 0.015 355);
   --rose-100: oklch(0.94 0.033 355);
   --rose-200: oklch(0.885 0.066 355);
@@ -130,14 +64,4 @@
   --rose-700: oklch(0.485 0.131 355);
   --rose-800: oklch(0.41 0.099 355);
   --rose-900: oklch(0.33 0.067 355);
-}
-
-.dark {
-  --color-surface: var(--gray-900);
-  --color-bg: oklch(0.22 0.012 323);
-  --color-text: var(--gray-50);
-  --color-muted: var(--gray-400);
-  --color-border: var(--gray-800);
-  --color-action: var(--primary-400);
-  --color-action-text: var(--gray-900);
 }

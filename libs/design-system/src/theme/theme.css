@@ -1,42 +1,6 @@
-/*
- * Preset Tailwind (v4) du Design System — @justin-croyable/design-system
- *
- * Tailwind v4 n'a plus de « preset » JavaScript : le preset d'un DS est un
- * fichier CSS que l'application importe après `tailwindcss`.
- *
- * À FOURNIR PAR L'APPLICATION, dans son CSS d'entrée et dans cet ordre :
- *
- *   @layer ng-icon, theme, base, components, utilities;  // ng-icon avant base
- *   @import 'tailwindcss';
- *   @plugin "tailwindcss-animate";                       // animations du DS
- *   @import '@justin-croyable/design-system/theme.css';  // ce fichier
- *
- * Pourquoi ce n'est pas ce fichier qui importe `tailwindcss` et le plugin :
- * les `@import`/`@plugin` d'un CSS se résolvent depuis le dossier du fichier
- * qui les contient. Un preset qui importerait ses propres outils exigerait donc
- * que `tailwindcss` soit résolvable depuis `libs/design-system` — faux dans ce
- * monorepo, où la racine hoiste Tailwind 3 pour le track NativeWind pendant que
- * le DS web tourne sur Tailwind 4. Laisser l'app posséder ces deux lignes rend
- * le preset utilisable quel que soit l'endroit d'où il est consommé.
- *
- * Découpage :
- *   - `primitives.css` : les valeurs brutes (rampes de marque, neutres,
- *     sémantiques, palette décorative). Aucune n'est utilisée directement par
- *     les composants.
- *   - ce fichier : les *rôles* (`--background`, `--primary`, …) adossés aux
- *     primitives, leur bascule dark, puis l'exposition en utilitaires Tailwind
- *     via `@theme inline`.
- *
- * Pour retheming : surcharger les primitives (ou les rôles) dans le CSS de
- * l'app, après cet import. Les composants ne référencent que des rôles, donc
- * ils suivent sans modification.
- */
 @import './primitives.css';
+@import './palettes/fuchsia.css';
 
-/* Les classes des composants du DS vivent hors de l'arborescence de l'app : sans
-   cette source, les utilitaires que seul le DS utilise seraient purgés. Attention,
-   ce chemin est ignoré quand le DS est consommé depuis `node_modules` (Tailwind
-   respecte `.gitignore`) : dans ce cas l'app doit redéclarer la source. */
 @source '../components';
 
 @custom-variant dark (&:is(.dark *));
@@ -48,6 +12,7 @@
   --card-foreground: var(--color-text);
   --popover: var(--color-surface);
   --popover-foreground: var(--color-text);
+  --brand: var(--color-brand);
   --primary: var(--color-action);
   --primary-foreground: var(--color-action-text);
   --secondary: var(--primary-100);
@@ -60,15 +25,7 @@
   --border: var(--color-border);
   --input: var(--color-border);
   --ring: var(--color-action);
-  /* Palette des graphiques : les familles chromatiques du DS au pas 500,
-     réparties sur la roue en évitant les teintes sémantiques (error, warning,
-     success, info). Décoratives par nature : aucune ne porte de sens état. */
-  --chart-1: var(--primary-500);
-  --chart-2: var(--cyan-500);
-  --chart-3: var(--orange-500);
-  --chart-4: var(--violet-500);
-  --chart-5: var(--lime-500);
-  --chart-6: var(--rose-500);
+
   --sidebar: var(--color-surface);
   --sidebar-foreground: var(--color-text);
   --sidebar-primary: var(--color-action);
@@ -86,6 +43,7 @@
   --card-foreground: var(--color-text);
   --popover: var(--color-surface);
   --popover-foreground: var(--color-text);
+  --brand: var(--color-brand);
   --primary: var(--color-action);
   --primary-foreground: var(--color-action-text);
   --secondary: var(--primary-800);
@@ -98,7 +56,7 @@
   --border: var(--color-border);
   --input: var(--color-border);
   --ring: var(--color-action);
-  /* --chart-* : hérités de :root (nuances 500, identiques en clair et sombre). */
+
   --sidebar: var(--color-surface);
   --sidebar-foreground: var(--color-text);
   --sidebar-primary: var(--color-action);
@@ -116,6 +74,7 @@
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
+  --color-brand: var(--brand);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
@@ -147,11 +106,21 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  /* Palette complémentaire (cf. primitives.css). Chaque espace de noms est
-     d'abord remis à `initial` pour purger la rampe Tailwind par défaut : sans
-     ça, les pas que nous ne définissons pas (950) continueraient à résoudre
-     vers une teinte hors système. Un `orange-950` devient donc une erreur de
-     build plutôt qu'une couleur silencieusement fausse. */
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-mono: var(--font-mono);
+
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-200: var(--brand-200);
+  --color-brand-300: var(--brand-300);
+  --color-brand-400: var(--brand-400);
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-brand-800: var(--brand-800);
+  --color-brand-900: var(--brand-900);
+
   --color-orange-*: initial;
   --color-orange-50: var(--orange-50);
   --color-orange-100: var(--orange-100);

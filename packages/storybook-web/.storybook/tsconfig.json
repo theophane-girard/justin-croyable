@@ -12,6 +12,9 @@
       // Mapping exact, prioritaire sur le joker : sans lui le manifeste serait
       // cherché dans `src/`, où il n'existe pas.
       "@justin-croyable/design-system/package.json": ["../../../libs/design-system/package.json"],
+      "@justin-croyable/design-system/palettes/*": [
+        "../../../libs/design-system/src/theme/palettes/*"
+      ],
       "@justin-croyable/design-system/*": ["../../../libs/design-system/src/*"]
     },
     // Storybook émet du JS : on neutralise le mode « projet composite / types

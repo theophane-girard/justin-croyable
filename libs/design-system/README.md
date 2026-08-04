@@ -52,6 +52,10 @@ L'app fournit Tailwind et le plugin d'animations, puis importe le preset :
 
 @import '@justin-croyable/design-system/theme.css';
 
+/* Choix de la palette : importer un fichier de palette APRÈS le preset.
+   Sans cette ligne, le DS reste sur `fuchsia` (palette par défaut). */
+@import '@justin-croyable/design-system/palettes/emerald.css';
+
 /* Les classes des composants du DS sont hors de l'arborescence de l'app, et
    Tailwind ignore node_modules (`.gitignore`) : redéclarer la source par son
    chemin réel, sinon les utilitaires propres au DS sont purgés. */
@@ -68,19 +72,62 @@ Points d'entrée exportés :
 
 | Export | Contenu |
 | --- | --- |
-| `@justin-croyable/design-system/theme.css` | Le preset : rôles, bascule dark, `@theme inline`, couche `base`. |
-| `@justin-croyable/design-system/primitives.css` | Uniquement les valeurs brutes (rampes, sémantiques). Importé par `theme.css`. |
+| `@justin-croyable/design-system/theme.css` | Le preset : rôles, bascule dark, `@theme inline`, couche `base`. Importe `primitives.css` + la palette `fuchsia` par défaut. |
+| `@justin-croyable/design-system/primitives.css` | Valeurs **partagées** entre palettes : sémantiques, décoratives, typo, rayon. Importé par `theme.css`. |
+| `@justin-croyable/design-system/palettes/<nom>.css` | Une **palette** (identité de marque) : rampes `brand`/`primary`/`gray` + rôles + série de graphiques (`--chart-1..6`), clair et sombre. `fuchsia`, `emerald`. |
 | `@justin-croyable/design-system/tailwind.preset` | Preset **JS** de compatibilité (Tailwind v3, `@config`, outillage). |
+
+### Palettes
+
+Une **palette** porte l'identité chromatique de marque (rampes `brand` /
+`primary` / `gray` + rôles `--color-*`, en clair et en sombre) **et une série de
+graphiques** (`--chart-1..6`) : un jeu catégoriel **curé à la main** pour cette
+palette, menant sur sa teinte de marque. Les charts sont donc assortis à la
+palette active. Les sémantiques (`--success`…), les décoratives
+(orange/lime/cyan/violet/rose) et la typo sont **partagées** (`primitives.css`) :
+elles ne changent pas d'une palette à l'autre — c'est voulu, ces teintes sont
+placées à des valeurs absolues pour ne pas se confondre entre elles ni avec la
+marque.
+
+La série de graphiques est **choisie et ordonnée à la main** par palette : les
+couleurs *et* leur ordre sont pensés pour que des séries voisines restent
+distinctes (un ordre séquentiel de teintes proches, ou une rotation mécanique,
+tasse le rendu). Valeurs **littérales** (pas de `calc(var(--brand-hue)…)`) :
+`ThemePaletteService` les lit via `getComputedStyle` pour peindre le canvas
+ECharts, qui exige des couleurs concrètes.
+
+| Palette | Teinte | Rôle |
+| --- | --- | --- |
+| `fuchsia` | 323 (magenta) | Par défaut. Importée par `theme.css`, aucun réglage requis. |
+| `emerald` | 160 (vert) | Optionnelle. `@import '.../palettes/emerald.css';` après `theme.css`. |
+
+**Choisir une palette** = importer son fichier CSS après `theme.css` (c'est la
+« conf » côté Tailwind v4). Le preset JS (v3) lit les variables CSS, il suit donc
+la palette sans configuration supplémentaire. **Ajouter une palette** = déposer un
+`palettes/<nom>.css` sur le même contrat de tokens (prendre `fuchsia.css` comme
+gabarit et changer la teinte). Un point d'attention : la série `--chart-1..6` ne
+se déduit pas mécaniquement de la teinte de marque — **choisir les couleurs et
+leur ordre à la main** pour que des séries voisines restent discernables.
+
+**Prévisualiser** : le Storybook web expose une toolbar « Palette » (fuchsia /
+emerald) qui bascule la palette au runtime sur toutes les stories — pratique pour
+comparer, sans rebuild. Voir la story `Design System/Tokens › Palette`.
 
 ### Tokens
 
-- `primitives.css` — les valeurs : rampes de marque et de neutres, sémantiques
-  (`--success`, `--warning`, `--error`, `--info`), palette décorative (orange, lime, cyan,
-  violet, rose). Les écarts de perception qui justifient ces cinq teintes sont documentés dans
-  le fichier.
-- `theme.css` — les **rôles** (`--background`, `--primary`, `--muted`, `--ring`, …) adossés aux
-  primitives. Les composants ne référencent que des rôles : retheming = surcharger les
-  primitives (ou les rôles) après l'import, sans toucher un composant.
+- `primitives.css` — les valeurs **partagées** : sémantiques (`--success`, `--warning`,
+  `--error`, `--info`), palette décorative (orange, lime, cyan, violet, rose), typo
+  (`--font-display`, `--font-body`, `--font-mono`) et rayon. Les écarts de perception qui
+  justifient les cinq teintes décoratives sont documentés dans le fichier.
+- `palettes/<nom>.css` — l'identité de marque **par palette** : rampes `--brand-*`,
+  `--primary-*`, `--gray-*` et rôles (`--color-brand`, `--color-action`, `--color-bg`, …),
+  clair et sombre.
+- `theme.css` — les **rôles** (`--background`, `--primary`, `--brand`, `--muted`, `--ring`, …)
+  adossés aux primitives, plus l'exposition en utilitaires : `bg-brand` / `bg-brand-600`
+  (rampe de marque) et `font-display` / `font-body` / `font-mono` (les tokens seulement — le
+  chargement des fontes reste à la charge de l'app). Les composants ne référencent que des
+  rôles : retheming = surcharger les primitives (ou les rôles) après l'import, sans toucher un
+  composant.
 
 Le mode sombre est la classe `.dark` sur l'élément racine (`@custom-variant dark`).
 
