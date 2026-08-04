@@ -13,9 +13,13 @@ import {
   type TemplateRef,
 } from '@angular/core';
 
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router } from '@angular/router';
+
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideChevronLeft, lucideChevronRight } from '@ng-icons/lucide';
 import type { ClassValue } from 'clsx';
+import { filter } from 'rxjs';
 
 import {
   sidebarGroupLabelVariants,
@@ -82,12 +86,20 @@ export class SidebarComponent {
   private readonly internalCollapsed = signal(false);
   private readonly sidebarService = inject(SidebarService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly router = inject(Router);
 
   protected readonly mobileOpen = this.sidebarService.mobileOpen;
 
   constructor() {
     this.sidebarService.registerSidebar();
     this.destroyRef.onDestroy(() => this.sidebarService.unregisterSidebar());
+
+    this.router.events
+      .pipe(
+        filter((event) => event instanceof NavigationEnd),
+        takeUntilDestroyed(),
+      )
+      .subscribe(() => this.sidebarService.closeMobile());
 
     effect(() => {
       this.internalCollapsed.set(this.collapsed());
