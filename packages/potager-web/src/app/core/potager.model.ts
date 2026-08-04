@@ -1,0 +1,79 @@
+export const CATEGORY_META = {
+  legume: { id: 'legume', label: 'Légume', badgeType: 'secondary', icon: 'phosphorLeaf' },
+  fruit: { id: 'fruit', label: 'Fruit', badgeType: 'default', icon: 'phosphorTree' },
+} as const;
+
+export type CategoryId = keyof typeof CATEGORY_META;
+
+export type Crop = {
+  readonly id: string;
+  readonly label: string;
+  readonly category: CategoryId;
+  readonly icon: string;
+  readonly referencePricePerKg: number;
+};
+
+export const CROPS = [
+  { id: 'tomate', label: 'Tomate', category: 'legume', icon: 'phosphorLeaf', referencePricePerKg: 3.2 },
+  { id: 'courgette', label: 'Courgette', category: 'legume', icon: 'phosphorLeaf', referencePricePerKg: 2.5 },
+  { id: 'carotte', label: 'Carotte', category: 'legume', icon: 'phosphorLeaf', referencePricePerKg: 1.6 },
+  { id: 'pomme-de-terre', label: 'Pomme de terre', category: 'legume', icon: 'phosphorLeaf', referencePricePerKg: 1.8 },
+  { id: 'salade', label: 'Salade', category: 'legume', icon: 'phosphorLeaf', referencePricePerKg: 3.5 },
+  { id: 'haricot-vert', label: 'Haricot vert', category: 'legume', icon: 'phosphorLeaf', referencePricePerKg: 5.5 },
+  { id: 'poivron', label: 'Poivron', category: 'legume', icon: 'phosphorLeaf', referencePricePerKg: 4 },
+  { id: 'aubergine', label: 'Aubergine', category: 'legume', icon: 'phosphorLeaf', referencePricePerKg: 3.2 },
+  { id: 'concombre', label: 'Concombre', category: 'legume', icon: 'phosphorLeaf', referencePricePerKg: 2.2 },
+  { id: 'radis', label: 'Radis', category: 'legume', icon: 'phosphorLeaf', referencePricePerKg: 3.5 },
+  { id: 'oignon', label: 'Oignon', category: 'legume', icon: 'phosphorLeaf', referencePricePerKg: 1.8 },
+  { id: 'poireau', label: 'Poireau', category: 'legume', icon: 'phosphorLeaf', referencePricePerKg: 2.6 },
+  { id: 'epinard', label: 'Épinard', category: 'legume', icon: 'phosphorLeaf', referencePricePerKg: 4.5 },
+  { id: 'courge', label: 'Courge', category: 'legume', icon: 'phosphorLeaf', referencePricePerKg: 2.2 },
+  { id: 'fraise', label: 'Fraise', category: 'fruit', icon: 'phosphorTree', referencePricePerKg: 8 },
+  { id: 'framboise', label: 'Framboise', category: 'fruit', icon: 'phosphorTree', referencePricePerKg: 20 },
+  { id: 'pomme', label: 'Pomme', category: 'fruit', icon: 'phosphorTree', referencePricePerKg: 2.6 },
+  { id: 'poire', label: 'Poire', category: 'fruit', icon: 'phosphorTree', referencePricePerKg: 2.9 },
+  { id: 'prune', label: 'Prune', category: 'fruit', icon: 'phosphorTree', referencePricePerKg: 4.5 },
+  { id: 'cerise', label: 'Cerise', category: 'fruit', icon: 'phosphorTree', referencePricePerKg: 9 },
+  { id: 'abricot', label: 'Abricot', category: 'fruit', icon: 'phosphorTree', referencePricePerKg: 4.5 },
+  { id: 'peche', label: 'Pêche', category: 'fruit', icon: 'phosphorTree', referencePricePerKg: 3.5 },
+  { id: 'raisin', label: 'Raisin', category: 'fruit', icon: 'phosphorTree', referencePricePerKg: 4 },
+  { id: 'rhubarbe', label: 'Rhubarbe', category: 'legume', icon: 'phosphorLeaf', referencePricePerKg: 3.5 },
+] as const satisfies readonly Crop[];
+
+export type CropId = (typeof CROPS)[number]['id'];
+
+export const CROP_BY_ID: Readonly<Record<CropId, Crop>> = CROPS.reduce(
+  (accumulator, crop) => ({ ...accumulator, [crop.id]: crop }),
+  {} as Record<CropId, Crop>,
+);
+
+export type PricePerKgByCrop = Partial<Record<CropId, number>>;
+
+export type PriceSource = 'live' | 'reference';
+
+export type HarvestEntry = {
+  readonly id: string;
+  readonly cropId: CropId;
+  readonly weightKg: number;
+  readonly harvestedOn: string;
+};
+
+export type HarvestDraft = {
+  readonly cropId: CropId;
+  readonly weightKg: number;
+  readonly harvestedOn: Date;
+};
+
+export type HarvestRow = {
+  readonly id: string;
+  readonly cropLabel: string;
+  readonly categoryLabel: string;
+  readonly harvestedOn: Date;
+  readonly weightKg: number;
+  readonly pricePerKg: number;
+  readonly savingsEur: number;
+};
+
+export function isCropId(value: string): value is CropId {
+  return value in CROP_BY_ID;
+}

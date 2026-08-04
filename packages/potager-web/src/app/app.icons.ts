@@ -1,0 +1,31 @@
+import {
+  phosphorBasket,
+  phosphorCloudArrowDown,
+  phosphorCoins,
+  phosphorInfo,
+  phosphorLeaf,
+  phosphorListBullets,
+  phosphorMoon,
+  phosphorPlant,
+  phosphorPlus,
+  phosphorScales,
+  phosphorSquaresFour,
+  phosphorSun,
+  phosphorTrash,
+} from '@ng-icons/phosphor-icons/regular';
+
+export const APP_ICONS = {
+  phosphorBasket,
+  phosphorCloudArrowDown,
+  phosphorCoins,
+  phosphorInfo,
+  phosphorLeaf,
+  phosphorListBullets,
+  phosphorMoon,
+  phosphorPlant,
+  phosphorPlus,
+  phosphorScales,
+  phosphorSquaresFour,
+  phosphorSun,
+  phosphorTrash,
+} as const;
