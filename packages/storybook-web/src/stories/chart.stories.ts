@@ -1,4 +1,9 @@
-import { ChartComponent, ThemePaletteService, type ChartSkeletonType } from '@justin-croyable/design-system';
+import {
+  CardComponent,
+  ChartComponent,
+  ThemePaletteService,
+  type ChartSkeletonType,
+} from '@justin-croyable/design-system';
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import type { EChartsCoreOption } from 'echarts/core';
 import type { Meta, StoryObj } from '@storybook/angular-vite';
@@ -272,18 +277,16 @@ export const MultipleSeries: Story = {
 
 @Component({
   selector: 'app-custom-colors-chart-demo',
-  imports: [ChartComponent],
+  imports: [CardComponent, ChartComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      <div class="border-border rounded-lg border p-4">
-        <h3 class="text-foreground mb-3 text-sm font-medium">Couleurs choisies dans la palette</h3>
+      <app-card title="Couleurs choisies dans la palette">
         <app-chart [options]="teintesChoisies()" height="18rem" />
-      </div>
-      <div class="border-border rounded-lg border p-4">
-        <h3 class="text-foreground mb-3 text-sm font-medium">Couleurs sémantiques (états)</h3>
+      </app-card>
+      <app-card title="Couleurs sémantiques (états)">
         <app-chart [options]="etatsSemantiques()" height="18rem" />
-      </div>
+      </app-card>
     </div>
   `,
 })
@@ -342,24 +345,21 @@ export const Dashboard: Story = {
   args: { seriesCount: 1 },
   render: args => ({
     props: { barresEmpilees, jauge, courbe: withSeriesCount(courbe, args.seriesCount), camembert },
+    moduleMetadata: { imports: [CardComponent] },
     template: `
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div class="border-border rounded-lg border p-4">
-          <h3 class="text-foreground mb-3 text-sm font-medium">Inscriptions & désabonnements (empilé)</h3>
+        <app-card title="Inscriptions & désabonnements (empilé)">
           <app-chart [options]="barresEmpilees" height="15rem" />
-        </div>
-        <div class="border-border rounded-lg border p-4">
-          <h3 class="text-foreground mb-3 text-sm font-medium">Taux de satisfaction</h3>
+        </app-card>
+        <app-card title="Taux de satisfaction">
           <app-chart [options]="jauge" height="15rem" />
-        </div>
-        <div class="border-border rounded-lg border p-4">
-          <h3 class="text-foreground mb-3 text-sm font-medium">Sessions (tendance)</h3>
+        </app-card>
+        <app-card title="Sessions (tendance)">
           <app-chart [options]="courbe" height="15rem" />
-        </div>
-        <div class="border-border rounded-lg border p-4">
-          <h3 class="text-foreground mb-3 text-sm font-medium">Répartition par framework</h3>
+        </app-card>
+        <app-card title="Répartition par framework">
           <app-chart [options]="camembert" height="15rem" />
-        </div>
+        </app-card>
       </div>
     `,
   }),

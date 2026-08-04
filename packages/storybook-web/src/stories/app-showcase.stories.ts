@@ -203,22 +203,18 @@ type SelectValue = string | string[] | null;
             @switch (activeTab()) {
               @case (tab.dashboard) {
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div class="border-border rounded-lg border p-4">
-                    <h3 class="text-foreground mb-3 text-sm font-medium">Inscriptions & désabonnements (empilé)</h3>
+                  <app-card title="Inscriptions & désabonnements (empilé)">
                     <app-chart [options]="barresEmpilees" height="15rem" />
-                  </div>
-                  <div class="border-border rounded-lg border p-4">
-                    <h3 class="text-foreground mb-3 text-sm font-medium">Taux de satisfaction</h3>
+                  </app-card>
+                  <app-card title="Taux de satisfaction">
                     <app-chart [options]="jauge" height="15rem" />
-                  </div>
-                  <div class="border-border rounded-lg border p-4">
-                    <h3 class="text-foreground mb-3 text-sm font-medium">Sessions (tendance)</h3>
+                  </app-card>
+                  <app-card title="Sessions (tendance)">
                     <app-chart [options]="courbe" height="15rem" />
-                  </div>
-                  <div class="border-border rounded-lg border p-4">
-                    <h3 class="text-foreground mb-3 text-sm font-medium">Répartition par framework</h3>
+                  </app-card>
+                  <app-card title="Répartition par framework">
                     <app-chart [options]="camembert" height="15rem" />
-                  </div>
+                  </app-card>
                 </div>
               }
 
