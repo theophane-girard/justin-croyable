@@ -65,9 +65,9 @@
      marque suivi de trois froids voisins. On alterne donc chaud/froid et on
      écarte les teintes proches, en gardant le vert en tête. */
   --chart-1: oklch(0.62 0.15 160); /* vert (marque) */
-  --chart-2: oklch(0.62 0.15 41); /* orange */
+  --chart-2: oklch(0.62 0.15 340); /* rose */
   --chart-3: oklch(0.62 0.15 266); /* bleu-violet */
-  --chart-4: oklch(0.62 0.15 340); /* magenta */
+  --chart-4: oklch(0.62 0.15 41); /* orange */
   --chart-5: oklch(0.62 0.15 86); /* jaune */
   --chart-6: oklch(0.62 0.15 205); /* teal */
 }
