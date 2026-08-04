@@ -5,8 +5,9 @@ import { filter, map } from 'rxjs';
 
 import {
   BadgeComponent,
-  ButtonComponent,
   LayoutImports,
+  SegmentComponent,
+  type SegmentItem,
   ThemeService,
 } from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
@@ -27,9 +28,11 @@ const NAV_ITEM_BASE_CLASS =
 const NAV_ITEM_ACTIVE_CLASS = `${NAV_ITEM_BASE_CLASS} bg-muted text-foreground font-medium`;
 const NAV_ITEM_IDLE_CLASS = `${NAV_ITEM_BASE_CLASS} text-muted-foreground hover:bg-muted hover:text-foreground`;
 
+const THEME_VALUE = { light: 'light', dark: 'dark' } as const;
+
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, ...LayoutImports, NgIcon, ButtonComponent, BadgeComponent],
+  imports: [RouterOutlet, RouterLink, ...LayoutImports, NgIcon, SegmentComponent, BadgeComponent],
   template: `
     <div class="bg-background text-foreground h-dvh overflow-hidden">
       <app-layout direction="horizontal" class="h-full">
@@ -60,19 +63,14 @@ const NAV_ITEM_IDLE_CLASS = `${NAV_ITEM_BASE_CLASS} text-muted-foreground hover:
             </app-sidebar-group>
 
             <app-sidebar-group class="mt-auto p-3">
-              <button
-                appButton
-                variant="ghost"
+              <app-segment
+                variant="accent"
                 size="sm"
-                class="w-full justify-start gap-2"
-                [class.justify-center]="sidebarCollapsed()"
-                (click)="theme.toggle()"
-                [attr.title]="sidebarCollapsed() ? (theme.isDark() ? 'Thème clair' : 'Thème sombre') : null"
-                [attr.aria-label]="theme.isDark() ? 'Passer en thème clair' : 'Passer en thème sombre'"
-              >
-                <ng-icon [name]="theme.isDark() ? 'phosphorSun' : 'phosphorMoon'" class="size-4 shrink-0" />
-                <span [class.hidden]="sidebarCollapsed()">{{ theme.isDark() ? 'Thème clair' : 'Thème sombre' }}</span>
-              </button>
+                class="w-full"
+                [items]="themeItems()"
+                [value]="theme.theme()"
+                (valueChange)="onThemeChange($event)"
+              />
             </app-sidebar-group>
           </div>
         </app-sidebar>
@@ -140,6 +138,28 @@ export class AppComponent {
       cssClass: this.#isActive(item.path, active) ? NAV_ITEM_ACTIVE_CLASS : NAV_ITEM_IDLE_CLASS,
     }));
   });
+
+  protected readonly themeItems = computed<SegmentItem[]>(() => {
+    const collapsed = this.sidebarCollapsed();
+    return [
+      {
+        value: THEME_VALUE.light,
+        label: collapsed ? undefined : 'Clair',
+        icon: 'phosphorSun',
+        ariaLabel: 'Thème clair',
+      },
+      {
+        value: THEME_VALUE.dark,
+        label: collapsed ? undefined : 'Sombre',
+        icon: 'phosphorMoon',
+        ariaLabel: 'Thème sombre',
+      },
+    ];
+  });
+
+  protected onThemeChange(value: string): void {
+    this.theme.set(value === THEME_VALUE.dark ? THEME_VALUE.dark : THEME_VALUE.light);
+  }
 
   #isActive(path: string, active: string): boolean {
     if (path === '') {

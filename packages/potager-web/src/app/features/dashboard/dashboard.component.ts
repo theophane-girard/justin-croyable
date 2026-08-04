@@ -20,7 +20,7 @@ import { APP_PATHS } from '../../app.routes';
 const TOP_CROPS_COUNT = 8;
 
 const PRICE_MODE_ITEMS: SegmentItem[] = [
-  { value: PRICE_MODE.conventional, label: 'Conventionnel' },
+  { value: PRICE_MODE.conventional, label: 'Conventionnel', icon: 'phosphorBasket' },
   { value: PRICE_MODE.bio, label: 'Bio', icon: 'phosphorLeaf' },
 ];
 
