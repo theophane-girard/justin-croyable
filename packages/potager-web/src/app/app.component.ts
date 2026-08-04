@@ -38,24 +38,42 @@ const NAV_ITEM_IDLE_CLASS = `${NAV_ITEM_BASE_CLASS} text-muted-foreground hover:
           [collapsed]="sidebarCollapsed()"
           (collapsedChange)="sidebarCollapsed.set($event)"
         >
-          <app-sidebar-group class="p-3">
-            <div class="mb-2 flex items-center gap-2 px-2" [class.justify-center]="sidebarCollapsed()">
-              <ng-icon name="phosphorPlant" class="text-primary size-6 shrink-0" />
-              <span class="text-base font-semibold" [class.hidden]="sidebarCollapsed()">Mon Potager</span>
-            </div>
-            <app-sidebar-group-label [class.hidden]="sidebarCollapsed()">Navigation</app-sidebar-group-label>
-            @for (item of navLinks(); track item.path) {
-              <a
-                [routerLink]="item.link"
-                [class]="item.cssClass"
+          <div class="flex h-full flex-col">
+            <app-sidebar-group class="p-3">
+              <div class="mb-2 flex items-center gap-2 px-2" [class.justify-center]="sidebarCollapsed()">
+                <ng-icon name="phosphorPlant" class="text-primary size-6 shrink-0" />
+                <span class="text-base font-semibold" [class.hidden]="sidebarCollapsed()">Mon Potager</span>
+              </div>
+              <app-sidebar-group-label [class.hidden]="sidebarCollapsed()">Navigation</app-sidebar-group-label>
+              @for (item of navLinks(); track item.path) {
+                <a
+                  [routerLink]="item.link"
+                  [class]="item.cssClass"
+                  [class.justify-center]="sidebarCollapsed()"
+                  [attr.title]="sidebarCollapsed() ? item.label : null"
+                >
+                  <ng-icon [name]="item.icon" class="size-4 shrink-0" />
+                  <span [class.hidden]="sidebarCollapsed()">{{ item.label }}</span>
+                </a>
+              }
+            </app-sidebar-group>
+
+            <app-sidebar-group class="mt-auto p-3">
+              <button
+                appButton
+                variant="ghost"
+                size="sm"
+                class="w-full justify-start gap-2"
                 [class.justify-center]="sidebarCollapsed()"
-                [attr.title]="sidebarCollapsed() ? item.label : null"
+                (click)="theme.toggle()"
+                [attr.title]="sidebarCollapsed() ? (theme.isDark() ? 'Thème clair' : 'Thème sombre') : null"
+                [attr.aria-label]="theme.isDark() ? 'Passer en thème clair' : 'Passer en thème sombre'"
               >
-                <ng-icon [name]="item.icon" class="size-4 shrink-0" />
-                <span [class.hidden]="sidebarCollapsed()">{{ item.label }}</span>
-              </a>
-            }
-          </app-sidebar-group>
+                <ng-icon [name]="theme.isDark() ? 'phosphorSun' : 'phosphorMoon'" class="size-4 shrink-0" />
+                <span [class.hidden]="sidebarCollapsed()">{{ theme.isDark() ? 'Thème clair' : 'Thème sombre' }}</span>
+              </button>
+            </app-sidebar-group>
+          </div>
         </app-sidebar>
 
         <app-layout direction="vertical" class="min-w-0 flex-1">
@@ -75,15 +93,6 @@ const NAV_ITEM_IDLE_CLASS = `${NAV_ITEM_BASE_CLASS} text-muted-foreground hover:
                   Prix de référence
                 </app-badge>
               }
-              <button
-                appButton
-                variant="ghost"
-                size="icon-sm"
-                (click)="theme.toggle()"
-                [attr.aria-label]="theme.isDark() ? 'Passer en thème clair' : 'Passer en thème sombre'"
-              >
-                <ng-icon [name]="theme.isDark() ? 'phosphorSun' : 'phosphorMoon'" class="size-4" />
-              </button>
             </div>
           </app-header>
 

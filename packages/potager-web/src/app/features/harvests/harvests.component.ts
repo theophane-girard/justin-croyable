@@ -1,9 +1,17 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  signal,
+  TemplateRef,
+  viewChild,
+} from '@angular/core';
 
 import {
   ButtonComponent,
-  CardComponent,
   DatePickerComponent,
+  DialogService,
   EmptyComponent,
   InputDirective,
   InputGroupComponent,
@@ -63,12 +71,13 @@ const HARVEST_GRID_OPTIONS: GridOptions<HarvestRow> = {
   paginationPageSizeSelector: [8, 16, 32],
 };
 
+const ADD_DIALOG_WIDTH = '32rem';
+
 @Component({
   selector: 'app-harvests',
   imports: [
     ...SelectImports,
     NgIcon,
-    CardComponent,
     ButtonComponent,
     InputDirective,
     InputGroupComponent,
@@ -78,93 +87,100 @@ const HARVEST_GRID_OPTIONS: GridOptions<HarvestRow> = {
   ],
   template: `
     <div class="flex flex-col gap-4">
-      <app-card
-        title="Ajouter une récolte"
-        description="Renseignez la culture, le poids récolté et la date."
-      >
-        <div class="grid grid-cols-1 gap-5 md:grid-cols-3">
-          <app-select
-            label="Culture"
-            placeholder="Sélectionner une culture…"
-            [required]="true"
-            [value]="cropId()"
-            (valueChange)="onCropChange($event)"
-          >
-            @for (crop of crops; track crop.id) {
-              <app-select-item [value]="crop.id">{{ crop.label }}</app-select-item>
-            }
-          </app-select>
-
-          <app-input-group label="Poids récolté" hint="En kilogrammes." [required]="true">
-            <input
-              app-input
-              type="number"
-              inputmode="decimal"
-              min="0"
-              step="0.1"
-              placeholder="0"
-              [value]="weightInput()"
-              (input)="onWeightInput($event)"
-            />
-          </app-input-group>
-
-          <div class="flex flex-col gap-2">
-            <label class="text-sm font-medium">Date de récolte</label>
-            <app-date-picker
-              placeholder="Choisir une date"
-              format="d MMMM yyyy"
-              type="outline"
-              [value]="date()"
-              (valueChange)="date.set($event)"
-            />
-          </div>
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex flex-col">
+          <h2 class="text-foreground text-lg font-semibold">Récoltes</h2>
+          <p class="text-muted-foreground text-sm">Économies estimées au prix moyen français.</p>
         </div>
-
-        <div card-footer class="w-full flex-row justify-end gap-2">
-          <button appButton [buttonDisabled]="!canSubmit()" (click)="onSubmit()">
+        <div class="flex items-center gap-2">
+          @if (store.rows().length > 0) {
+            <button
+              appButton
+              variant="outline"
+              size="sm"
+              [buttonDisabled]="!selectedId()"
+              (click)="onDelete()"
+            >
+              <ng-icon name="phosphorTrash" class="size-4" />
+              Supprimer la sélection
+            </button>
+          }
+          <button appButton size="sm" (click)="openAddDialog()">
             <ng-icon name="phosphorPlus" class="size-4" />
-            Ajouter la récolte
+            Ajouter
           </button>
         </div>
-      </app-card>
+      </div>
 
-      <app-card title="Historique des récoltes" description="Économies estimées au prix moyen français.">
-        @if (store.rows().length === 0) {
-          <app-empty
-            icon="phosphorBasket"
-            title="Aucune récolte"
-            description="Ajoutez une récolte pour la voir apparaître ici."
-          />
-        } @else {
-          <div class="flex flex-col gap-3">
-            <div class="flex items-center justify-end">
-              <button
-                appButton
-                variant="outline"
-                size="sm"
-                [buttonDisabled]="!selectedId()"
-                (click)="onDelete()"
-              >
-                <ng-icon name="phosphorTrash" class="size-4" />
-                Supprimer la sélection
-              </button>
-            </div>
-            <app-table
-              [rowData]="store.rows()"
-              [columnDefs]="columns"
-              [gridOptions]="gridOptions"
-              (rowSelected)="onRowSelected($event)"
-              height="30rem"
-            />
-          </div>
-        }
-      </app-card>
+      @if (store.rows().length === 0) {
+        <app-empty
+          icon="phosphorBasket"
+          title="Aucune récolte"
+          description="Ajoutez une récolte pour la voir apparaître ici."
+        >
+          <button appButton (click)="openAddDialog()">
+            <ng-icon name="phosphorPlus" class="size-4" />
+            Ajouter une récolte
+          </button>
+        </app-empty>
+      } @else {
+        <app-table
+          [rowData]="store.rows()"
+          [columnDefs]="columns"
+          [gridOptions]="gridOptions"
+          (rowSelected)="onRowSelected($event)"
+          height="30rem"
+        />
+      }
     </div>
+
+    <ng-template #addForm>
+      <div class="grid grid-cols-1 gap-5">
+        <app-select
+          label="Culture"
+          placeholder="Sélectionner une culture…"
+          [required]="true"
+          [value]="cropId()"
+          (valueChange)="onCropChange($event)"
+        >
+          @for (crop of crops; track crop.id) {
+            <app-select-item [value]="crop.id">{{ crop.label }}</app-select-item>
+          }
+        </app-select>
+
+        <app-input-group label="Poids récolté" hint="En kilogrammes." [required]="true">
+          <input
+            app-input
+            type="number"
+            inputmode="decimal"
+            min="0"
+            step="0.1"
+            placeholder="0"
+            [value]="weightInput()"
+            (input)="onWeightInput($event)"
+          />
+        </app-input-group>
+
+        <div class="flex flex-col gap-2">
+          <label class="text-sm font-medium">Date de récolte</label>
+          <app-date-picker
+            placeholder="Choisir une date"
+            format="d MMMM yyyy"
+            type="outline"
+            [value]="date()"
+            (valueChange)="date.set($event)"
+          />
+        </div>
+      </div>
+    </ng-template>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HarvestsComponent {
   protected readonly store = inject(HarvestStore);
+  readonly #dialog = inject(DialogService);
+
+  private readonly addFormTemplate = viewChild.required<TemplateRef<unknown>>('addForm');
 
   protected readonly crops = CROPS;
   protected readonly columns = HARVEST_COLUMNS;
@@ -184,6 +200,18 @@ export class HarvestsComponent {
     () => isCropId(this.cropId()) && this.weightKg() !== null && this.date() !== null,
   );
 
+  protected openAddDialog(): void {
+    this.#resetForm();
+    this.#dialog.create({
+      title: 'Ajouter une récolte',
+      content: this.addFormTemplate(),
+      okText: 'Ajouter',
+      cancelText: 'Annuler',
+      width: ADD_DIALOG_WIDTH,
+      onOk: () => this.#confirmAdd(),
+    });
+  }
+
   protected onCropChange(value: string | string[] | null): void {
     if (typeof value !== 'string') {
       return;
@@ -194,17 +222,6 @@ export class HarvestsComponent {
   protected onWeightInput(event: Event): void {
     const target = event.target as HTMLInputElement;
     this.weightInput.set(target.value);
-  }
-
-  protected onSubmit(): void {
-    const cropId = this.cropId();
-    const weightKg = this.weightKg();
-    const harvestedOn = this.date();
-    if (!isCropId(cropId) || weightKg === null || harvestedOn === null) {
-      return;
-    }
-    this.store.add({ cropId, weightKg, harvestedOn });
-    this.#resetForm();
   }
 
   protected onRowSelected(event: RowSelectedEvent<HarvestRow>): void {
@@ -228,6 +245,17 @@ export class HarvestsComponent {
     }
     this.store.remove(id);
     this.selectedId.set(null);
+  }
+
+  #confirmAdd(): false | void {
+    const cropId = this.cropId();
+    const weightKg = this.weightKg();
+    const harvestedOn = this.date();
+    if (!isCropId(cropId) || weightKg === null || harvestedOn === null) {
+      return false;
+    }
+    this.store.add({ cropId, weightKg, harvestedOn });
+    this.#resetForm();
   }
 
   #resetForm(): void {
