@@ -8,12 +8,16 @@ import {
   phosphorLeaf,
   phosphorListBullets,
   phosphorMoon,
+  phosphorPiggyBank,
   phosphorPlant,
   phosphorPlus,
+  phosphorPottedPlant,
+  phosphorReceipt,
   phosphorScales,
   phosphorSquaresFour,
   phosphorSun,
   phosphorTrash,
+  phosphorTrendUp,
 } from '@ng-icons/phosphor-icons/regular';
 
 export const APP_ICONS = {
@@ -26,10 +30,14 @@ export const APP_ICONS = {
   phosphorLeaf,
   phosphorListBullets,
   phosphorMoon,
+  phosphorPiggyBank,
   phosphorPlant,
   phosphorPlus,
+  phosphorPottedPlant,
+  phosphorReceipt,
   phosphorScales,
   phosphorSquaresFour,
   phosphorSun,
   phosphorTrash,
+  phosphorTrendUp,
 } as const;

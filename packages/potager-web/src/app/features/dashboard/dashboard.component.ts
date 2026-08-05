@@ -14,6 +14,7 @@ import { NgIcon } from '@ng-icons/core';
 import type { EChartsCoreOption } from 'echarts/core';
 
 import { HarvestStore, MONTHS_FR } from '../../core/harvest-store';
+import { ExpenseStore } from '../../core/expense-store';
 import { PRICE_MODE, type PriceMode } from '../../core/potager.model';
 import { APP_PATHS } from '../../app.routes';
 
@@ -42,7 +43,7 @@ const PRICE_MODE_ITEMS: SegmentItem[] = [
         <div class="flex flex-col">
           <h2 class="text-foreground text-lg font-semibold">Tableau de bord</h2>
           <p class="text-muted-foreground text-sm">
-            Économies estimées d'après les prix moyens des fruits et légumes en France.
+            Économies nettes : valeur récoltée aux prix moyens français, dépenses déduites.
           </p>
         </div>
         <app-segment
@@ -71,9 +72,23 @@ const PRICE_MODE_ITEMS: SegmentItem[] = [
           <app-card>
             <div class="flex items-center justify-between">
               <div class="flex flex-col gap-1">
-                <span class="text-muted-foreground text-sm">Total récolté</span>
+                <span class="text-muted-foreground text-sm">Économies nettes</span>
+                <span class="text-primary text-3xl font-bold tabular-nums">
+                  <span appCountUp>{{ netSavingsEur() }}</span> €
+                </span>
+              </div>
+              <div class="bg-primary/10 text-primary flex size-10 items-center justify-center rounded-lg">
+                <ng-icon name="phosphorPiggyBank" class="size-5" />
+              </div>
+            </div>
+          </app-card>
+
+          <app-card>
+            <div class="flex items-center justify-between">
+              <div class="flex flex-col gap-1">
+                <span class="text-muted-foreground text-sm">Valeur récoltée</span>
                 <span class="text-foreground text-3xl font-bold tabular-nums">
-                  <span appCountUp>{{ store.totalWeightKg() }}</span> kg
+                  <span appCountUp>{{ store.totalSavingsEur() }}</span> €
                 </span>
               </div>
               <div class="bg-secondary text-secondary-foreground flex size-10 items-center justify-center rounded-lg">
@@ -85,27 +100,13 @@ const PRICE_MODE_ITEMS: SegmentItem[] = [
           <app-card>
             <div class="flex items-center justify-between">
               <div class="flex flex-col gap-1">
-                <span class="text-muted-foreground text-sm">Économies estimées</span>
-                <span class="text-primary text-3xl font-bold tabular-nums">
-                  <span appCountUp>{{ store.totalSavingsEur() }}</span> €
-                </span>
-              </div>
-              <div class="bg-primary/10 text-primary flex size-10 items-center justify-center rounded-lg">
-                <ng-icon name="phosphorCoins" class="size-5" />
-              </div>
-            </div>
-          </app-card>
-
-          <app-card>
-            <div class="flex items-center justify-between">
-              <div class="flex flex-col gap-1">
-                <span class="text-muted-foreground text-sm">Cultures différentes</span>
+                <span class="text-muted-foreground text-sm">Dépenses</span>
                 <span class="text-foreground text-3xl font-bold tabular-nums">
-                  <span appCountUp>{{ store.cropCount() }}</span>
+                  <span appCountUp>{{ expenses.totalExpensesEur() }}</span> €
                 </span>
               </div>
               <div class="bg-secondary text-secondary-foreground flex size-10 items-center justify-center rounded-lg">
-                <ng-icon name="phosphorLeaf" class="size-5" />
+                <ng-icon name="phosphorReceipt" class="size-5" />
               </div>
             </div>
           </app-card>
@@ -113,9 +114,9 @@ const PRICE_MODE_ITEMS: SegmentItem[] = [
           <app-card>
             <div class="flex items-center justify-between">
               <div class="flex flex-col gap-1">
-                <span class="text-muted-foreground text-sm">Récoltes enregistrées</span>
+                <span class="text-muted-foreground text-sm">Total récolté</span>
                 <span class="text-foreground text-3xl font-bold tabular-nums">
-                  <span appCountUp>{{ store.entryCount() }}</span>
+                  <span appCountUp>{{ store.totalWeightKg() }}</span> kg
                 </span>
               </div>
               <div class="bg-secondary text-secondary-foreground flex size-10 items-center justify-center rounded-lg">
@@ -126,8 +127,8 @@ const PRICE_MODE_ITEMS: SegmentItem[] = [
         </div>
 
         <app-card
-          title="Récoltes et économies par mois"
-          description="Poids récolté (kg) et économies estimées (€) sur l'année."
+          title="Valeur récoltée et dépenses par mois"
+          description="Valeur estimée des récoltes (€) et dépenses (€) sur l'année."
         >
           <app-chart [options]="monthlyOptions()" height="18rem" />
         </app-card>
@@ -141,10 +142,10 @@ const PRICE_MODE_ITEMS: SegmentItem[] = [
           </app-card>
 
           <app-card
-            title="Répartition des récoltes"
-            description="Poids récolté par catégorie."
+            title="Répartition des dépenses"
+            description="Montant dépensé par catégorie d'achat."
           >
-            <app-chart [options]="categoryOptions()" height="18rem" />
+            <app-chart [options]="expensesByCategoryOptions()" height="18rem" />
           </app-card>
         </div>
       </div>
@@ -155,9 +156,14 @@ const PRICE_MODE_ITEMS: SegmentItem[] = [
 })
 export class DashboardComponent {
   protected readonly store = inject(HarvestStore);
+  protected readonly expenses = inject(ExpenseStore);
 
   protected readonly harvestsLink = `/${APP_PATHS.harvests}`;
   protected readonly priceModeItems = PRICE_MODE_ITEMS;
+
+  protected readonly netSavingsEur = computed(
+    () => Math.round((this.store.totalSavingsEur() - this.expenses.totalExpensesEur()) * 100) / 100,
+  );
 
   protected onPriceModeChange(value: string): void {
     const mode: PriceMode = value === PRICE_MODE.bio ? PRICE_MODE.bio : PRICE_MODE.conventional;
@@ -166,22 +172,18 @@ export class DashboardComponent {
 
   protected readonly monthlyOptions = computed<EChartsCoreOption>(() => ({
     tooltip: { trigger: 'axis' },
-    legend: { data: ['Récolte (kg)', 'Économies (€)'] },
+    legend: { data: ['Valeur récoltée (€)', 'Dépenses (€)'] },
     grid: { left: 12, right: 12, top: 48, bottom: 8, containLabel: true },
     xAxis: { type: 'category', data: [...MONTHS_FR] },
-    yAxis: [
-      { type: 'value', name: 'kg' },
-      { type: 'value', name: '€' },
-    ],
+    yAxis: { type: 'value', name: '€' },
     series: [
-      { name: 'Récolte (kg)', type: 'bar', data: this.store.monthlyWeights() },
+      { name: 'Valeur récoltée (€)', type: 'bar', data: this.store.monthlySavings() },
       {
-        name: 'Économies (€)',
+        name: 'Dépenses (€)',
         type: 'line',
-        yAxisIndex: 1,
         smooth: true,
         areaStyle: {},
-        data: this.store.monthlySavings(),
+        data: this.expenses.monthlyExpenses(),
       },
     ],
   }));
@@ -197,14 +199,16 @@ export class DashboardComponent {
     };
   });
 
-  protected readonly categoryOptions = computed<EChartsCoreOption>(() => ({
-    tooltip: { trigger: 'item', formatter: '{b} : {c} kg ({d} %)' },
+  protected readonly expensesByCategoryOptions = computed<EChartsCoreOption>(() => ({
+    tooltip: { trigger: 'item', formatter: '{b} : {c} € ({d} %)' },
     legend: { bottom: 0 },
     series: [
       {
         type: 'pie',
         radius: ['45%', '70%'],
-        data: this.store.weightByCategory().map(item => ({ name: item.label, value: item.value })),
+        data: this.expenses
+          .expensesByCategory()
+          .map(item => ({ name: item.label, value: item.value })),
       },
     ],
   }));

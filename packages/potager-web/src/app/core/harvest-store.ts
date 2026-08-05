@@ -89,6 +89,15 @@ export class HarvestStore {
 
   readonly cropCount = computed(() => new Set(this.#entries().map(entry => entry.cropId)).size);
 
+  readonly weightByCropId = computed<Partial<Record<CropId, number>>>(() =>
+    this.#entries().reduce<Partial<Record<CropId, number>>>((accumulator, entry) => {
+      accumulator[entry.cropId] = this.#roundToCents(
+        (accumulator[entry.cropId] ?? 0) + entry.weightKg,
+      );
+      return accumulator;
+    }, {}),
+  );
+
   readonly monthlyWeights = computed(() =>
     this.#bucketByMonth(this.rows(), row => row.weightKg),
   );

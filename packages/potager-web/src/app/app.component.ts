@@ -21,6 +21,8 @@ type NavItem = { readonly path: string; readonly link: string; readonly label: s
 const NAV_ITEMS: readonly NavItem[] = [
   { path: APP_PATHS.dashboard, link: '/', label: 'Tableau de bord', icon: 'phosphorSquaresFour' },
   { path: APP_PATHS.harvests, link: `/${APP_PATHS.harvests}`, label: 'Récoltes', icon: 'phosphorListBullets' },
+  { path: APP_PATHS.expenses, link: `/${APP_PATHS.expenses}`, label: 'Dépenses', icon: 'phosphorReceipt' },
+  { path: APP_PATHS.garden, link: `/${APP_PATHS.garden}`, label: 'Mon jardin', icon: 'phosphorPottedPlant' },
 ];
 
 const THEME_VALUE = { light: 'light', dark: 'dark' } as const;

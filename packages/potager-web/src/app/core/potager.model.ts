@@ -12,6 +12,20 @@ export const PRICE_MODE = {
 
 export type PriceMode = (typeof PRICE_MODE)[keyof typeof PRICE_MODE];
 
+export const EXPENSE_CATEGORY_META = {
+  semences: { id: 'semences', label: 'Semences', icon: 'phosphorPackage' },
+  plants: { id: 'plants', label: 'Plants', icon: 'phosphorPottedPlant' },
+  substrat: { id: 'substrat', label: 'Terreau & substrat', icon: 'phosphorStack' },
+  engrais: { id: 'engrais', label: 'Engrais', icon: 'phosphorDrop' },
+  arrosage: { id: 'arrosage', label: 'Arrosage', icon: 'phosphorSprayBottle' },
+  outillage: { id: 'outillage', label: 'Outillage', icon: 'phosphorToolbox' },
+  autre: { id: 'autre', label: 'Autre', icon: 'phosphorTag' },
+} as const;
+
+export type ExpenseCategoryId = keyof typeof EXPENSE_CATEGORY_META;
+
+export const EXPENSE_CATEGORIES = Object.values(EXPENSE_CATEGORY_META);
+
 export type Crop = {
   readonly id: string;
   readonly label: string;
@@ -84,6 +98,57 @@ export type HarvestRow = {
   readonly savingsEur: number;
 };
 
+export type ExpenseEntry = {
+  readonly id: string;
+  readonly label: string;
+  readonly category: ExpenseCategoryId;
+  readonly amountEur: number;
+  readonly spentOn: string;
+};
+
+export type ExpenseDraft = {
+  readonly label: string;
+  readonly category: ExpenseCategoryId;
+  readonly amountEur: number;
+  readonly spentOn: Date;
+};
+
+export type ExpenseRow = {
+  readonly id: string;
+  readonly label: string;
+  readonly categoryId: ExpenseCategoryId;
+  readonly categoryLabel: string;
+  readonly categoryIcon: string;
+  readonly spentOn: Date;
+  readonly amountEur: number;
+};
+
+export type PlantEntry = {
+  readonly id: string;
+  readonly cropId: CropId;
+  readonly quantity: number;
+};
+
+export type PlantDraft = {
+  readonly cropId: CropId;
+  readonly quantity: number;
+};
+
+export type PlantRow = {
+  readonly id: string;
+  readonly cropId: CropId;
+  readonly cropLabel: string;
+  readonly cropIcon: string;
+  readonly categoryLabel: string;
+  readonly quantity: number;
+  readonly harvestedKg: number;
+  readonly yieldPerPlantKg: number;
+};
+
 export function isCropId(value: string): value is CropId {
   return value in CROP_BY_ID;
+}
+
+export function isExpenseCategoryId(value: string): value is ExpenseCategoryId {
+  return value in EXPENSE_CATEGORY_META;
 }
