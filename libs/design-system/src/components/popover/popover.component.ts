@@ -24,7 +24,10 @@ import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 
 import { filter, type Subscription } from 'rxjs';
 
-import { ViewportService } from '../../core/services/viewport.service';
+import {
+  runMobileSheetCloseAnimation,
+  ViewportService,
+} from '../../core/services/viewport.service';
 import { mergeClasses } from '../../utils/merge-classes';
 
 import { popoverVariants } from './popover.variants';
@@ -178,7 +181,22 @@ export class PopoverDirective implements OnInit, OnDestroy {
       return;
     }
 
-    this.overlayRef?.detach();
+    if (this.overlayIsSheet && this.overlayRef?.hasAttached()) {
+      const overlayRef = this.overlayRef;
+      const content = overlayRef.overlayElement.firstElementChild as HTMLElement | null;
+      if (content) {
+        runMobileSheetCloseAnimation(content, () => {
+          if (overlayRef.hasAttached()) {
+            overlayRef.detach();
+          }
+        });
+      } else {
+        overlayRef.detach();
+      }
+    } else {
+      this.overlayRef?.detach();
+    }
+
     this.isVisible.set(false);
     this.visibleChange.emit(false);
   }

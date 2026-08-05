@@ -46,7 +46,12 @@ import {
   type SelectSizeVariants,
 } from './select.variants';
 import { IdDirective } from '../../core';
-import { MOBILE_SHEET_CONTENT_CLASSES, ViewportService } from '../../core/services/viewport.service';
+import {
+  MOBILE_SHEET_CONTENT_CLASSES,
+  MOBILE_SHEET_ENTER_CLASSES,
+  runMobileSheetCloseAnimation,
+  ViewportService,
+} from '../../core/services/viewport.service';
 import { fieldLabelClasses, fieldMessage, fieldMessageClasses } from '../../utils/field-message';
 import { mergeClasses } from '../../utils/merge-classes';
 
@@ -262,7 +267,10 @@ export class SelectComponent implements FormValueControl<SelectValue>, OnDestroy
     ),
   );
   protected readonly contentClasses = computed(() =>
-    mergeClasses(selectContentVariants(), this.isMobile() ? MOBILE_SHEET_CONTENT_CLASSES : ''),
+    mergeClasses(
+      selectContentVariants(),
+      this.isMobile() ? `${MOBILE_SHEET_CONTENT_CLASSES} ${MOBILE_SHEET_ENTER_CLASSES}` : '',
+    ),
   );
   protected readonly triggerClasses = computed(() =>
     mergeClasses(
@@ -481,7 +489,11 @@ export class SelectComponent implements FormValueControl<SelectValue>, OnDestroy
 
   private close(shouldTouch = true) {
     if (this.overlayRef?.hasAttached()) {
-      this.overlayRef.detach();
+      if (this.overlayIsMobile) {
+        this.animateSheetCloseThenDetach();
+      } else {
+        this.overlayRef.detach();
+      }
     }
     this.isOpen.set(false);
     this.focusedIndex.set(-1);
@@ -489,6 +501,23 @@ export class SelectComponent implements FormValueControl<SelectValue>, OnDestroy
       this.touch.emit();
     }
     this.updateFocusWhenNormalMode();
+  }
+
+  private animateSheetCloseThenDetach(): void {
+    const overlayRef = this.overlayRef;
+    if (!overlayRef) {
+      return;
+    }
+    const content = overlayRef.overlayElement.querySelector<HTMLElement>('#dropdown');
+    if (!content) {
+      overlayRef.detach();
+      return;
+    }
+    runMobileSheetCloseAnimation(content, () => {
+      if (overlayRef.hasAttached()) {
+        overlayRef.detach();
+      }
+    });
   }
 
   private updateFocusWhenNormalMode(): void {

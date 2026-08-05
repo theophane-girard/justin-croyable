@@ -41,7 +41,11 @@ import {
 import { EmptyComponent } from '../empty';
 import { PopoverComponent, PopoverDirective } from '../popover';
 import { IdDirective } from '../../core';
-import { MOBILE_SHEET_CONTENT_CLASSES, ViewportService } from '../../core/services/viewport.service';
+import {
+  MOBILE_SHEET_CONTENT_CLASSES,
+  MOBILE_SHEET_ENTER_CLASSES,
+  ViewportService,
+} from '../../core/services/viewport.service';
 import {
   fieldLabelClasses,
   fieldMessage,
@@ -299,7 +303,7 @@ export class ComboboxComponent implements ControlValueAccessor {
 
   protected readonly popoverClasses = computed(() => {
     if (this.isMobile()) {
-      return `${MOBILE_SHEET_CONTENT_CLASSES} p-0`;
+      return `${MOBILE_SHEET_CONTENT_CLASSES} ${MOBILE_SHEET_ENTER_CLASSES} p-0`;
     }
     const widthClass =
       this.width() === 'full' ? 'w-full' : comboboxVariants({ width: this.width() });
