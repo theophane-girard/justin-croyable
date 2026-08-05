@@ -166,15 +166,14 @@ type SelectValue = string | string[] | null;
             <app-sidebar-group-label [class.hidden]="sidebarCollapsed()">Navigation</app-sidebar-group-label>
             @for (item of navItems; track item.slug) {
               <button
+                appSidebarItem
                 type="button"
+                [icon]="item.icon"
+                [label]="item.label"
+                [active]="activeTab() === item.slug"
+                [collapsed]="sidebarCollapsed()"
                 (click)="select(item.slug)"
-                [class]="navItemClass(activeTab() === item.slug)"
-                [class.justify-center]="sidebarCollapsed()"
-                [attr.title]="sidebarCollapsed() ? item.label : null"
-              >
-                <ng-icon [name]="item.icon" class="size-4 shrink-0" />
-                <span [class.hidden]="sidebarCollapsed()">{{ item.label }}</span>
-              </button>
+              ></button>
             }
           </app-sidebar-group>
         </app-sidebar>
@@ -384,14 +383,6 @@ class AppShowcaseComponent {
       return;
     }
     this.plan.set(value);
-  }
-
-  protected navItemClass(active: boolean): string {
-    const base = 'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors';
-    if (active) {
-      return `${base} bg-muted text-foreground font-medium`;
-    }
-    return `${base} text-muted-foreground hover:bg-muted hover:text-foreground`;
   }
 }
 

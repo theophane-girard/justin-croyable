@@ -51,3 +51,20 @@ export const sidebarGroupVariants = cva('flex flex-col gap-1');
 export const sidebarGroupLabelVariants = cva(
   'flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium text-sidebar-foreground/70 outline-hidden transition-[margin,opacity] duration-200 ease-linear focus-visible:ring-2 focus-visible:ring-sidebar-ring [&>svg]:size-4 [&>svg]:shrink-0',
 );
+
+// Sidebar Item Variants
+export const sidebarItemVariants = cva(
+  'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring',
+  {
+    variants: {
+      active: {
+        true: 'bg-muted text-foreground font-medium',
+        false: 'text-muted-foreground hover:bg-muted hover:text-foreground',
+      },
+    },
+    defaultVariants: {
+      active: false,
+    },
+  },
+);
+export type SidebarItemVariants = NonNullable<VariantProps<typeof sidebarItemVariants>['active']>;
