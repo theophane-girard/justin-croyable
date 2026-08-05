@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  signal,
+  TemplateRef,
+  viewChild,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import {
@@ -11,6 +19,7 @@ import {
   FabListComponent,
   SegmentComponent,
   type SegmentItem,
+  SheetService,
   TableComponent,
 } from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
@@ -23,7 +32,16 @@ import {
   SEASON_FILTER_ALL,
   SEASON_META,
 } from '../../core/potager.model';
+import {
+  buildYearOptions,
+  buildYearSegmentItems,
+  parseYearValue,
+  YEAR_SEGMENT_MAX,
+  yearFilterToLabel,
+  yearFilterToValue,
+} from '../../core/period-selector';
 import { GardenStore } from '../../core/garden-store';
+import { HarvestStore } from '../../core/harvest-store';
 import { SeasonStore } from '../../core/season-store';
 import { GARDEN_ADD_LINK } from '../../app.routes';
 
@@ -94,10 +112,14 @@ const PLANT_GRID_OPTIONS: GridOptions<PlantRow> = {
 };
 
 const SEASON_FILTER_ITEMS: SegmentItem[] = [
-  { value: SEASON_FILTER_ALL, label: 'Année' },
+  { value: SEASON_FILTER_ALL, label: 'Toutes' },
   { value: SEASON.summer, label: SEASON_META.summer.label, icon: SEASON_META.summer.icon },
   { value: SEASON.winter, label: SEASON_META.winter.label, icon: SEASON_META.winter.icon },
 ];
+
+const BOTTOM_SHEET_SIDE = 'bottom';
+
+type CloseableSheet = { close: () => void };
 
 @Component({
   selector: 'app-garden',
@@ -123,7 +145,22 @@ const SEASON_FILTER_ITEMS: SegmentItem[] = [
             Plants cultivés, rendement et économie nette par plant.
           </p>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
+          @if (showYearSelector()) {
+            @if (yearUsesSegment()) {
+              <app-segment
+                variant="accent"
+                [items]="yearItems()"
+                [value]="yearValue()"
+                (valueChange)="onYearChange($event)"
+              />
+            } @else {
+              <button appButton variant="outline" size="sm" (click)="openYearSheet()">
+                <ng-icon name="phosphorCalendarBlank" class="size-4" />
+                {{ yearLabel() }}
+              </button>
+            }
+          }
           <app-segment
             variant="accent"
             [items]="seasonItems"
@@ -225,12 +262,32 @@ const SEASON_FILTER_ITEMS: SegmentItem[] = [
         </app-fab-list>
       </app-fab>
     }
+
+    <ng-template #yearSheet>
+      <div class="flex flex-col gap-2 p-4">
+        @for (option of yearOptions(); track option.value) {
+          <button
+            appButton
+            class="w-full justify-start"
+            [variant]="option.value === yearValue() ? 'default' : 'outline'"
+            (click)="selectYear(option.value)"
+          >
+            {{ option.label }}
+          </button>
+        }
+      </div>
+    </ng-template>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class GardenComponent {
   protected readonly store = inject(GardenStore);
   protected readonly season = inject(SeasonStore);
+  readonly #harvests = inject(HarvestStore);
+  readonly #sheet = inject(SheetService);
+
+  private readonly yearSheetTemplate = viewChild.required<TemplateRef<unknown>>('yearSheet');
+  #yearSheetRef: CloseableSheet | null = null;
 
   protected readonly columns = PLANT_COLUMNS;
   protected readonly gridOptions = PLANT_GRID_OPTIONS;
@@ -239,10 +296,43 @@ export class GardenComponent {
 
   protected readonly selectedId = signal<string | null>(null);
 
+  protected readonly showYearSelector = computed(() => this.#harvests.availableYears().length >= 2);
+  protected readonly yearUsesSegment = computed(
+    () => this.#harvests.availableYears().length <= YEAR_SEGMENT_MAX,
+  );
+  protected readonly yearItems = computed(() =>
+    buildYearSegmentItems(this.#harvests.availableYears()),
+  );
+  protected readonly yearOptions = computed(() => buildYearOptions(this.#harvests.availableYears()));
+  protected readonly yearValue = computed(() => yearFilterToValue(this.#harvests.effectiveYear()));
+  protected readonly yearLabel = computed(() => yearFilterToLabel(this.#harvests.effectiveYear()));
+
   protected onSeasonChange(value: string | null): void {
     if (value !== null && isSeasonFilter(value)) {
       this.season.setSeason(value);
     }
+  }
+
+  protected onYearChange(value: string | null): void {
+    const parsed = parseYearValue(value);
+    if (parsed !== null) {
+      this.season.setYear(parsed);
+    }
+  }
+
+  protected openYearSheet(): void {
+    this.#yearSheetRef = this.#sheet.create({
+      title: 'Année',
+      side: BOTTOM_SHEET_SIDE,
+      okText: null,
+      cancelText: null,
+      content: this.yearSheetTemplate(),
+    });
+  }
+
+  protected selectYear(value: string): void {
+    this.onYearChange(value);
+    this.#yearSheetRef?.close();
   }
 
   protected onRowSelected(event: RowSelectedEvent<PlantRow>): void {

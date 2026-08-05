@@ -10,10 +10,13 @@ import {
   type HarvestRow,
   isCropId,
   matchesSeason,
+  matchesYear,
   PRICE_MODE,
   type PriceMode,
   type PriceSource,
   seasonForDate,
+  YEAR_ALL,
+  type YearFilter,
 } from './potager.model';
 import { GovPriceService } from './gov-price.service';
 import { SeasonStore } from './season-store';
@@ -50,12 +53,17 @@ const SEED_ENTRIES: readonly HarvestEntry[] = [
   { id: 'seed-8', cropId: 'radis', weightKg: 1.6, harvestedOn: '2026-04-20' },
   { id: 'seed-9', cropId: 'tomate', weightKg: 4.7, harvestedOn: '2026-08-02' },
   { id: 'seed-10', cropId: 'courge', weightKg: 5.4, harvestedOn: '2026-09-15' },
+  { id: 'seed-11', cropId: 'tomate', weightKg: 5.2, harvestedOn: '2025-07-18' },
+  { id: 'seed-12', cropId: 'fraise', weightKg: 1.9, harvestedOn: '2025-05-24' },
+  { id: 'seed-13', cropId: 'courgette', weightKg: 6.8, harvestedOn: '2025-08-09' },
+  { id: 'seed-14', cropId: 'poireau', weightKg: 3.1, harvestedOn: '2025-11-12' },
 ];
 
 @Injectable({ providedIn: 'root' })
 export class HarvestStore {
   readonly #govPrices = inject(GovPriceService);
-  readonly #season = inject(SeasonStore).season;
+  readonly #seasonStore = inject(SeasonStore);
+  readonly #season = this.#seasonStore.season;
   readonly #platformId = inject(PLATFORM_ID);
 
   readonly #entries = signal<readonly HarvestEntry[]>(this.#restore());
@@ -81,49 +89,68 @@ export class HarvestStore {
       .sort((a, b) => b.harvestedOn.getTime() - a.harvestedOn.getTime());
   });
 
-  readonly #seasonRows = computed<HarvestRow[]>(() => {
-    const filter = this.#season();
-    return this.rows().filter(row => matchesSeason(row.season, filter));
+  readonly availableYears = computed<number[]>(() =>
+    Array.from(
+      new Set(this.#entries().map(entry => new Date(entry.harvestedOn).getFullYear())),
+    ).sort((a, b) => b - a),
+  );
+
+  readonly effectiveYear = computed<YearFilter>(() => {
+    const selection = this.#seasonStore.yearSelection();
+    if (selection === YEAR_ALL) {
+      return YEAR_ALL;
+    }
+    const years = this.availableYears();
+    if (typeof selection === 'number' && years.includes(selection)) {
+      return selection;
+    }
+    return years[0] ?? new Date().getFullYear();
+  });
+
+  readonly #periodRows = computed<HarvestRow[]>(() => {
+    const season = this.#season();
+    const year = this.effectiveYear();
+    return this.rows().filter(
+      row => matchesSeason(row.season, season) && matchesYear(row.harvestedOn.getFullYear(), year),
+    );
   });
 
   readonly entryCount = computed(() => this.#entries().length);
 
   readonly totalWeightKg = computed(() =>
-    this.#roundToCents(this.#seasonRows().reduce((total, row) => total + row.weightKg, 0)),
+    this.#roundToCents(this.#periodRows().reduce((total, row) => total + row.weightKg, 0)),
   );
 
   readonly totalSavingsEur = computed(() =>
-    this.#roundToCents(this.#seasonRows().reduce((total, row) => total + row.savingsEur, 0)),
+    this.#roundToCents(this.#periodRows().reduce((total, row) => total + row.savingsEur, 0)),
   );
 
   readonly cropCount = computed(() => new Set(this.#entries().map(entry => entry.cropId)).size);
 
-  readonly weightByCropId = computed<Partial<Record<CropId, number>>>(() =>
-    this.#entries().reduce<Partial<Record<CropId, number>>>((accumulator, entry) => {
-      accumulator[entry.cropId] = this.#roundToCents(
-        (accumulator[entry.cropId] ?? 0) + entry.weightKg,
-      );
+  readonly periodWeightByCropId = computed<Partial<Record<CropId, number>>>(() =>
+    this.#periodRows().reduce<Partial<Record<CropId, number>>>((accumulator, row) => {
+      accumulator[row.cropId] = this.#roundToCents((accumulator[row.cropId] ?? 0) + row.weightKg);
       return accumulator;
     }, {}),
   );
 
-  readonly seasonalValueByCropId = computed<Partial<Record<CropId, number>>>(() =>
-    this.#seasonRows().reduce<Partial<Record<CropId, number>>>((accumulator, row) => {
+  readonly periodValueByCropId = computed<Partial<Record<CropId, number>>>(() =>
+    this.#periodRows().reduce<Partial<Record<CropId, number>>>((accumulator, row) => {
       accumulator[row.cropId] = this.#roundToCents((accumulator[row.cropId] ?? 0) + row.savingsEur);
       return accumulator;
     }, {}),
   );
 
   readonly monthlyWeights = computed(() =>
-    this.#bucketByMonth(this.#seasonRows(), row => row.weightKg),
+    this.#bucketByMonth(this.#periodRows(), row => row.weightKg),
   );
 
   readonly monthlySavings = computed(() =>
-    this.#bucketByMonth(this.#seasonRows(), row => row.savingsEur),
+    this.#bucketByMonth(this.#periodRows(), row => row.savingsEur),
   );
 
   readonly savingsByCrop = computed<NamedValue[]>(() =>
-    this.#groupBy(this.#seasonRows(), row => row.cropLabel, row => row.savingsEur).sort(
+    this.#groupBy(this.#periodRows(), row => row.cropLabel, row => row.savingsEur).sort(
       (a, b) => b.value - a.value,
     ),
   );

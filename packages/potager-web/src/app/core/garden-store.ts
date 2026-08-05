@@ -36,7 +36,7 @@ export class GardenStore {
   readonly #expenseByPlantId = computed<Record<string, number>>(() => {
     const plantIds = this.#entries().map(entry => entry.id);
     const plantIdSet = new Set(plantIds);
-    return this.#expenses.seasonRows().reduce<Record<string, number>>((accumulator, expense) => {
+    return this.#expenses.periodRows().reduce<Record<string, number>>((accumulator, expense) => {
       const targets = expense.plantIds.length
         ? expense.plantIds.filter(id => plantIdSet.has(id))
         : plantIds;
@@ -52,8 +52,8 @@ export class GardenStore {
   });
 
   readonly rows = computed<PlantRow[]>(() => {
-    const harvestedByCrop = this.#harvests.weightByCropId();
-    const valueByCrop = this.#harvests.seasonalValueByCropId();
+    const harvestedByCrop = this.#harvests.periodWeightByCropId();
+    const valueByCrop = this.#harvests.periodValueByCropId();
     const expenseByPlant = this.#expenseByPlantId();
     return this.#entries()
       .map(entry =>

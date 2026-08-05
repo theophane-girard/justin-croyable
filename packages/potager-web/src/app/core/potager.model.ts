@@ -46,6 +46,14 @@ export function isSeasonFilter(value: string): value is SeasonFilter {
   return value === SEASON_FILTER_ALL || value === SEASON.summer || value === SEASON.winter;
 }
 
+export const YEAR_ALL = 'all';
+
+export type YearFilter = number | typeof YEAR_ALL;
+
+export function matchesYear(year: number, filter: YearFilter): boolean {
+  return filter === YEAR_ALL || year === filter;
+}
+
 export const EXPENSE_CATEGORY_META = {
   semences: { id: 'semences', label: 'Semences', icon: 'phosphorPackage' },
   plants: { id: 'plants', label: 'Plants', icon: 'phosphorPottedPlant' },

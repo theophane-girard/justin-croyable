@@ -8,8 +8,10 @@ import {
   type ExpenseRow,
   isExpenseCategoryId,
   matchesSeason,
+  matchesYear,
   seasonForDate,
 } from './potager.model';
+import { HarvestStore } from './harvest-store';
 import { SeasonStore } from './season-store';
 
 const STORAGE_KEY = 'potager.expenses.v2';
@@ -23,12 +25,15 @@ const SEED_EXPENSES: readonly ExpenseEntry[] = [
   { id: 'exp-3', label: 'Terreau potager 70L', category: 'substrat', amountEur: 32.9, spentOn: '2026-04-20', plantIds: [] },
   { id: 'exp-4', label: 'Engrais organique', category: 'engrais', amountEur: 14.2, spentOn: '2026-05-02', plantIds: ['plant-1', 'plant-2'] },
   { id: 'exp-5', label: 'Tuyau microporeux', category: 'arrosage', amountEur: 21.5, spentOn: '2026-05-15', plantIds: [] },
+  { id: 'exp-6', label: 'Semences (saison précédente)', category: 'semences', amountEur: 16, spentOn: '2025-03-10', plantIds: [] },
+  { id: 'exp-7', label: 'Griffe de désherbage', category: 'outillage', amountEur: 12.9, spentOn: '2025-04-02', plantIds: [] },
 ];
 
 @Injectable({ providedIn: 'root' })
 export class ExpenseStore {
   readonly #platformId = inject(PLATFORM_ID);
   readonly #season = inject(SeasonStore).season;
+  readonly #effectiveYear = inject(HarvestStore).effectiveYear;
 
   readonly #entries = signal<readonly ExpenseEntry[]>(this.#restore());
 
@@ -40,25 +45,28 @@ export class ExpenseStore {
       .sort((a, b) => b.spentOn.getTime() - a.spentOn.getTime()),
   );
 
-  readonly #seasonRows = computed<ExpenseRow[]>(() => {
-    const filter = this.#season();
-    return this.rows().filter(row => matchesSeason(row.season, filter));
+  readonly #periodRows = computed<ExpenseRow[]>(() => {
+    const season = this.#season();
+    const year = this.#effectiveYear();
+    return this.rows().filter(
+      row => matchesSeason(row.season, season) && matchesYear(row.spentOn.getFullYear(), year),
+    );
   });
 
-  readonly seasonRows = this.#seasonRows;
+  readonly periodRows = this.#periodRows;
 
   readonly expenseCount = computed(() => this.#entries().length);
 
   readonly totalExpensesEur = computed(() =>
-    this.#roundToCents(this.#seasonRows().reduce((total, row) => total + row.amountEur, 0)),
+    this.#roundToCents(this.#periodRows().reduce((total, row) => total + row.amountEur, 0)),
   );
 
   readonly monthlyExpenses = computed(() =>
-    this.#bucketByMonth(this.#seasonRows(), row => row.amountEur),
+    this.#bucketByMonth(this.#periodRows(), row => row.amountEur),
   );
 
   readonly expensesByCategory = computed<NamedValue[]>(() =>
-    this.#groupBy(this.#seasonRows(), row => row.categoryLabel, row => row.amountEur).sort(
+    this.#groupBy(this.#periodRows(), row => row.categoryLabel, row => row.amountEur).sort(
       (a, b) => b.value - a.value,
     ),
   );

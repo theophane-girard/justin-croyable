@@ -1,6 +1,7 @@
 import {
   phosphorArrowsDownUp,
   phosphorBasket,
+  phosphorCalendarBlank,
   phosphorCloudArrowDown,
   phosphorCoins,
   phosphorFunnel,
@@ -24,6 +25,7 @@ import {
 export const APP_ICONS = {
   phosphorArrowsDownUp,
   phosphorBasket,
+  phosphorCalendarBlank,
   phosphorCloudArrowDown,
   phosphorCoins,
   phosphorFunnel,
