@@ -54,8 +54,14 @@ const HARVEST_COLUMNS: ColDef<HarvestRow>[] = [
   { field: 'categoryLabel', headerName: 'Catégorie', minWidth: 120 },
   { field: 'weightKg', headerName: 'Poids (kg)', type: 'numericColumn', valueFormatter: formatKgCell },
   {
-    field: 'pricePerKg',
-    headerName: 'Prix moyen (€/kg)',
+    field: 'conventionalPricePerKg',
+    headerName: 'Prix conventionnel (€/kg)',
+    type: 'numericColumn',
+    valueFormatter: formatEurCell,
+  },
+  {
+    field: 'bioPricePerKg',
+    headerName: 'Prix bio (€/kg)',
     type: 'numericColumn',
     valueFormatter: formatEurCell,
   },

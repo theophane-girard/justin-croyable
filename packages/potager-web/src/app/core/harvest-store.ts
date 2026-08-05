@@ -65,16 +65,15 @@ export class HarvestStore {
     this.#priceMode() === PRICE_MODE.bio ? 'reference' : this.#govPrices.priceSource(),
   );
 
-  readonly #effectivePrices = computed<Record<CropId, number>>(() =>
-    this.#priceMode() === PRICE_MODE.bio
-      ? { ...REFERENCE_BIO_PRICES }
-      : mergePrices(this.#govPrices.livePrices()),
+  readonly #conventionalPrices = computed<Record<CropId, number>>(() =>
+    mergePrices(this.#govPrices.livePrices()),
   );
 
   readonly rows = computed<HarvestRow[]>(() => {
-    const prices = this.#effectivePrices();
+    const conventional = this.#conventionalPrices();
+    const mode = this.#priceMode();
     return this.#entries()
-      .map(entry => this.#toRow(entry, prices))
+      .map(entry => this.#toRow(entry, conventional, mode))
       .sort((a, b) => b.harvestedOn.getTime() - a.harvestedOn.getTime());
   });
 
@@ -130,15 +129,19 @@ export class HarvestStore {
     this.#priceMode.set(mode);
   }
 
-  #toRow(entry: HarvestEntry, prices: Record<CropId, number>): HarvestRow {
+  #toRow(entry: HarvestEntry, conventional: Record<CropId, number>, mode: PriceMode): HarvestRow {
     const crop = CROP_BY_ID[entry.cropId];
-    const pricePerKg = prices[entry.cropId];
+    const conventionalPricePerKg = conventional[entry.cropId];
+    const bioPricePerKg = REFERENCE_BIO_PRICES[entry.cropId];
+    const pricePerKg = mode === PRICE_MODE.bio ? bioPricePerKg : conventionalPricePerKg;
     return {
       id: entry.id,
       cropLabel: crop.label,
       categoryLabel: CATEGORY_META[crop.category].label,
       harvestedOn: new Date(entry.harvestedOn),
       weightKg: entry.weightKg,
+      conventionalPricePerKg,
+      bioPricePerKg,
       pricePerKg,
       savingsEur: this.#roundToCents(entry.weightKg * pricePerKg),
     };

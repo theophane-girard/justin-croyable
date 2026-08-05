@@ -78,6 +78,8 @@ export type HarvestRow = {
   readonly categoryLabel: string;
   readonly harvestedOn: Date;
   readonly weightKg: number;
+  readonly conventionalPricePerKg: number;
+  readonly bioPricePerKg: number;
   readonly pricePerKg: number;
   readonly savingsEur: number;
 };
