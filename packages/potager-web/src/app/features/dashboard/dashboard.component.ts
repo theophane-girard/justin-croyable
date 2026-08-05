@@ -34,9 +34,7 @@ import {
 } from '../../core/potager.model';
 import {
   buildYearOptions,
-  buildYearSegmentItems,
   parseYearValue,
-  YEAR_SEGMENT_MAX,
   yearFilterToLabel,
   yearFilterToValue,
 } from '../../core/period-selector';
@@ -82,19 +80,10 @@ type CloseableSheet = { close: () => void };
         </div>
         <div class="ml-auto flex flex-wrap items-center gap-2">
           @if (showYearSelector()) {
-            @if (yearUsesSegment()) {
-              <app-segment
-                variant="accent"
-                [items]="yearItems()"
-                [value]="yearValue()"
-                (valueChange)="onYearChange($event)"
-              />
-            } @else {
-              <button appButton variant="outline" size="sm" (click)="openYearSheet()">
-                <ng-icon name="phosphorCalendarBlank" class="size-4" />
-                {{ yearLabel() }}
-              </button>
-            }
+            <button appButton variant="outline" size="sm" (click)="openYearSheet()">
+              <ng-icon name="phosphorCalendarBlank" class="size-4" />
+              {{ yearLabel() }}
+            </button>
           }
           <app-segment
             variant="accent"
@@ -239,10 +228,6 @@ export class DashboardComponent {
   protected readonly seasonItems = SEASON_FILTER_ITEMS;
 
   protected readonly showYearSelector = computed(() => this.store.availableYears().length >= 2);
-  protected readonly yearUsesSegment = computed(
-    () => this.store.availableYears().length <= YEAR_SEGMENT_MAX,
-  );
-  protected readonly yearItems = computed(() => buildYearSegmentItems(this.store.availableYears()));
   protected readonly yearOptions = computed(() => buildYearOptions(this.store.availableYears()));
   protected readonly yearValue = computed(() => yearFilterToValue(this.store.effectiveYear()));
   protected readonly yearLabel = computed(() => yearFilterToLabel(this.store.effectiveYear()));

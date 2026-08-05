@@ -34,9 +34,7 @@ import {
 } from '../../core/potager.model';
 import {
   buildYearOptions,
-  buildYearSegmentItems,
   parseYearValue,
-  YEAR_SEGMENT_MAX,
   yearFilterToLabel,
   yearFilterToValue,
 } from '../../core/period-selector';
@@ -147,19 +145,10 @@ type CloseableSheet = { close: () => void };
         </div>
         <div class="flex flex-wrap items-center gap-2">
           @if (showYearSelector()) {
-            @if (yearUsesSegment()) {
-              <app-segment
-                variant="accent"
-                [items]="yearItems()"
-                [value]="yearValue()"
-                (valueChange)="onYearChange($event)"
-              />
-            } @else {
-              <button appButton variant="outline" size="sm" (click)="openYearSheet()">
-                <ng-icon name="phosphorCalendarBlank" class="size-4" />
-                {{ yearLabel() }}
-              </button>
-            }
+            <button appButton variant="outline" size="sm" (click)="openYearSheet()">
+              <ng-icon name="phosphorCalendarBlank" class="size-4" />
+              {{ yearLabel() }}
+            </button>
           }
           <app-segment
             variant="accent"
@@ -297,12 +286,6 @@ export class GardenComponent {
   protected readonly selectedId = signal<string | null>(null);
 
   protected readonly showYearSelector = computed(() => this.#harvests.availableYears().length >= 2);
-  protected readonly yearUsesSegment = computed(
-    () => this.#harvests.availableYears().length <= YEAR_SEGMENT_MAX,
-  );
-  protected readonly yearItems = computed(() =>
-    buildYearSegmentItems(this.#harvests.availableYears()),
-  );
   protected readonly yearOptions = computed(() => buildYearOptions(this.#harvests.availableYears()));
   protected readonly yearValue = computed(() => yearFilterToValue(this.#harvests.effectiveYear()));
   protected readonly yearLabel = computed(() => yearFilterToLabel(this.#harvests.effectiveYear()));

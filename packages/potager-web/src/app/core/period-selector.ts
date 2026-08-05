@@ -1,8 +1,4 @@
-import type { SegmentItem } from '@justin-croyable/design-system';
-
 import { YEAR_ALL, type YearFilter } from './potager.model';
-
-export const YEAR_SEGMENT_MAX = 3;
 
 export const YEAR_ALL_LABEL = 'Toutes';
 
@@ -13,10 +9,6 @@ export function buildYearOptions(years: readonly number[]): YearOption[] {
     ...years.map(year => ({ value: String(year), label: String(year) })),
     { value: YEAR_ALL, label: YEAR_ALL_LABEL },
   ];
-}
-
-export function buildYearSegmentItems(years: readonly number[]): SegmentItem[] {
-  return buildYearOptions(years).map(option => ({ value: option.value, label: option.label }));
 }
 
 export function yearFilterToValue(year: YearFilter): string {
