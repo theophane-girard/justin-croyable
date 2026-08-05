@@ -99,6 +99,9 @@ const COMPACT_MODE_WIDTH_THRESHOLD = 100;
         (click)="toggle()"
         (focus)="onFocus()"
       >
+        @if (prefixIcon()) {
+          <ng-icon [name]="prefixIcon()" class="text-muted-foreground size-4 shrink-0" />
+        }
         <span class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
           @for (selectedLabel of selectedLabels(); track $index) {
             @if (multiple()) {
@@ -185,6 +188,7 @@ export class SelectComponent implements FormValueControl<SelectValue>, OnDestroy
   readonly placeholder = input<string>('Select an option...');
   readonly size = input<SelectSizeVariants>('default');
   readonly displayLabel = input<string>('');
+  readonly prefixIcon = input<string>('');
 
   readonly label = input<string>('');
   readonly hint = input<string>('');

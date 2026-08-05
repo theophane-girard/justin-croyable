@@ -118,6 +118,9 @@ export interface ComboboxGroup {
       (visibleChange)="setOpen($event)"
       #popoverTrigger
     >
+      @if (prefixIcon()) {
+        <ng-icon [name]="prefixIcon()" class="text-muted-foreground mr-2 shrink-0" />
+      }
       <span class="flex-1 truncate text-left">
         {{ displayValue() ?? placeholder() }}
       </span>
@@ -245,6 +248,7 @@ export class ComboboxComponent implements ControlValueAccessor {
   readonly buttonVariant = input<ButtonVariant>('outline');
   readonly width = input<ComboboxWidthVariants>('default');
   readonly placeholder = input<string>('Select...');
+  readonly prefixIcon = input<string>('');
   readonly searchPlaceholder = input<string>('Search...');
   readonly emptyText = input<string>('No results found.');
   readonly disabled = input(false, { transform: booleanAttribute });
