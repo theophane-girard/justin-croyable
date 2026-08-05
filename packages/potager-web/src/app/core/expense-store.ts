@@ -7,24 +7,28 @@ import {
   type ExpenseEntry,
   type ExpenseRow,
   isExpenseCategoryId,
+  matchesSeason,
+  seasonForDate,
 } from './potager.model';
+import { SeasonStore } from './season-store';
 
-const STORAGE_KEY = 'potager.expenses.v1';
+const STORAGE_KEY = 'potager.expenses.v2';
 const MONTHS_IN_YEAR = 12;
 
 type NamedValue = { readonly label: string; readonly value: number };
 
 const SEED_EXPENSES: readonly ExpenseEntry[] = [
-  { id: 'exp-1', label: 'Sachets de graines', category: 'semences', amountEur: 18.5, spentOn: '2026-03-04' },
-  { id: 'exp-2', label: 'Plants de tomate', category: 'plants', amountEur: 24, spentOn: '2026-04-12' },
-  { id: 'exp-3', label: 'Terreau potager 70L', category: 'substrat', amountEur: 32.9, spentOn: '2026-03-20' },
-  { id: 'exp-4', label: 'Engrais organique', category: 'engrais', amountEur: 14.2, spentOn: '2026-05-02' },
-  { id: 'exp-5', label: 'Tuyau microporeux', category: 'arrosage', amountEur: 21.5, spentOn: '2026-05-15' },
+  { id: 'exp-1', label: 'Sachets de graines', category: 'semences', amountEur: 18.5, spentOn: '2026-03-04', plantIds: [] },
+  { id: 'exp-2', label: 'Plants de tomate', category: 'plants', amountEur: 24, spentOn: '2026-04-12', plantIds: ['plant-1'] },
+  { id: 'exp-3', label: 'Terreau potager 70L', category: 'substrat', amountEur: 32.9, spentOn: '2026-04-20', plantIds: [] },
+  { id: 'exp-4', label: 'Engrais organique', category: 'engrais', amountEur: 14.2, spentOn: '2026-05-02', plantIds: ['plant-1', 'plant-2'] },
+  { id: 'exp-5', label: 'Tuyau microporeux', category: 'arrosage', amountEur: 21.5, spentOn: '2026-05-15', plantIds: [] },
 ];
 
 @Injectable({ providedIn: 'root' })
 export class ExpenseStore {
   readonly #platformId = inject(PLATFORM_ID);
+  readonly #season = inject(SeasonStore).season;
 
   readonly #entries = signal<readonly ExpenseEntry[]>(this.#restore());
 
@@ -36,18 +40,25 @@ export class ExpenseStore {
       .sort((a, b) => b.spentOn.getTime() - a.spentOn.getTime()),
   );
 
+  readonly #seasonRows = computed<ExpenseRow[]>(() => {
+    const filter = this.#season();
+    return this.rows().filter(row => matchesSeason(row.season, filter));
+  });
+
+  readonly seasonRows = this.#seasonRows;
+
   readonly expenseCount = computed(() => this.#entries().length);
 
   readonly totalExpensesEur = computed(() =>
-    this.#roundToCents(this.#entries().reduce((total, entry) => total + entry.amountEur, 0)),
+    this.#roundToCents(this.#seasonRows().reduce((total, row) => total + row.amountEur, 0)),
   );
 
   readonly monthlyExpenses = computed(() =>
-    this.#bucketByMonth(this.rows(), row => row.amountEur),
+    this.#bucketByMonth(this.#seasonRows(), row => row.amountEur),
   );
 
   readonly expensesByCategory = computed<NamedValue[]>(() =>
-    this.#groupBy(this.rows(), row => row.categoryLabel, row => row.amountEur).sort(
+    this.#groupBy(this.#seasonRows(), row => row.categoryLabel, row => row.amountEur).sort(
       (a, b) => b.value - a.value,
     ),
   );
@@ -63,6 +74,7 @@ export class ExpenseStore {
       category: draft.category,
       amountEur: draft.amountEur,
       spentOn: this.#toIsoDate(draft.spentOn),
+      plantIds: [...draft.plantIds],
     };
     this.#entries.update(entries => [...entries, entry]);
   }
@@ -73,14 +85,17 @@ export class ExpenseStore {
 
   #toRow(entry: ExpenseEntry): ExpenseRow {
     const meta = EXPENSE_CATEGORY_META[entry.category];
+    const spentOn = new Date(entry.spentOn);
     return {
       id: entry.id,
       label: entry.label,
       categoryId: entry.category,
       categoryLabel: meta.label,
       categoryIcon: meta.icon,
-      spentOn: new Date(entry.spentOn),
+      spentOn,
+      season: seasonForDate(spentOn),
       amountEur: entry.amountEur,
+      plantIds: entry.plantIds,
     };
   }
 
@@ -130,10 +145,14 @@ export class ExpenseStore {
       if (!Array.isArray(value)) {
         return null;
       }
-      return value.filter((item): item is ExpenseEntry => this.#isValidEntry(item));
+      return value.filter((item): item is ExpenseEntry => this.#isValidEntry(item)).map(this.#normalizeEntry);
     } catch {
       return null;
     }
+  }
+
+  #normalizeEntry(entry: ExpenseEntry): ExpenseEntry {
+    return { ...entry, plantIds: Array.isArray(entry.plantIds) ? entry.plantIds : [] };
   }
 
   #isValidEntry(item: unknown): item is ExpenseEntry {

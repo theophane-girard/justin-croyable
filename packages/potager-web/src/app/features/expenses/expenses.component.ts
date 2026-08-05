@@ -31,9 +31,19 @@ import {
   type ExpenseCategoryId,
   type ExpenseRow,
   isExpenseCategoryId,
+  SEASON_META,
 } from '../../core/potager.model';
 import { ExpenseStore } from '../../core/expense-store';
+import { GardenStore } from '../../core/garden-store';
 import { EXPENSE_ADD_LINK } from '../../app.routes';
+
+type ExpenseTableRow = ExpenseRow & {
+  readonly allocationLabel: string;
+  readonly seasonLabel: string;
+};
+
+const ALL_PLANTS_LABEL = 'Tous les plants';
+const UNKNOWN_ALLOCATION_LABEL = '—';
 
 const DATE_FORMATTER = new Intl.DateTimeFormat('fr-FR', {
   day: '2-digit',
@@ -42,22 +52,24 @@ const DATE_FORMATTER = new Intl.DateTimeFormat('fr-FR', {
 });
 const EUR_FORMATTER = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
 
-function formatDateCell(params: ValueFormatterParams<ExpenseRow, Date>): string {
+function formatDateCell(params: ValueFormatterParams<ExpenseTableRow, Date>): string {
   return params.value instanceof Date ? DATE_FORMATTER.format(params.value) : '';
 }
 
-function formatEurCell(params: ValueFormatterParams<ExpenseRow, number>): string {
+function formatEurCell(params: ValueFormatterParams<ExpenseTableRow, number>): string {
   return typeof params.value === 'number' ? EUR_FORMATTER.format(params.value) : '';
 }
 
-const EXPENSE_COLUMNS: ColDef<ExpenseRow>[] = [
-  { field: 'spentOn', headerName: 'Date', minWidth: 150, valueFormatter: formatDateCell },
-  { field: 'label', headerName: 'Libellé', minWidth: 180, flex: 1 },
-  { field: 'categoryLabel', headerName: 'Catégorie', minWidth: 160 },
+const EXPENSE_COLUMNS: ColDef<ExpenseTableRow>[] = [
+  { field: 'spentOn', headerName: 'Date', minWidth: 140, valueFormatter: formatDateCell },
+  { field: 'label', headerName: 'Libellé', minWidth: 170, flex: 1 },
+  { field: 'categoryLabel', headerName: 'Catégorie', minWidth: 150 },
+  { field: 'allocationLabel', headerName: 'Affectation', minWidth: 170 },
+  { field: 'seasonLabel', headerName: 'Saison', minWidth: 100 },
   { field: 'amountEur', headerName: 'Montant', type: 'numericColumn', valueFormatter: formatEurCell },
 ];
 
-const EXPENSE_GRID_OPTIONS: GridOptions<ExpenseRow> = {
+const EXPENSE_GRID_OPTIONS: GridOptions<ExpenseTableRow> = {
   rowSelection: { mode: 'singleRow', checkboxes: false, enableClickSelection: true },
   pagination: true,
   paginationPageSize: 8,
@@ -113,7 +125,7 @@ const BOTTOM_SHEET_SIDE = 'bottom';
         <div class="flex flex-col">
           <h2 class="text-foreground text-lg font-semibold">Dépenses</h2>
           <p class="text-muted-foreground text-sm">
-            Achats du potager déduits de vos économies.
+            Achats du potager, affectés aux plants et déduits de vos économies.
           </p>
         </div>
         <div class="hidden items-center gap-2 sm:flex">
@@ -233,6 +245,7 @@ const BOTTOM_SHEET_SIDE = 'bottom';
 })
 export class ExpensesComponent {
   protected readonly store = inject(ExpenseStore);
+  readonly #garden = inject(GardenStore);
   readonly #sheet = inject(SheetService);
 
   private readonly filterSheetTemplate = viewChild.required<TemplateRef<unknown>>('filterSheet');
@@ -253,7 +266,11 @@ export class ExpensesComponent {
 
   protected readonly categoryValue = computed(() => this.categoryFilter() ?? CATEGORY_ALL);
 
-  protected readonly displayedRows = computed(() => {
+  readonly #plantLabelById = computed<Map<string, string>>(
+    () => new Map(this.#garden.rows().map(plant => [plant.id, plant.cropLabel])),
+  );
+
+  protected readonly displayedRows = computed<ExpenseTableRow[]>(() => {
     const category = this.categoryFilter();
     const field = this.sortField();
     const direction = this.sortDir();
@@ -263,7 +280,9 @@ export class ExpensesComponent {
       : this.store.rows();
 
     const multiplier = direction === SORT_DIR.asc ? 1 : -1;
-    return [...filtered].sort((a, b) => this.#compareRows(a, b, field) * multiplier);
+    return [...filtered]
+      .sort((a, b) => this.#compareRows(a, b, field) * multiplier)
+      .map(row => this.#toTableRow(row));
   });
 
   protected readonly activeChips = computed<{ id: ChipId; label: string }[]>(() => {
@@ -338,7 +357,7 @@ export class ExpensesComponent {
     this.sortDir.set(SORT_DIR.desc);
   }
 
-  protected onRowSelected(event: RowSelectedEvent<ExpenseRow>): void {
+  protected onRowSelected(event: RowSelectedEvent<ExpenseTableRow>): void {
     const row = event.data;
     if (!row) {
       return;
@@ -359,6 +378,25 @@ export class ExpensesComponent {
     }
     this.store.remove(id);
     this.selectedId.set(null);
+  }
+
+  #toTableRow(row: ExpenseRow): ExpenseTableRow {
+    return {
+      ...row,
+      allocationLabel: this.#allocationLabel(row),
+      seasonLabel: SEASON_META[row.season].label,
+    };
+  }
+
+  #allocationLabel(row: ExpenseRow): string {
+    if (row.plantIds.length === 0) {
+      return ALL_PLANTS_LABEL;
+    }
+    const labels = this.#plantLabelById();
+    const resolved = row.plantIds
+      .map(id => labels.get(id))
+      .filter((label): label is string => label !== undefined);
+    return resolved.length > 0 ? [...new Set(resolved)].join(', ') : UNKNOWN_ALLOCATION_LABEL;
   }
 
   #compareRows(a: ExpenseRow, b: ExpenseRow, field: SortField): number {

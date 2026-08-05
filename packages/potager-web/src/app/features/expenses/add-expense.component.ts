@@ -8,11 +8,13 @@ import {
   InputDirective,
   InputGroupComponent,
   SelectImports,
+  SwitchComponent,
 } from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
 
 import { EXPENSE_CATEGORIES, isExpenseCategoryId } from '../../core/potager.model';
 import { ExpenseStore } from '../../core/expense-store';
+import { GardenStore } from '../../core/garden-store';
 import { EXPENSES_LINK } from '../../app.routes';
 
 @Component({
@@ -26,6 +28,7 @@ import { EXPENSES_LINK } from '../../app.routes';
     InputDirective,
     InputGroupComponent,
     DatePickerComponent,
+    SwitchComponent,
   ],
   template: `
     <div class="mx-auto flex w-full max-w-2xl flex-col gap-4">
@@ -90,6 +93,36 @@ import { EXPENSES_LINK } from '../../app.routes';
               (valueChange)="date.set($event)"
             />
           </div>
+
+          <div class="flex flex-col gap-3 md:col-span-2">
+            <div class="flex items-center justify-between gap-3">
+              <div class="flex flex-col">
+                <span class="text-sm font-medium">Affecter à tous les plants</span>
+                <span class="text-muted-foreground text-xs">
+                  Le montant est réparti à parts égales entre les plants concernés.
+                </span>
+              </div>
+              <app-switch [checked]="allPlants()" (checkedChange)="onAllPlantsChange($event)" />
+            </div>
+
+            @if (!allPlants()) {
+              <app-select
+                label="Plants concernés"
+                placeholder="Sélectionner un ou plusieurs plants…"
+                [required]="true"
+                [multiple]="true"
+                [maxLabelCount]="3"
+                [value]="selectedPlantIds()"
+                (valueChange)="onPlantsChange($event)"
+              >
+                @for (plant of plants(); track plant.id) {
+                  <app-select-item [value]="plant.id">
+                    {{ plant.cropLabel }} ({{ plant.quantity }})
+                  </app-select-item>
+                }
+              </app-select>
+            }
+          </div>
         </div>
       </app-card>
     </div>
@@ -98,15 +131,19 @@ import { EXPENSES_LINK } from '../../app.routes';
 })
 export class AddExpenseComponent {
   protected readonly store = inject(ExpenseStore);
+  readonly #garden = inject(GardenStore);
   readonly #router = inject(Router);
 
   protected readonly categories = EXPENSE_CATEGORIES;
   protected readonly expensesLink = EXPENSES_LINK;
+  protected readonly plants = this.#garden.rows;
 
   protected readonly label = signal<string>('');
   protected readonly category = signal<string>('');
   protected readonly amountInput = signal<string>('');
   protected readonly date = signal<Date | null>(new Date());
+  protected readonly allPlants = signal<boolean>(true);
+  protected readonly selectedPlantIds = signal<string[]>([]);
 
   protected readonly amountEur = computed(() => {
     const parsed = Number.parseFloat(this.amountInput().replace(',', '.'));
@@ -118,7 +155,8 @@ export class AddExpenseComponent {
       this.label().trim().length > 0 &&
       isExpenseCategoryId(this.category()) &&
       this.amountEur() !== null &&
-      this.date() !== null,
+      this.date() !== null &&
+      (this.allPlants() || this.selectedPlantIds().length > 0),
   );
 
   protected onLabelInput(event: Event): void {
@@ -136,6 +174,21 @@ export class AddExpenseComponent {
     this.amountInput.set((event.target as HTMLInputElement).value);
   }
 
+  protected onAllPlantsChange(value: boolean): void {
+    this.allPlants.set(value);
+    if (value) {
+      this.selectedPlantIds.set([]);
+    }
+  }
+
+  protected onPlantsChange(value: string | string[] | null): void {
+    if (Array.isArray(value)) {
+      this.selectedPlantIds.set(value);
+      return;
+    }
+    this.selectedPlantIds.set(typeof value === 'string' && value.length > 0 ? [value] : []);
+  }
+
   protected onSave(): void {
     const label = this.label().trim();
     const category = this.category();
@@ -144,7 +197,11 @@ export class AddExpenseComponent {
     if (!label || !isExpenseCategoryId(category) || amountEur === null || spentOn === null) {
       return;
     }
-    this.store.add({ label, category, amountEur, spentOn });
+    const plantIds = this.allPlants() ? [] : this.selectedPlantIds();
+    if (!this.allPlants() && plantIds.length === 0) {
+      return;
+    }
+    this.store.add({ label, category, amountEur, spentOn, plantIds });
     this.#router.navigateByUrl(EXPENSES_LINK);
   }
 }

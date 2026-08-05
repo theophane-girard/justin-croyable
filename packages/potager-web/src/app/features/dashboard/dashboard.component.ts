@@ -15,7 +15,15 @@ import type { EChartsCoreOption } from 'echarts/core';
 
 import { HarvestStore, MONTHS_FR } from '../../core/harvest-store';
 import { ExpenseStore } from '../../core/expense-store';
-import { PRICE_MODE, type PriceMode } from '../../core/potager.model';
+import { SeasonStore } from '../../core/season-store';
+import {
+  isSeasonFilter,
+  PRICE_MODE,
+  type PriceMode,
+  SEASON,
+  SEASON_FILTER_ALL,
+  SEASON_META,
+} from '../../core/potager.model';
 import { APP_PATHS } from '../../app.routes';
 
 const TOP_CROPS_COUNT = 8;
@@ -23,6 +31,12 @@ const TOP_CROPS_COUNT = 8;
 const PRICE_MODE_ITEMS: SegmentItem[] = [
   { value: PRICE_MODE.conventional, label: 'Conventionnel', icon: 'phosphorBasket' },
   { value: PRICE_MODE.bio, label: 'Bio', icon: 'phosphorLeaf' },
+];
+
+const SEASON_FILTER_ITEMS: SegmentItem[] = [
+  { value: SEASON_FILTER_ALL, label: 'Année' },
+  { value: SEASON.summer, label: SEASON_META.summer.label, icon: SEASON_META.summer.icon },
+  { value: SEASON.winter, label: SEASON_META.winter.label, icon: SEASON_META.winter.icon },
 ];
 
 @Component({
@@ -46,13 +60,20 @@ const PRICE_MODE_ITEMS: SegmentItem[] = [
             Économies nettes : valeur récoltée aux prix moyens français, dépenses déduites.
           </p>
         </div>
-        <app-segment
-          variant="accent"
-          class="ml-auto"
-          [items]="priceModeItems"
-          [value]="store.priceMode()"
-          (valueChange)="onPriceModeChange($event)"
-        />
+        <div class="ml-auto flex flex-wrap items-center gap-2">
+          <app-segment
+            variant="accent"
+            [items]="seasonItems"
+            [value]="season.season()"
+            (valueChange)="onSeasonChange($event)"
+          />
+          <app-segment
+            variant="accent"
+            [items]="priceModeItems"
+            [value]="store.priceMode()"
+            (valueChange)="onPriceModeChange($event)"
+          />
+        </div>
       </div>
 
     @if (store.entryCount() === 0) {
@@ -157,9 +178,11 @@ const PRICE_MODE_ITEMS: SegmentItem[] = [
 export class DashboardComponent {
   protected readonly store = inject(HarvestStore);
   protected readonly expenses = inject(ExpenseStore);
+  protected readonly season = inject(SeasonStore);
 
   protected readonly harvestsLink = `/${APP_PATHS.harvests}`;
   protected readonly priceModeItems = PRICE_MODE_ITEMS;
+  protected readonly seasonItems = SEASON_FILTER_ITEMS;
 
   protected readonly netSavingsEur = computed(
     () => Math.round((this.store.totalSavingsEur() - this.expenses.totalExpensesEur()) * 100) / 100,
@@ -168,6 +191,12 @@ export class DashboardComponent {
   protected onPriceModeChange(value: string): void {
     const mode: PriceMode = value === PRICE_MODE.bio ? PRICE_MODE.bio : PRICE_MODE.conventional;
     this.store.setPriceMode(mode);
+  }
+
+  protected onSeasonChange(value: string | null): void {
+    if (value !== null && isSeasonFilter(value)) {
+      this.season.setSeason(value);
+    }
   }
 
   protected readonly monthlyOptions = computed<EChartsCoreOption>(() => ({

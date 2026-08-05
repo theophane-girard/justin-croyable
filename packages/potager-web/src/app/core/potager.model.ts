@@ -12,6 +12,40 @@ export const PRICE_MODE = {
 
 export type PriceMode = (typeof PRICE_MODE)[keyof typeof PRICE_MODE];
 
+export const SEASON = {
+  summer: 'summer',
+  winter: 'winter',
+} as const;
+
+export type Season = (typeof SEASON)[keyof typeof SEASON];
+
+export const SEASON_META = {
+  summer: { id: 'summer', label: 'Été', icon: 'phosphorSun' },
+  winter: { id: 'winter', label: 'Hiver', icon: 'phosphorSnowflake' },
+} as const;
+
+export const SEASON_FILTER_ALL = 'all';
+
+export type SeasonFilter = Season | typeof SEASON_FILTER_ALL;
+
+const SUMMER_MONTHS: ReadonlySet<number> = new Set([3, 4, 5, 6, 7, 8]);
+
+export function seasonForMonth(month: number): Season {
+  return SUMMER_MONTHS.has(month) ? SEASON.summer : SEASON.winter;
+}
+
+export function seasonForDate(date: Date): Season {
+  return seasonForMonth(date.getMonth());
+}
+
+export function matchesSeason(season: Season, filter: SeasonFilter): boolean {
+  return filter === SEASON_FILTER_ALL || filter === season;
+}
+
+export function isSeasonFilter(value: string): value is SeasonFilter {
+  return value === SEASON_FILTER_ALL || value === SEASON.summer || value === SEASON.winter;
+}
+
 export const EXPENSE_CATEGORY_META = {
   semences: { id: 'semences', label: 'Semences', icon: 'phosphorPackage' },
   plants: { id: 'plants', label: 'Plants', icon: 'phosphorPottedPlant' },
@@ -88,9 +122,11 @@ export type HarvestDraft = {
 
 export type HarvestRow = {
   readonly id: string;
+  readonly cropId: CropId;
   readonly cropLabel: string;
   readonly categoryLabel: string;
   readonly harvestedOn: Date;
+  readonly season: Season;
   readonly weightKg: number;
   readonly conventionalPricePerKg: number;
   readonly bioPricePerKg: number;
@@ -104,6 +140,7 @@ export type ExpenseEntry = {
   readonly category: ExpenseCategoryId;
   readonly amountEur: number;
   readonly spentOn: string;
+  readonly plantIds: readonly string[];
 };
 
 export type ExpenseDraft = {
@@ -111,6 +148,7 @@ export type ExpenseDraft = {
   readonly category: ExpenseCategoryId;
   readonly amountEur: number;
   readonly spentOn: Date;
+  readonly plantIds: readonly string[];
 };
 
 export type ExpenseRow = {
@@ -120,7 +158,9 @@ export type ExpenseRow = {
   readonly categoryLabel: string;
   readonly categoryIcon: string;
   readonly spentOn: Date;
+  readonly season: Season;
   readonly amountEur: number;
+  readonly plantIds: readonly string[];
 };
 
 export type PlantEntry = {
@@ -143,6 +183,9 @@ export type PlantRow = {
   readonly quantity: number;
   readonly harvestedKg: number;
   readonly yieldPerPlantKg: number;
+  readonly harvestValueEur: number;
+  readonly expenseEur: number;
+  readonly netSavingsEur: number;
 };
 
 export function isCropId(value: string): value is CropId {

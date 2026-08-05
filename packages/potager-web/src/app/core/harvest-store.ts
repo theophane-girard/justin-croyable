@@ -9,11 +9,14 @@ import {
   type HarvestEntry,
   type HarvestRow,
   isCropId,
+  matchesSeason,
   PRICE_MODE,
   type PriceMode,
   type PriceSource,
+  seasonForDate,
 } from './potager.model';
 import { GovPriceService } from './gov-price.service';
+import { SeasonStore } from './season-store';
 import { mergePrices, REFERENCE_BIO_PRICES } from './reference-prices';
 
 export const MONTHS_FR = [
@@ -52,6 +55,7 @@ const SEED_ENTRIES: readonly HarvestEntry[] = [
 @Injectable({ providedIn: 'root' })
 export class HarvestStore {
   readonly #govPrices = inject(GovPriceService);
+  readonly #season = inject(SeasonStore).season;
   readonly #platformId = inject(PLATFORM_ID);
 
   readonly #entries = signal<readonly HarvestEntry[]>(this.#restore());
@@ -77,14 +81,19 @@ export class HarvestStore {
       .sort((a, b) => b.harvestedOn.getTime() - a.harvestedOn.getTime());
   });
 
+  readonly #seasonRows = computed<HarvestRow[]>(() => {
+    const filter = this.#season();
+    return this.rows().filter(row => matchesSeason(row.season, filter));
+  });
+
   readonly entryCount = computed(() => this.#entries().length);
 
   readonly totalWeightKg = computed(() =>
-    this.#roundToCents(this.#entries().reduce((total, entry) => total + entry.weightKg, 0)),
+    this.#roundToCents(this.#seasonRows().reduce((total, row) => total + row.weightKg, 0)),
   );
 
   readonly totalSavingsEur = computed(() =>
-    this.#roundToCents(this.rows().reduce((total, row) => total + row.savingsEur, 0)),
+    this.#roundToCents(this.#seasonRows().reduce((total, row) => total + row.savingsEur, 0)),
   );
 
   readonly cropCount = computed(() => new Set(this.#entries().map(entry => entry.cropId)).size);
@@ -98,22 +107,25 @@ export class HarvestStore {
     }, {}),
   );
 
+  readonly seasonalValueByCropId = computed<Partial<Record<CropId, number>>>(() =>
+    this.#seasonRows().reduce<Partial<Record<CropId, number>>>((accumulator, row) => {
+      accumulator[row.cropId] = this.#roundToCents((accumulator[row.cropId] ?? 0) + row.savingsEur);
+      return accumulator;
+    }, {}),
+  );
+
   readonly monthlyWeights = computed(() =>
-    this.#bucketByMonth(this.rows(), row => row.weightKg),
+    this.#bucketByMonth(this.#seasonRows(), row => row.weightKg),
   );
 
   readonly monthlySavings = computed(() =>
-    this.#bucketByMonth(this.rows(), row => row.savingsEur),
+    this.#bucketByMonth(this.#seasonRows(), row => row.savingsEur),
   );
 
   readonly savingsByCrop = computed<NamedValue[]>(() =>
-    this.#groupBy(this.rows(), row => row.cropLabel, row => row.savingsEur).sort(
+    this.#groupBy(this.#seasonRows(), row => row.cropLabel, row => row.savingsEur).sort(
       (a, b) => b.value - a.value,
     ),
-  );
-
-  readonly weightByCategory = computed<NamedValue[]>(() =>
-    this.#groupBy(this.rows(), row => row.categoryLabel, row => row.weightKg),
   );
 
   constructor() {
@@ -143,11 +155,14 @@ export class HarvestStore {
     const conventionalPricePerKg = conventional[entry.cropId];
     const bioPricePerKg = REFERENCE_BIO_PRICES[entry.cropId];
     const pricePerKg = mode === PRICE_MODE.bio ? bioPricePerKg : conventionalPricePerKg;
+    const harvestedOn = new Date(entry.harvestedOn);
     return {
       id: entry.id,
+      cropId: entry.cropId,
       cropLabel: crop.label,
       categoryLabel: CATEGORY_META[crop.category].label,
-      harvestedOn: new Date(entry.harvestedOn),
+      harvestedOn,
+      season: seasonForDate(harvestedOn),
       weightKg: entry.weightKg,
       conventionalPricePerKg,
       bioPricePerKg,

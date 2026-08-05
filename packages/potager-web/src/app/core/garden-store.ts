@@ -10,6 +10,7 @@ import {
   type PlantRow,
 } from './potager.model';
 import { HarvestStore } from './harvest-store';
+import { ExpenseStore } from './expense-store';
 
 const STORAGE_KEY = 'potager.plants.v1';
 
@@ -26,16 +27,44 @@ const SEED_PLANTS: readonly PlantEntry[] = [
 export class GardenStore {
   readonly #platformId = inject(PLATFORM_ID);
   readonly #harvests = inject(HarvestStore);
+  readonly #expenses = inject(ExpenseStore);
 
   readonly #entries = signal<readonly PlantEntry[]>(this.#restore());
 
   readonly entries = this.#entries.asReadonly();
 
+  readonly #expenseByPlantId = computed<Record<string, number>>(() => {
+    const plantIds = this.#entries().map(entry => entry.id);
+    const plantIdSet = new Set(plantIds);
+    return this.#expenses.seasonRows().reduce<Record<string, number>>((accumulator, expense) => {
+      const targets = expense.plantIds.length
+        ? expense.plantIds.filter(id => plantIdSet.has(id))
+        : plantIds;
+      if (targets.length === 0) {
+        return accumulator;
+      }
+      const share = expense.amountEur / targets.length;
+      targets.forEach(id => {
+        accumulator[id] = (accumulator[id] ?? 0) + share;
+      });
+      return accumulator;
+    }, {});
+  });
+
   readonly rows = computed<PlantRow[]>(() => {
-    const harvested = this.#harvests.weightByCropId();
+    const harvestedByCrop = this.#harvests.weightByCropId();
+    const valueByCrop = this.#harvests.seasonalValueByCropId();
+    const expenseByPlant = this.#expenseByPlantId();
     return this.#entries()
-      .map(entry => this.#toRow(entry, harvested[entry.cropId] ?? 0))
-      .sort((a, b) => b.yieldPerPlantKg - a.yieldPerPlantKg);
+      .map(entry =>
+        this.#toRow(
+          entry,
+          harvestedByCrop[entry.cropId] ?? 0,
+          valueByCrop[entry.cropId] ?? 0,
+          expenseByPlant[entry.id] ?? 0,
+        ),
+      )
+      .sort((a, b) => b.netSavingsEur - a.netSavingsEur);
   });
 
   readonly plantCount = computed(() =>
@@ -53,7 +82,11 @@ export class GardenStore {
     return this.#roundToCents(totalHarvested / plants);
   });
 
-  readonly bestYieldCropLabel = computed(() => this.rows().at(0)?.cropLabel ?? '—');
+  readonly totalNetSavingsEur = computed(() =>
+    this.#roundToCents(this.rows().reduce((total, row) => total + row.netSavingsEur, 0)),
+  );
+
+  readonly bestNetSavingsCropLabel = computed(() => this.rows().at(0)?.cropLabel ?? '—');
 
   constructor() {
     effect(() => this.#persist(this.#entries()));
@@ -77,7 +110,12 @@ export class GardenStore {
     this.#entries.update(entries => entries.filter(entry => entry.id !== id));
   }
 
-  #toRow(entry: PlantEntry, harvestedKg: number): PlantRow {
+  #toRow(
+    entry: PlantEntry,
+    harvestedKg: number,
+    harvestValueEur: number,
+    expenseEur: number,
+  ): PlantRow {
     const crop = CROP_BY_ID[entry.cropId];
     const yieldPerPlantKg = entry.quantity > 0 ? harvestedKg / entry.quantity : 0;
     return {
@@ -89,6 +127,9 @@ export class GardenStore {
       quantity: entry.quantity,
       harvestedKg: this.#roundToCents(harvestedKg),
       yieldPerPlantKg: this.#roundToCents(yieldPerPlantKg),
+      harvestValueEur: this.#roundToCents(harvestValueEur),
+      expenseEur: this.#roundToCents(expenseEur),
+      netSavingsEur: this.#roundToCents(harvestValueEur - expenseEur),
     };
   }
 
