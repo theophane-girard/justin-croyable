@@ -43,7 +43,7 @@ const THEME_VALUE = { light: 'light', dark: 'dark' } as const;
           (collapsedChange)="sidebarCollapsed.set($event)"
         >
           <div class="flex h-full flex-col">
-            <app-sidebar-group class="p-3">
+            <app-sidebar-group class="px-1 py-3">
               <div class="mb-2 flex items-center gap-2 px-2" [class.justify-center]="sidebarCollapsed()">
                 <ng-icon name="phosphorPlant" class="text-primary size-6 shrink-0" />
                 <span class="text-base font-semibold" [class.hidden]="sidebarCollapsed()">Mon Potager</span>
@@ -62,7 +62,7 @@ const THEME_VALUE = { light: 'light', dark: 'dark' } as const;
               }
             </app-sidebar-group>
 
-            <app-sidebar-group class="mt-auto p-3">
+            <app-sidebar-group class="mt-auto px-1 py-3">
               <app-segment
                 variant="accent"
                 size="sm"
