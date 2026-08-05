@@ -34,8 +34,14 @@ export class CountUpDirective {
   readonly #target = signal<CountTarget | null>(null);
   #frameId: number | null = NO_FRAME_SCHEDULED;
 
+  #lastRendered: string | null = null;
+  #observer: MutationObserver | null = null;
+
   constructor() {
-    afterNextRender(() => this.#captureTargetFromHost());
+    afterNextRender(() => {
+      this.#captureTargetFromHost();
+      this.#observeHostValue();
+    });
 
     effect(() => {
       const target = this.#target();
@@ -46,16 +52,42 @@ export class CountUpDirective {
       this.#animateTo(target, duration);
     });
 
-    this.#destroyRef.onDestroy(() => this.#cancelFrame());
+    this.#destroyRef.onDestroy(() => {
+      this.#cancelFrame();
+      this.#observer?.disconnect();
+    });
+  }
+
+  #observeHostValue(): void {
+    if (typeof MutationObserver === 'undefined') {
+      return;
+    }
+    this.#observer = new MutationObserver(() => this.#onHostValueChanged());
+    this.#observer.observe(this.#host.nativeElement, {
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
+  }
+
+  #onHostValueChanged(): void {
+    if (this.#currentText() === this.#lastRendered) {
+      return;
+    }
+    this.#captureTargetFromHost();
   }
 
   #captureTargetFromHost(): void {
-    const rawText = this.#host.nativeElement.textContent ?? '';
+    const rawText = this.#currentText();
     const value = Number(rawText.trim());
     if (rawText.trim() === '' || Number.isNaN(value)) {
       return;
     }
     this.#target.set({ value, decimals: this.#countDecimals(rawText) });
+  }
+
+  #currentText(): string {
+    return this.#host.nativeElement.textContent ?? '';
   }
 
   #countDecimals(rawText: string): number {
@@ -90,7 +122,19 @@ export class CountUpDirective {
   }
 
   #render(value: number, decimals: number): void {
-    this.#host.nativeElement.textContent = value.toFixed(decimals);
+    const text = value.toFixed(decimals);
+    this.#lastRendered = text;
+    this.#writeText(text);
+  }
+
+  #writeText(text: string): void {
+    const host = this.#host.nativeElement;
+    const node = host.firstChild;
+    if (node && node.nodeType === Node.TEXT_NODE) {
+      node.nodeValue = text;
+      return;
+    }
+    host.textContent = text;
   }
 
   #prefersReducedMotion(): boolean {
