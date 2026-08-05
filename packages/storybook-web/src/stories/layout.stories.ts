@@ -53,9 +53,9 @@ const meta: Meta<LayoutArgs> = {
           <app-sidebar [width]="sidebarWidth" [collapsible]="collapsible" [collapsed]="collapsed">
             <app-sidebar-group class="px-1 py-3">
               <app-sidebar-group-label>Espace</app-sidebar-group-label>
-              <a class="rounded-md px-2 py-1.5 text-sm hover:bg-muted">Tableau de bord</a>
-              <a class="rounded-md px-2 py-1.5 text-sm hover:bg-muted">Projets</a>
-              <a class="rounded-md px-2 py-1.5 text-sm hover:bg-muted">Équipe</a>
+              <a appSidebarItem label="Tableau de bord"></a>
+              <a appSidebarItem label="Projets"></a>
+              <a appSidebarItem label="Équipe"></a>
             </app-sidebar-group>
           </app-sidebar>
 

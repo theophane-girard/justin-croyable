@@ -7,6 +7,7 @@ import {
   SidebarGroupComponent,
   SidebarGroupLabelComponent,
 } from './sidebar.component';
+import { SidebarItemComponent } from './sidebar-item.component';
 
 export const LayoutImports = [
   LayoutComponent,
@@ -16,4 +17,5 @@ export const LayoutImports = [
   SidebarComponent,
   SidebarGroupComponent,
   SidebarGroupLabelComponent,
+  SidebarItemComponent,
 ] as const;
