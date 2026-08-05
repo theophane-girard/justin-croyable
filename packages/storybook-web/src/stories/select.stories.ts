@@ -4,6 +4,7 @@ import { expect, userEvent, waitFor, within } from 'storybook/test';
 
 type SelectArgs = {
   placeholder: string;
+  prefixIcon: string;
   size: SelectSizeVariants;
   multiple: boolean;
   disabled: boolean;
@@ -22,12 +23,13 @@ const meta: Meta<SelectArgs> = {
     docs: {
       description: {
         component:
-          "Liste déroulante bâtie sur le CDK Overlay, pilotable au clavier (flèches, Entrée, Échap, Début/Fin). En mode `multiple`, les valeurs choisies s'affichent en badges et `maxLabelCount` limite le nombre de libellés visibles avant compactage.",
+          "Liste déroulante bâtie sur le CDK Overlay, pilotable au clavier (flèches, Entrée, Échap, Début/Fin). En mode `multiple`, les valeurs choisies s'affichent en badges et `maxLabelCount` limite le nombre de libellés visibles avant compactage. `prefixIcon` affiche une icône (ng-icon) en préfixe du déclencheur. Sur mobile (< sm), la liste s'ouvre en bottom sheet ancré en bas — avec en-tête rappelant le champ et animations d'ouverture/fermeture — au lieu du popover ancré.",
       },
     },
   },
   argTypes: {
     placeholder: { control: 'text' },
+    prefixIcon: { control: 'text', description: 'Nom d’icône (ng-icon) affichée en préfixe du déclencheur.' },
     size: { control: 'inline-radio', options: ['sm', 'default', 'lg'] },
     multiple: { control: 'boolean' },
     disabled: { control: 'boolean' },
@@ -39,6 +41,7 @@ const meta: Meta<SelectArgs> = {
   },
   args: {
     placeholder: 'Sélectionner un rôle…',
+    prefixIcon: '',
     size: 'default',
     multiple: false,
     disabled: false,
@@ -54,6 +57,7 @@ const meta: Meta<SelectArgs> = {
       <div class="w-72">
         <app-select
           [placeholder]="placeholder"
+          [prefixIcon]="prefixIcon"
           [size]="size"
           [multiple]="multiple"
           [disabled]="disabled"
@@ -107,6 +111,14 @@ export const WithLabelAndHint: Story = {
 };
 
 export const Preselected: Story = { args: { value: 'editor' } };
+
+export const WithPrefixIcon: Story = {
+  args: {
+    label: 'Rôle',
+    prefixIcon: 'lucideSearch',
+    placeholder: 'Rechercher un rôle…',
+  },
+};
 
 export const Multiple: Story = {
   args: { multiple: true, value: ['admin', 'editor'], maxLabelCount: 3, placeholder: 'Rôles…' },
