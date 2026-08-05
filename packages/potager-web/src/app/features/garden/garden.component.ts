@@ -110,7 +110,7 @@ const PLANT_GRID_OPTIONS: GridOptions<PlantRow> = {
 };
 
 const SEASON_FILTER_ITEMS: SegmentItem[] = [
-  { value: SEASON_FILTER_ALL, label: 'Toutes' },
+  { value: SEASON_FILTER_ALL, label: 'Année entière' },
   { value: SEASON.summer, label: SEASON_META.summer.label, icon: SEASON_META.summer.icon },
   { value: SEASON.winter, label: SEASON_META.winter.label, icon: SEASON_META.winter.icon },
 ];
