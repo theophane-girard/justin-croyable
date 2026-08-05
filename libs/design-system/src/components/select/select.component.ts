@@ -46,6 +46,7 @@ import {
   type SelectSizeVariants,
 } from './select.variants';
 import { IdDirective } from '../../core';
+import { MOBILE_SHEET_CONTENT_CLASSES, ViewportService } from '../../core/services/viewport.service';
 import { fieldLabelClasses, fieldMessage, fieldMessageClasses } from '../../utils/field-message';
 import { mergeClasses } from '../../utils/merge-classes';
 
@@ -154,12 +155,16 @@ export class SelectComponent implements FormValueControl<SelectValue>, OnDestroy
   private readonly overlayPositionBuilder = inject(OverlayPositionBuilder);
   private readonly viewContainerRef = inject(ViewContainerRef);
   private readonly platformId = inject(PLATFORM_ID);
+  private readonly viewport = inject(ViewportService);
+
+  protected readonly isMobile = this.viewport.isMobile;
 
   readonly dropdownTemplate = viewChild.required<TemplateRef<void>>('dropdownTemplate');
   readonly selectItems = contentChildren(SelectItemComponent);
 
   private overlayRef?: OverlayRef;
   private portal?: TemplatePortal;
+  private overlayIsMobile = false;
 
   readonly class = input<ClassValue>('');
   readonly maxLabelCount = input<number>(1);
@@ -248,7 +253,9 @@ export class SelectComponent implements FormValueControl<SelectValue>, OnDestroy
       this.showError() ? 'border-destructive data-active:border-destructive' : '',
     ),
   );
-  protected readonly contentClasses = computed(() => mergeClasses(selectContentVariants()));
+  protected readonly contentClasses = computed(() =>
+    mergeClasses(selectContentVariants(), this.isMobile() ? MOBILE_SHEET_CONTENT_CLASSES : ''),
+  );
   protected readonly triggerClasses = computed(() =>
     mergeClasses(
       selectTriggerVariants({
@@ -425,28 +432,37 @@ export class SelectComponent implements FormValueControl<SelectValue>, OnDestroy
       return;
     }
 
-    // Create overlay if it doesn't exist
+    const mobile = this.isMobile();
+
+    // Recreate the overlay if the presentation mode changed (viewport resize).
+    if (this.overlayRef && this.overlayIsMobile !== mobile) {
+      this.destroyOverlay();
+    }
+
     if (!this.overlayRef) {
-      this.createOverlay();
+      this.createOverlay(mobile);
     }
 
     if (!this.overlayRef) {
       return;
     }
 
-    const hostWidth = this.controlElement().nativeElement.offsetWidth || 0;
-
     if (this.overlayRef.hasAttached()) {
       this.overlayRef.detach();
     }
 
     this.portal = new TemplatePortal(this.dropdownTemplate(), this.viewContainerRef);
-
     this.overlayRef.attach(this.portal);
-    this.overlayRef.updateSize({ width: hostWidth });
     this.isOpen.set(true);
     this.updateFocusWhenNormalMode();
 
+    if (mobile) {
+      this.setFocusOnOpen();
+      return;
+    }
+
+    const hostWidth = this.controlElement().nativeElement.offsetWidth || 0;
+    this.overlayRef.updateSize({ width: hostWidth });
     this.determinePortalWidthOnOpen(hostWidth);
   }
 
@@ -528,56 +544,70 @@ export class SelectComponent implements FormValueControl<SelectValue>, OnDestroy
     });
   }
 
-  private createOverlay() {
+  private createOverlay(mobile = false) {
     if (this.overlayRef) {
       return;
     } // Already created
 
-    if (isPlatformBrowser(this.platformId)) {
-      try {
-        const positionStrategy = this.overlayPositionBuilder
-          .flexibleConnectedTo(this.controlElement())
-          .withPositions([
-            {
-              originX: 'center',
-              originY: 'bottom',
-              overlayX: 'center',
-              overlayY: 'top',
-              offsetY: 4,
-            },
-            {
-              originX: 'center',
-              originY: 'top',
-              overlayX: 'center',
-              overlayY: 'bottom',
-              offsetY: -4,
-            },
-          ])
-          .withPush(false);
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
 
-        const elementWidth = this.elementRef.nativeElement.offsetWidth || 200;
+    try {
+      this.overlayIsMobile = mobile;
+      this.overlayRef = mobile ? this.createSheetOverlay() : this.createPopoverOverlay();
 
-        this.overlayRef = this.overlay.create({
-          positionStrategy,
-          hasBackdrop: false,
-          scrollStrategy: this.overlay.scrollStrategies.reposition(),
-          width: elementWidth,
-          maxHeight: 384, // max-h-96 equivalent
-        });
+      if (mobile) {
         this.overlayRef
-          .outsidePointerEvents()
-          .pipe(
-            filter((event) => !this.elementRef.nativeElement.contains(event.target)),
-            takeUntilDestroyed(this.destroyRef),
-          )
+          .backdropClick()
+          .pipe(takeUntilDestroyed(this.destroyRef))
           .subscribe(() => {
             this.isFocus.set(false);
             this.close();
           });
-      } catch (error) {
-        console.error('Error creating overlay:', error);
       }
+
+      this.overlayRef
+        .outsidePointerEvents()
+        .pipe(
+          filter((event) => !this.elementRef.nativeElement.contains(event.target)),
+          takeUntilDestroyed(this.destroyRef),
+        )
+        .subscribe(() => {
+          this.isFocus.set(false);
+          this.close();
+        });
+    } catch (error) {
+      console.error('Error creating overlay:', error);
     }
+  }
+
+  private createPopoverOverlay(): OverlayRef {
+    const positionStrategy = this.overlayPositionBuilder
+      .flexibleConnectedTo(this.controlElement())
+      .withPositions([
+        { originX: 'center', originY: 'bottom', overlayX: 'center', overlayY: 'top', offsetY: 4 },
+        { originX: 'center', originY: 'top', overlayX: 'center', overlayY: 'bottom', offsetY: -4 },
+      ])
+      .withPush(false);
+
+    const elementWidth = this.elementRef.nativeElement.offsetWidth || 200;
+
+    return this.overlay.create({
+      positionStrategy,
+      hasBackdrop: false,
+      scrollStrategy: this.overlay.scrollStrategies.reposition(),
+      width: elementWidth,
+      maxHeight: 384, // max-h-96 equivalent
+    });
+  }
+
+  private createSheetOverlay(): OverlayRef {
+    return this.overlay.create({
+      positionStrategy: this.overlay.position().global(),
+      hasBackdrop: true,
+      scrollStrategy: this.overlay.scrollStrategies.block(),
+    });
   }
 
   private destroyOverlay() {

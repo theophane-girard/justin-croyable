@@ -2,6 +2,7 @@ import { type ConnectedPosition, Overlay, OverlayPositionBuilder, type OverlayRe
 import { TemplatePortal } from '@angular/cdk/portal';
 import { isPlatformBrowser } from '@angular/common';
 import {
+  booleanAttribute,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -23,6 +24,7 @@ import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 
 import { filter, type Subscription } from 'rxjs';
 
+import { ViewportService } from '../../core/services/viewport.service';
 import { mergeClasses } from '../../utils/merge-classes';
 
 import { popoverVariants } from './popover.variants';
@@ -78,9 +80,11 @@ export class PopoverDirective implements OnInit, OnDestroy {
   private readonly renderer = inject(Renderer2);
   private readonly viewContainerRef = inject(ViewContainerRef);
   private readonly platformId = inject(PLATFORM_ID);
+  private readonly viewport = inject(ViewportService);
 
   private overlayRef?: OverlayRef;
   private overlayRefSubscription?: Subscription;
+  private overlayIsSheet = false;
   private listeners: (() => void)[] = [];
 
   readonly trigger = input<PopoverTrigger>('click');
@@ -89,6 +93,11 @@ export class PopoverDirective implements OnInit, OnDestroy {
   readonly origin = input<ElementRef>();
   readonly visible = input<boolean>(false);
   readonly overlayClickable = input<boolean>(true);
+  /**
+   * Opt-in : sur mobile (< sm), présente le contenu en bottom sheet plein écran
+   * plutôt qu'en popover ancré. N'affecte que les consommateurs qui l'activent.
+   */
+  readonly mobileSheet = input(false, { transform: booleanAttribute });
   readonly visibleChange = output<boolean>();
 
   private readonly isVisible = signal(false);
@@ -139,14 +148,29 @@ export class PopoverDirective implements OnInit, OnDestroy {
       return;
     }
 
+    const sheet = this.sheetMode();
+    if (this.overlayRef && this.overlayIsSheet !== sheet) {
+      this.overlayRefSubscription?.unsubscribe();
+      this.overlayRefSubscription = undefined;
+      this.overlayRef.dispose();
+      this.overlayRef = undefined;
+    }
+
     if (!this.overlayRef) {
       this.createOverlay();
+      if (this.trigger() === 'click') {
+        this.subscribeToOverlayRef();
+      }
     }
 
     const templatePortal = new TemplatePortal(this.content(), this.viewContainerRef);
     this.overlayRef?.attach(templatePortal);
     this.isVisible.set(true);
     this.visibleChange.emit(true);
+  }
+
+  private sheetMode(): boolean {
+    return this.mobileSheet() && this.viewport.isMobile();
   }
 
   hide() {
@@ -168,20 +192,37 @@ export class PopoverDirective implements OnInit, OnDestroy {
   }
 
   private createOverlay() {
-    if (isPlatformBrowser(this.platformId)) {
-      const positionStrategy = this.overlayPositionBuilder
-        .flexibleConnectedTo(this.nativeElement)
-        .withPositions(this.getPositions())
-        .withPush(false)
-        .withFlexibleDimensions(false)
-        .withViewportMargin(8);
-
-      this.overlayRef = this.overlay.create({
-        positionStrategy,
-        hasBackdrop: false,
-        scrollStrategy: this.overlay.scrollStrategies.reposition(),
-      });
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
     }
+
+    this.overlayIsSheet = this.sheetMode();
+
+    if (this.overlayIsSheet) {
+      this.overlayRef = this.overlay.create({
+        positionStrategy: this.overlay.position().global(),
+        hasBackdrop: true,
+        scrollStrategy: this.overlay.scrollStrategies.block(),
+      });
+      this.overlayRef
+        .backdropClick()
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe(() => this.hide());
+      return;
+    }
+
+    const positionStrategy = this.overlayPositionBuilder
+      .flexibleConnectedTo(this.nativeElement)
+      .withPositions(this.getPositions())
+      .withPush(false)
+      .withFlexibleDimensions(false)
+      .withViewportMargin(8);
+
+    this.overlayRef = this.overlay.create({
+      positionStrategy,
+      hasBackdrop: false,
+      scrollStrategy: this.overlay.scrollStrategies.reposition(),
+    });
   }
 
   private subscribeToOverlayRef(): void {

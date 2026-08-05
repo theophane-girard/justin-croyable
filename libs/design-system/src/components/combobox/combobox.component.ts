@@ -41,6 +41,7 @@ import {
 import { EmptyComponent } from '../empty';
 import { PopoverComponent, PopoverDirective } from '../popover';
 import { IdDirective } from '../../core';
+import { MOBILE_SHEET_CONTENT_CLASSES, ViewportService } from '../../core/services/viewport.service';
 import {
   fieldLabelClasses,
   fieldMessage,
@@ -94,6 +95,7 @@ export interface ComboboxGroup {
       type="button"
       appButton
       appPopover
+      [mobileSheet]="true"
       role="combobox"
       [content]="popoverContent"
       [variant]="buttonVariant()"
@@ -223,6 +225,9 @@ export interface ComboboxGroup {
 })
 export class ComboboxComponent implements ControlValueAccessor {
   private readonly injector = inject(Injector);
+  private readonly viewport = inject(ViewportService);
+
+  protected readonly isMobile = this.viewport.isMobile;
 
   readonly class = input<ClassValue>('');
   readonly buttonVariant = input<ButtonVariant>('outline');
@@ -285,6 +290,9 @@ export class ComboboxComponent implements ControlValueAccessor {
   protected readonly buttonClasses = computed(() => 'w-full justify-between');
 
   protected readonly popoverClasses = computed(() => {
+    if (this.isMobile()) {
+      return `${MOBILE_SHEET_CONTENT_CLASSES} p-0`;
+    }
     const widthClass =
       this.width() === 'full' ? 'w-full' : comboboxVariants({ width: this.width() });
     return `${widthClass} p-0`;
