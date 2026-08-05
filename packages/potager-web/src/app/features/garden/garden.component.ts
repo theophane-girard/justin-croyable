@@ -143,7 +143,7 @@ type CloseableSheet = { close: () => void };
             Plants cultivés, rendement et économie nette par plant.
           </p>
         </div>
-        <div class="flex flex-wrap items-center gap-2">
+        <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
           @if (showYearSelector()) {
             <button appButton variant="outline" size="sm" (click)="openYearSheet()">
               <ng-icon name="phosphorCalendarBlank" class="size-4" />
@@ -151,6 +151,7 @@ type CloseableSheet = { close: () => void };
             </button>
           }
           <app-segment
+            class="order-last w-full sm:order-none sm:w-auto"
             variant="accent"
             [items]="seasonItems"
             [value]="season.season()"
