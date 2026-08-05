@@ -1,7 +1,9 @@
 import {
+  phosphorArrowsDownUp,
   phosphorBasket,
   phosphorCloudArrowDown,
   phosphorCoins,
+  phosphorFunnel,
   phosphorInfo,
   phosphorLeaf,
   phosphorListBullets,
@@ -15,9 +17,11 @@ import {
 } from '@ng-icons/phosphor-icons/regular';
 
 export const APP_ICONS = {
+  phosphorArrowsDownUp,
   phosphorBasket,
   phosphorCloudArrowDown,
   phosphorCoins,
+  phosphorFunnel,
   phosphorInfo,
   phosphorLeaf,
   phosphorListBullets,
