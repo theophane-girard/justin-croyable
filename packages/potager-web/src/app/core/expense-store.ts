@@ -14,7 +14,7 @@ import {
 import { HarvestStore } from './harvest-store';
 import { SeasonStore } from './season-store';
 
-const STORAGE_KEY = 'potager.expenses.v2';
+const STORAGE_KEY = 'potager.expenses.v3';
 const MONTHS_IN_YEAR = 12;
 
 type NamedValue = { readonly label: string; readonly value: number };

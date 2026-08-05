@@ -37,7 +37,7 @@ export const MONTHS_FR = [
   'Déc',
 ] as const;
 
-const STORAGE_KEY = 'potager.harvests.v1';
+const STORAGE_KEY = 'potager.harvests.v2';
 const MONTHS_IN_YEAR = 12;
 
 type NamedValue = { readonly label: string; readonly value: number };

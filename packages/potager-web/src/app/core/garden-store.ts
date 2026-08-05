@@ -12,7 +12,7 @@ import {
 import { HarvestStore } from './harvest-store';
 import { ExpenseStore } from './expense-store';
 
-const STORAGE_KEY = 'potager.plants.v1';
+const STORAGE_KEY = 'potager.plants.v2';
 
 const SEED_PLANTS: readonly PlantEntry[] = [
   { id: 'plant-1', cropId: 'tomate', quantity: 6 },
