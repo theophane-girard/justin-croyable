@@ -10,10 +10,6 @@ export function yearFilterToValue(year: YearFilter): string {
   return year === YEAR_ALL ? YEAR_ALL : String(year);
 }
 
-export function yearFilterToLabel(year: YearFilter): string {
-  return year === YEAR_ALL ? '' : String(year);
-}
-
 export function parseYearValue(value: string | null): YearFilter | null {
   if (value === null || value === YEAR_ALL) {
     return null;

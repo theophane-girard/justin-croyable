@@ -1,11 +1,4 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  inject,
-  TemplateRef,
-  viewChild,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import {
@@ -16,7 +9,7 @@ import {
   EmptyComponent,
   SegmentComponent,
   type SegmentItem,
-  SheetService,
+  SelectImports,
 } from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
 import type { EChartsCoreOption } from 'echarts/core';
@@ -32,12 +25,7 @@ import {
   SEASON_FILTER_ALL,
   SEASON_META,
 } from '../../core/potager.model';
-import {
-  buildYearOptions,
-  parseYearValue,
-  yearFilterToLabel,
-  yearFilterToValue,
-} from '../../core/period-selector';
+import { buildYearOptions, parseYearValue, yearFilterToValue } from '../../core/period-selector';
 import { APP_PATHS } from '../../app.routes';
 
 const TOP_CROPS_COUNT = 8;
@@ -53,10 +41,6 @@ const SEASON_FILTER_ITEMS: SegmentItem[] = [
   { value: SEASON.winter, label: SEASON_META.winter.label, icon: SEASON_META.winter.icon },
 ];
 
-const BOTTOM_SHEET_SIDE = 'bottom';
-
-type CloseableSheet = { close: () => void };
-
 @Component({
   selector: 'app-dashboard',
   imports: [
@@ -68,6 +52,7 @@ type CloseableSheet = { close: () => void };
     ButtonComponent,
     EmptyComponent,
     SegmentComponent,
+    ...SelectImports,
   ],
   template: `
     <div class="flex flex-col gap-4">
@@ -80,10 +65,16 @@ type CloseableSheet = { close: () => void };
         </div>
         <div class="flex w-full flex-wrap items-center gap-2 sm:ml-auto sm:w-auto sm:flex-nowrap">
           @if (showYearSelector()) {
-            <button appButton variant="outline" size="sm" (click)="openYearSheet()">
-              <ng-icon name="phosphorCalendarBlank" class="size-4" />
-              {{ yearLabel() }}
-            </button>
+            <app-select
+              class="w-36"
+              prefixIcon="phosphorCalendarBlank"
+              [value]="yearValue()"
+              (valueChange)="onYearChange($event)"
+            >
+              @for (option of yearOptions(); track option.value) {
+                <app-select-item [value]="option.value">{{ option.label }}</app-select-item>
+              }
+            </app-select>
           }
           <app-segment
             class="order-last w-full sm:order-none sm:w-auto"
@@ -198,21 +189,6 @@ type CloseableSheet = { close: () => void };
       </div>
     }
     </div>
-
-    <ng-template #yearSheet>
-      <div class="flex flex-col gap-2 p-4">
-        @for (option of yearOptions(); track option.value) {
-          <button
-            appButton
-            class="w-full justify-start"
-            [variant]="option.value === yearValue() ? 'default' : 'outline'"
-            (click)="selectYear(option.value)"
-          >
-            {{ option.label }}
-          </button>
-        }
-      </div>
-    </ng-template>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -220,10 +196,6 @@ export class DashboardComponent {
   protected readonly store = inject(HarvestStore);
   protected readonly expenses = inject(ExpenseStore);
   protected readonly season = inject(SeasonStore);
-  readonly #sheet = inject(SheetService);
-
-  private readonly yearSheetTemplate = viewChild.required<TemplateRef<unknown>>('yearSheet');
-  #yearSheetRef: CloseableSheet | null = null;
 
   protected readonly harvestsLink = `/${APP_PATHS.harvests}`;
   protected readonly priceModeItems = PRICE_MODE_ITEMS;
@@ -232,7 +204,6 @@ export class DashboardComponent {
   protected readonly showYearSelector = computed(() => this.store.availableYears().length >= 2);
   protected readonly yearOptions = computed(() => buildYearOptions(this.store.availableYears()));
   protected readonly yearValue = computed(() => yearFilterToValue(this.store.effectiveYear()));
-  protected readonly yearLabel = computed(() => yearFilterToLabel(this.store.effectiveYear()));
 
   protected readonly netSavingsEur = computed(
     () => Math.round((this.store.totalSavingsEur() - this.expenses.totalExpensesEur()) * 100) / 100,
@@ -243,26 +214,14 @@ export class DashboardComponent {
     this.store.setPriceMode(mode);
   }
 
-  protected onYearChange(value: string | null): void {
+  protected onYearChange(value: string | string[] | null): void {
+    if (typeof value !== 'string') {
+      return;
+    }
     const parsed = parseYearValue(value);
     if (parsed !== null) {
       this.season.setYear(parsed);
     }
-  }
-
-  protected openYearSheet(): void {
-    this.#yearSheetRef = this.#sheet.create({
-      title: 'Année',
-      side: BOTTOM_SHEET_SIDE,
-      okText: null,
-      cancelText: null,
-      content: this.yearSheetTemplate(),
-    });
-  }
-
-  protected selectYear(value: string): void {
-    this.onYearChange(value);
-    this.#yearSheetRef?.close();
   }
 
   protected onSeasonChange(value: string | null): void {
