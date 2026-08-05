@@ -27,6 +27,9 @@ const SEED_EXPENSES: readonly ExpenseEntry[] = [
   { id: 'exp-5', label: 'Tuyau microporeux', category: 'arrosage', amountEur: 21.5, spentOn: '2026-05-15', plantIds: [] },
   { id: 'exp-6', label: 'Semences (saison précédente)', category: 'semences', amountEur: 16, spentOn: '2025-03-10', plantIds: [] },
   { id: 'exp-7', label: 'Griffe de désherbage', category: 'outillage', amountEur: 12.9, spentOn: '2025-04-02', plantIds: [] },
+  { id: 'exp-8', label: 'Plants de tomate 2025', category: 'plants', amountEur: 21, spentOn: '2025-04-15', plantIds: ['plant-1'] },
+  { id: 'exp-9', label: 'Terreau 2025', category: 'substrat', amountEur: 28.5, spentOn: '2025-03-28', plantIds: [] },
+  { id: 'exp-10', label: 'Engrais 2025', category: 'engrais', amountEur: 13.4, spentOn: '2025-05-20', plantIds: ['plant-1', 'plant-2'] },
 ];
 
 @Injectable({ providedIn: 'root' })

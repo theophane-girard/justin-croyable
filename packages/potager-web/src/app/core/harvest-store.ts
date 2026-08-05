@@ -57,6 +57,14 @@ const SEED_ENTRIES: readonly HarvestEntry[] = [
   { id: 'seed-12', cropId: 'fraise', weightKg: 1.9, harvestedOn: '2025-05-24' },
   { id: 'seed-13', cropId: 'courgette', weightKg: 6.8, harvestedOn: '2025-08-09' },
   { id: 'seed-14', cropId: 'poireau', weightKg: 3.1, harvestedOn: '2025-11-12' },
+  { id: 'seed-15', cropId: 'salade', weightKg: 2.6, harvestedOn: '2025-06-15' },
+  { id: 'seed-16', cropId: 'haricot-vert', weightKg: 3.4, harvestedOn: '2025-07-28' },
+  { id: 'seed-17', cropId: 'pomme-de-terre', weightKg: 9.7, harvestedOn: '2025-08-20' },
+  { id: 'seed-18', cropId: 'radis', weightKg: 1.3, harvestedOn: '2025-04-22' },
+  { id: 'seed-19', cropId: 'courge', weightKg: 4.9, harvestedOn: '2025-09-18' },
+  { id: 'seed-20', cropId: 'tomate', weightKg: 3.8, harvestedOn: '2025-08-05' },
+  { id: 'seed-21', cropId: 'framboise', weightKg: 0.9, harvestedOn: '2025-06-30' },
+  { id: 'seed-22', cropId: 'carotte', weightKg: 4.2, harvestedOn: '2025-10-08' },
 ];
 
 @Injectable({ providedIn: 'root' })
