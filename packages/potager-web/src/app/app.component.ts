@@ -23,11 +23,6 @@ const NAV_ITEMS: readonly NavItem[] = [
   { path: APP_PATHS.harvests, link: `/${APP_PATHS.harvests}`, label: 'Récoltes', icon: 'phosphorListBullets' },
 ];
 
-const NAV_ITEM_BASE_CLASS =
-  'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors';
-const NAV_ITEM_ACTIVE_CLASS = `${NAV_ITEM_BASE_CLASS} bg-muted text-foreground font-medium`;
-const NAV_ITEM_IDLE_CLASS = `${NAV_ITEM_BASE_CLASS} text-muted-foreground hover:bg-muted hover:text-foreground`;
-
 const THEME_VALUE = { light: 'light', dark: 'dark' } as const;
 
 @Component({
@@ -51,14 +46,13 @@ const THEME_VALUE = { light: 'light', dark: 'dark' } as const;
               <app-sidebar-group-label [class.hidden]="sidebarCollapsed()">Navigation</app-sidebar-group-label>
               @for (item of navLinks(); track item.path) {
                 <a
+                  appSidebarItem
                   [routerLink]="item.link"
-                  [class]="item.cssClass"
-                  [class.justify-center]="sidebarCollapsed()"
-                  [attr.title]="sidebarCollapsed() ? item.label : null"
-                >
-                  <ng-icon [name]="item.icon" class="size-4 shrink-0" />
-                  <span [class.hidden]="sidebarCollapsed()">{{ item.label }}</span>
-                </a>
+                  [icon]="item.icon"
+                  [label]="item.label"
+                  [active]="item.active"
+                  [collapsed]="sidebarCollapsed()"
+                ></a>
               }
             </app-sidebar-group>
 
@@ -132,10 +126,10 @@ export class AppComponent {
   );
 
   protected readonly navLinks = computed(() => {
-    const active = this.currentPath();
+    const current = this.currentPath();
     return NAV_ITEMS.map(item => ({
       ...item,
-      cssClass: this.#isActive(item.path, active) ? NAV_ITEM_ACTIVE_CLASS : NAV_ITEM_IDLE_CLASS,
+      active: this.#isActive(item.path, current),
     }));
   });
 
