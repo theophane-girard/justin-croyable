@@ -131,6 +131,13 @@ export interface ComboboxGroup {
 
     <ng-template #popoverContent>
       <app-popover [class]="popoverClasses()">
+        @if (isMobile() && sheetHeader()) {
+          <div
+            class="bg-popover text-foreground sticky top-0 z-10 border-b px-3 py-3 text-sm font-medium"
+          >
+            {{ sheetHeader() }}
+          </div>
+        }
         <app-command class="min-h-auto" (commandSelected)="handleSelect($event)" #commandRef>
           @if (searchable()) {
             <app-command-input [placeholder]="searchPlaceholder()" #commandInputRef />
@@ -228,6 +235,7 @@ export class ComboboxComponent implements ControlValueAccessor {
   private readonly viewport = inject(ViewportService);
 
   protected readonly isMobile = this.viewport.isMobile;
+  protected readonly sheetHeader = computed(() => this.label() || this.placeholder());
 
   readonly class = input<ClassValue>('');
   readonly buttonVariant = input<ButtonVariant>('outline');

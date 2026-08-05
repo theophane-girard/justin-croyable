@@ -131,6 +131,13 @@ const COMPACT_MODE_WIDTH_THRESHOLD = 100;
         "
         tabindex="-1"
       >
+        @if (isMobile() && sheetHeader()) {
+          <div
+            class="bg-popover text-foreground sticky top-0 z-10 border-b px-3 py-3 text-sm font-medium"
+          >
+            {{ sheetHeader() }}
+          </div>
+        }
         <div class="p-1">
           <ng-content />
         </div>
@@ -158,6 +165,7 @@ export class SelectComponent implements FormValueControl<SelectValue>, OnDestroy
   private readonly viewport = inject(ViewportService);
 
   protected readonly isMobile = this.viewport.isMobile;
+  protected readonly sheetHeader = computed(() => this.label() || this.placeholder());
 
   readonly dropdownTemplate = viewChild.required<TemplateRef<void>>('dropdownTemplate');
   readonly selectItems = contentChildren(SelectItemComponent);
