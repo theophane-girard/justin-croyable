@@ -5,8 +5,9 @@ export const chipVariants = cva(
   {
     variants: {
       variant: {
-        default: 'border-transparent bg-secondary text-secondary-foreground',
+        default: 'border-transparent bg-muted text-foreground',
         outline: 'border-border bg-transparent text-foreground',
+        accent: 'border-transparent bg-secondary text-secondary-foreground',
       },
       shape: {
         default: 'rounded-md',

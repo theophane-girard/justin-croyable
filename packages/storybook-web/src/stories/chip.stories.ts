@@ -26,7 +26,7 @@ const meta: Meta<ChipArgs> = {
     },
   },
   argTypes: {
-    variant: { control: 'inline-radio', options: ['default', 'outline'] },
+    variant: { control: 'inline-radio', options: ['default', 'outline', 'accent'] },
     shape: { control: 'inline-radio', options: ['default', 'pill'] },
     disabled: { control: 'boolean' },
     label: { control: 'text' },
@@ -64,6 +64,7 @@ export const Variants: Story = {
       <div class="flex flex-wrap items-center gap-2">
         <app-chip variant="default">Neutre</app-chip>
         <app-chip variant="outline">Contour</app-chip>
+        <app-chip variant="accent">Accentué</app-chip>
       </div>
     `,
   }),
@@ -99,6 +100,28 @@ export const Filtres: Story = {
         <app-chip>Prix : 10 € – 50 €</app-chip>
         <app-chip>Disponible en stock</app-chip>
         <app-chip>Note : 4★ et plus</app-chip>
+      </div>
+    `,
+  }),
+};
+
+export const Accent: Story = {
+  parameters: {
+    controls: { disable: true },
+    docs: {
+      description: {
+        story:
+          "Variante teintée (couleur primaire atténuée), à réserver au filtre mis en avant : le critère structurant venant d'une recherche facettée (ex. la catégorie sélectionnée depuis la barre de recherche), qu'on veut distinguer des filtres secondaires neutres appliqués par-dessus.",
+      },
+    },
+  },
+  render: () => ({
+    template: `
+      <div class="flex flex-wrap items-center gap-2">
+        <app-chip variant="accent">Catégorie : Ordinateurs portables</app-chip>
+        <app-chip>Marque : Dell</app-chip>
+        <app-chip>Prix : 500 € – 1000 €</app-chip>
+        <app-chip>Disponible en stock</app-chip>
       </div>
     `,
   }),
