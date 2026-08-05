@@ -1,0 +1,23 @@
+/*
+ * CSS global de l'application Potager, compilé par Tailwind v4 via
+ * @tailwindcss/postcss (voir .postcssrc.json) dans le pipeline @angular/build.
+ *
+ * L'app fournit Tailwind et le plugin d'animations, puis importe le preset du
+ * DS. La palette « emerald » (teinte verte) est importée après le thème pour
+ * remplacer la palette fuchsia par défaut — un potager se porte mieux en vert.
+ */
+
+@layer ng-icon, theme, base, components, utilities;
+
+@import 'tailwindcss';
+@plugin 'tailwindcss-animate';
+
+@import '../../../libs/design-system/src/theme/theme.css';
+@import '../../../libs/design-system/src/theme/palettes/emerald.css';
+
+@source '../../../libs/design-system/src/components';
+@source './app';
+
+body {
+  @apply bg-background text-foreground;
+}
