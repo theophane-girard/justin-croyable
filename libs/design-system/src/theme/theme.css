@@ -2,6 +2,7 @@
 @import './palettes/fuchsia.css';
 
 @source '../components';
+@source '../core';
 
 @custom-variant dark (&:is(.dark *));
 

@@ -42,6 +42,11 @@ import { EmptyComponent } from '../empty';
 import { PopoverComponent, PopoverDirective } from '../popover';
 import { IdDirective } from '../../core';
 import {
+  MOBILE_SHEET_CONTENT_CLASSES,
+  MOBILE_SHEET_ENTER_CLASSES,
+  ViewportService,
+} from '../../core/services/viewport.service';
+import {
   fieldLabelClasses,
   fieldMessage,
   fieldMessageClasses,
@@ -94,6 +99,7 @@ export interface ComboboxGroup {
       type="button"
       appButton
       appPopover
+      [mobileSheet]="true"
       role="combobox"
       [content]="popoverContent"
       [variant]="buttonVariant()"
@@ -112,6 +118,9 @@ export interface ComboboxGroup {
       (visibleChange)="setOpen($event)"
       #popoverTrigger
     >
+      @if (prefixIcon()) {
+        <ng-icon [name]="prefixIcon()" class="text-muted-foreground mr-2 shrink-0" />
+      }
       <span class="flex-1 truncate text-left">
         {{ displayValue() ?? placeholder() }}
       </span>
@@ -129,6 +138,13 @@ export interface ComboboxGroup {
 
     <ng-template #popoverContent>
       <app-popover [class]="popoverClasses()">
+        @if (isMobile() && sheetHeader()) {
+          <div
+            class="bg-popover text-foreground sticky top-0 z-10 border-b px-3 py-3 text-sm font-medium"
+          >
+            {{ sheetHeader() }}
+          </div>
+        }
         <app-command class="min-h-auto" (commandSelected)="handleSelect($event)" #commandRef>
           @if (searchable()) {
             <app-command-input [placeholder]="searchPlaceholder()" #commandInputRef />
@@ -223,11 +239,16 @@ export interface ComboboxGroup {
 })
 export class ComboboxComponent implements ControlValueAccessor {
   private readonly injector = inject(Injector);
+  private readonly viewport = inject(ViewportService);
+
+  protected readonly isMobile = this.viewport.isMobile;
+  protected readonly sheetHeader = computed(() => this.label() || this.placeholder());
 
   readonly class = input<ClassValue>('');
   readonly buttonVariant = input<ButtonVariant>('outline');
   readonly width = input<ComboboxWidthVariants>('default');
   readonly placeholder = input<string>('Select...');
+  readonly prefixIcon = input<string>('');
   readonly searchPlaceholder = input<string>('Search...');
   readonly emptyText = input<string>('No results found.');
   readonly disabled = input(false, { transform: booleanAttribute });
@@ -285,6 +306,9 @@ export class ComboboxComponent implements ControlValueAccessor {
   protected readonly buttonClasses = computed(() => 'w-full justify-between');
 
   protected readonly popoverClasses = computed(() => {
+    if (this.isMobile()) {
+      return `${MOBILE_SHEET_CONTENT_CLASSES} ${MOBILE_SHEET_ENTER_CLASSES} p-0`;
+    }
     const widthClass =
       this.width() === 'full' ? 'w-full' : comboboxVariants({ width: this.width() });
     return `${widthClass} p-0`;

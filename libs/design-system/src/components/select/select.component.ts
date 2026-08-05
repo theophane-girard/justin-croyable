@@ -46,6 +46,12 @@ import {
   type SelectSizeVariants,
 } from './select.variants';
 import { IdDirective } from '../../core';
+import {
+  MOBILE_SHEET_CONTENT_CLASSES,
+  MOBILE_SHEET_ENTER_CLASSES,
+  runMobileSheetCloseAnimation,
+  ViewportService,
+} from '../../core/services/viewport.service';
 import { fieldLabelClasses, fieldMessage, fieldMessageClasses } from '../../utils/field-message';
 import { mergeClasses } from '../../utils/merge-classes';
 
@@ -93,6 +99,9 @@ const COMPACT_MODE_WIDTH_THRESHOLD = 100;
         (click)="toggle()"
         (focus)="onFocus()"
       >
+        @if (prefixIcon()) {
+          <ng-icon [name]="prefixIcon()" class="text-muted-foreground size-4 shrink-0" />
+        }
         <span class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
           @for (selectedLabel of selectedLabels(); track $index) {
             @if (multiple()) {
@@ -130,6 +139,13 @@ const COMPACT_MODE_WIDTH_THRESHOLD = 100;
         "
         tabindex="-1"
       >
+        @if (isMobile() && sheetHeader()) {
+          <div
+            class="bg-popover text-foreground sticky top-0 z-10 border-b px-3 py-3 text-sm font-medium"
+          >
+            {{ sheetHeader() }}
+          </div>
+        }
         <div class="p-1">
           <ng-content />
         </div>
@@ -154,12 +170,17 @@ export class SelectComponent implements FormValueControl<SelectValue>, OnDestroy
   private readonly overlayPositionBuilder = inject(OverlayPositionBuilder);
   private readonly viewContainerRef = inject(ViewContainerRef);
   private readonly platformId = inject(PLATFORM_ID);
+  private readonly viewport = inject(ViewportService);
+
+  protected readonly isMobile = this.viewport.isMobile;
+  protected readonly sheetHeader = computed(() => this.label() || this.placeholder());
 
   readonly dropdownTemplate = viewChild.required<TemplateRef<void>>('dropdownTemplate');
   readonly selectItems = contentChildren(SelectItemComponent);
 
   private overlayRef?: OverlayRef;
   private portal?: TemplatePortal;
+  private overlayIsMobile = false;
 
   readonly class = input<ClassValue>('');
   readonly maxLabelCount = input<number>(1);
@@ -167,6 +188,7 @@ export class SelectComponent implements FormValueControl<SelectValue>, OnDestroy
   readonly placeholder = input<string>('Select an option...');
   readonly size = input<SelectSizeVariants>('default');
   readonly displayLabel = input<string>('');
+  readonly prefixIcon = input<string>('');
 
   readonly label = input<string>('');
   readonly hint = input<string>('');
@@ -248,7 +270,12 @@ export class SelectComponent implements FormValueControl<SelectValue>, OnDestroy
       this.showError() ? 'border-destructive data-active:border-destructive' : '',
     ),
   );
-  protected readonly contentClasses = computed(() => mergeClasses(selectContentVariants()));
+  protected readonly contentClasses = computed(() =>
+    mergeClasses(
+      selectContentVariants(),
+      this.isMobile() ? `${MOBILE_SHEET_CONTENT_CLASSES} ${MOBILE_SHEET_ENTER_CLASSES}` : '',
+    ),
+  );
   protected readonly triggerClasses = computed(() =>
     mergeClasses(
       selectTriggerVariants({
@@ -425,28 +452,37 @@ export class SelectComponent implements FormValueControl<SelectValue>, OnDestroy
       return;
     }
 
-    // Create overlay if it doesn't exist
+    const mobile = this.isMobile();
+
+    // Recreate the overlay if the presentation mode changed (viewport resize).
+    if (this.overlayRef && this.overlayIsMobile !== mobile) {
+      this.destroyOverlay();
+    }
+
     if (!this.overlayRef) {
-      this.createOverlay();
+      this.createOverlay(mobile);
     }
 
     if (!this.overlayRef) {
       return;
     }
 
-    const hostWidth = this.controlElement().nativeElement.offsetWidth || 0;
-
     if (this.overlayRef.hasAttached()) {
       this.overlayRef.detach();
     }
 
     this.portal = new TemplatePortal(this.dropdownTemplate(), this.viewContainerRef);
-
     this.overlayRef.attach(this.portal);
-    this.overlayRef.updateSize({ width: hostWidth });
     this.isOpen.set(true);
     this.updateFocusWhenNormalMode();
 
+    if (mobile) {
+      this.setFocusOnOpen();
+      return;
+    }
+
+    const hostWidth = this.controlElement().nativeElement.offsetWidth || 0;
+    this.overlayRef.updateSize({ width: hostWidth });
     this.determinePortalWidthOnOpen(hostWidth);
   }
 
@@ -457,7 +493,11 @@ export class SelectComponent implements FormValueControl<SelectValue>, OnDestroy
 
   private close(shouldTouch = true) {
     if (this.overlayRef?.hasAttached()) {
-      this.overlayRef.detach();
+      if (this.overlayIsMobile) {
+        this.animateSheetCloseThenDetach();
+      } else {
+        this.overlayRef.detach();
+      }
     }
     this.isOpen.set(false);
     this.focusedIndex.set(-1);
@@ -465,6 +505,23 @@ export class SelectComponent implements FormValueControl<SelectValue>, OnDestroy
       this.touch.emit();
     }
     this.updateFocusWhenNormalMode();
+  }
+
+  private animateSheetCloseThenDetach(): void {
+    const overlayRef = this.overlayRef;
+    if (!overlayRef) {
+      return;
+    }
+    const content = overlayRef.overlayElement.querySelector<HTMLElement>('#dropdown');
+    if (!content) {
+      overlayRef.detach();
+      return;
+    }
+    runMobileSheetCloseAnimation(content, () => {
+      if (overlayRef.hasAttached()) {
+        overlayRef.detach();
+      }
+    });
   }
 
   private updateFocusWhenNormalMode(): void {
@@ -528,56 +585,70 @@ export class SelectComponent implements FormValueControl<SelectValue>, OnDestroy
     });
   }
 
-  private createOverlay() {
+  private createOverlay(mobile = false) {
     if (this.overlayRef) {
       return;
     } // Already created
 
-    if (isPlatformBrowser(this.platformId)) {
-      try {
-        const positionStrategy = this.overlayPositionBuilder
-          .flexibleConnectedTo(this.controlElement())
-          .withPositions([
-            {
-              originX: 'center',
-              originY: 'bottom',
-              overlayX: 'center',
-              overlayY: 'top',
-              offsetY: 4,
-            },
-            {
-              originX: 'center',
-              originY: 'top',
-              overlayX: 'center',
-              overlayY: 'bottom',
-              offsetY: -4,
-            },
-          ])
-          .withPush(false);
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
 
-        const elementWidth = this.elementRef.nativeElement.offsetWidth || 200;
+    try {
+      this.overlayIsMobile = mobile;
+      this.overlayRef = mobile ? this.createSheetOverlay() : this.createPopoverOverlay();
 
-        this.overlayRef = this.overlay.create({
-          positionStrategy,
-          hasBackdrop: false,
-          scrollStrategy: this.overlay.scrollStrategies.reposition(),
-          width: elementWidth,
-          maxHeight: 384, // max-h-96 equivalent
-        });
+      if (mobile) {
         this.overlayRef
-          .outsidePointerEvents()
-          .pipe(
-            filter((event) => !this.elementRef.nativeElement.contains(event.target)),
-            takeUntilDestroyed(this.destroyRef),
-          )
+          .backdropClick()
+          .pipe(takeUntilDestroyed(this.destroyRef))
           .subscribe(() => {
             this.isFocus.set(false);
             this.close();
           });
-      } catch (error) {
-        console.error('Error creating overlay:', error);
       }
+
+      this.overlayRef
+        .outsidePointerEvents()
+        .pipe(
+          filter((event) => !this.elementRef.nativeElement.contains(event.target)),
+          takeUntilDestroyed(this.destroyRef),
+        )
+        .subscribe(() => {
+          this.isFocus.set(false);
+          this.close();
+        });
+    } catch (error) {
+      console.error('Error creating overlay:', error);
     }
+  }
+
+  private createPopoverOverlay(): OverlayRef {
+    const positionStrategy = this.overlayPositionBuilder
+      .flexibleConnectedTo(this.controlElement())
+      .withPositions([
+        { originX: 'center', originY: 'bottom', overlayX: 'center', overlayY: 'top', offsetY: 4 },
+        { originX: 'center', originY: 'top', overlayX: 'center', overlayY: 'bottom', offsetY: -4 },
+      ])
+      .withPush(false);
+
+    const elementWidth = this.elementRef.nativeElement.offsetWidth || 200;
+
+    return this.overlay.create({
+      positionStrategy,
+      hasBackdrop: false,
+      scrollStrategy: this.overlay.scrollStrategies.reposition(),
+      width: elementWidth,
+      maxHeight: 384, // max-h-96 equivalent
+    });
+  }
+
+  private createSheetOverlay(): OverlayRef {
+    return this.overlay.create({
+      positionStrategy: this.overlay.position().global(),
+      hasBackdrop: true,
+      scrollStrategy: this.overlay.scrollStrategies.block(),
+    });
   }
 
   private destroyOverlay() {

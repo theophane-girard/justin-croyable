@@ -12,6 +12,7 @@ type ComboboxArgs = {
   groups: ComboboxGroup[];
   width: ComboboxWidthVariants;
   placeholder: string;
+  prefixIcon: string;
   searchPlaceholder: string;
   emptyText: string;
   searchable: boolean;
@@ -38,13 +39,14 @@ const meta: Meta<ComboboxArgs> = {
     docs: {
       description: {
         component:
-          "Composition de Popover + Command : un bouton déclencheur ouvre une liste filtrable. Les options se passent à plat via `options`, ou regroupées via `groups` (les deux entrées sont exclusives dans la pratique).",
+          "Composition de Popover + Command : un bouton déclencheur ouvre une liste filtrable. Les options se passent à plat via `options`, ou regroupées via `groups` (les deux entrées sont exclusives dans la pratique). `prefixIcon` affiche une icône (ng-icon) en préfixe du déclencheur. Sur mobile (< sm), la liste s'ouvre en bottom sheet ancré en bas — avec en-tête rappelant le champ et animations d'ouverture/fermeture — au lieu du popover ancré.",
       },
     },
   },
   argTypes: {
     width: { control: 'inline-radio', options: ['sm', 'default', 'md', 'lg', 'full'] },
     placeholder: { control: 'text' },
+    prefixIcon: { control: 'text', description: 'Nom d’icône (ng-icon) affichée en préfixe du déclencheur.' },
     searchPlaceholder: { control: 'text' },
     emptyText: { control: 'text' },
     searchable: { control: 'boolean' },
@@ -61,6 +63,7 @@ const meta: Meta<ComboboxArgs> = {
     groups: [],
     width: 'default',
     placeholder: 'Choisir un framework…',
+    prefixIcon: '',
     searchPlaceholder: 'Rechercher…',
     emptyText: 'Aucun résultat.',
     searchable: true,
@@ -78,6 +81,7 @@ const meta: Meta<ComboboxArgs> = {
         [groups]="groups"
         [width]="width"
         [placeholder]="placeholder"
+        [prefixIcon]="prefixIcon"
         [searchPlaceholder]="searchPlaceholder"
         [emptyText]="emptyText"
         [searchable]="searchable"
@@ -135,6 +139,14 @@ export const WithLabelAndHint: Story = {
 export const Preselected: Story = { args: { value: 'angular' } };
 
 export const WithoutSearch: Story = { args: { searchable: false } };
+
+export const WithPrefixIcon: Story = {
+  args: {
+    label: 'Framework',
+    prefixIcon: 'lucideSearch',
+    placeholder: 'Rechercher un framework…',
+  },
+};
 
 export const Disabled: Story = { args: { disabled: true } };
 
