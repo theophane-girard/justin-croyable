@@ -47,6 +47,7 @@ const PRICE_MODE_ITEMS: SegmentItem[] = [
         </div>
         <app-segment
           variant="accent"
+          class="ml-auto"
           [items]="priceModeItems"
           [value]="store.priceMode()"
           (valueChange)="onPriceModeChange($event)"
@@ -86,7 +87,10 @@ const PRICE_MODE_ITEMS: SegmentItem[] = [
               <div class="flex flex-col gap-1">
                 <span class="text-muted-foreground text-sm">Économies estimées</span>
                 <span class="text-primary text-3xl font-bold tabular-nums">
-                  <span appCountUp>{{ store.totalSavingsEur() }}</span> €
+                  @for (mode of [store.priceMode()]; track mode) {
+                    <span appCountUp>{{ store.totalSavingsEur() }}</span>
+                  }
+                  €
                 </span>
               </div>
               <div class="bg-primary/10 text-primary flex size-10 items-center justify-center rounded-lg">
