@@ -1,7 +1,7 @@
 import { cva, type VariantProps } from 'class-variance-authority';
 
 export const segmentVariants = cva(
-  'relative isolate inline-grid auto-cols-fr grid-flow-col items-center rounded-lg p-1 select-none data-disabled:pointer-events-none data-disabled:opacity-50',
+  'relative isolate inline-grid auto-cols-fr grid-flow-col items-center rounded-md p-1 select-none data-disabled:pointer-events-none data-disabled:opacity-50',
   {
     variants: {
       variant: {
@@ -22,7 +22,7 @@ export const segmentVariants = cva(
 );
 
 export const segmentIndicatorVariants = cva(
-  'pointer-events-none absolute inset-y-1 left-1 rounded-md shadow-sm transition-[transform,width,opacity] duration-300 ease-out motion-reduce:transition-none',
+  'pointer-events-none absolute inset-y-1 left-1 rounded shadow-sm transition-[transform,width,opacity] duration-300 ease-out motion-reduce:transition-none',
   {
     variants: {
       variant: {
@@ -37,7 +37,7 @@ export const segmentIndicatorVariants = cva(
 );
 
 export const segmentItemVariants = cva(
-  'relative z-10 inline-flex h-full items-center justify-center gap-1.5 rounded-md font-medium whitespace-nowrap outline-none transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 [&_ng-icon]:flex [&_ng-icon]:items-center',
+  'relative z-10 inline-flex h-full items-center justify-center gap-1.5 rounded font-medium whitespace-nowrap outline-none transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 [&_ng-icon]:flex [&_ng-icon]:items-center',
   {
     variants: {
       size: {
