@@ -11,23 +11,28 @@ const RNM_DATASET_API =
 const TABULAR_API = 'https://tabular-api.data.gouv.fr/api/resources';
 const TABULAR_PAGE_SIZE = 500;
 const CSV_FORMAT = 'csv';
-const RETAIL_STAGE_KEYWORDS = ['detail', 'gms'] as const;
-const PRODUCT_LABEL_KEYS = ['LIBELLE', 'PRODUIT', 'LIBELLE_PRODUIT', 'libelle', 'produit'] as const;
-const PRICE_KEYS = ['PRIX', 'COURS', 'PRIX_MOYEN', 'prix', 'cours'] as const;
-const PRODUCTION_MODE_KEYS = [
-  'MODE_PRODUCTION',
-  'PRODUCTION',
-  'MODE',
-  'QUALITE',
-  'SEGMENT',
-  'mode_production',
-  'production',
-  'mode',
-  'qualite',
-  'segment',
+const PRODUCT_LABEL_KEYS = [
+  'produit',
+  'PRODUIT',
+  'libelle',
+  'LIBELLE',
+  'libelle_produit',
+  'LIBELLE_PRODUIT',
 ] as const;
+const PRICE_KEYS = [
+  'valeur en euro(s)',
+  'valeur_en_euro_s',
+  'valeur',
+  'VALEUR',
+  'prix',
+  'PRIX',
+  'cours',
+] as const;
+const STADE_KEYS = ['stade', 'STADE'] as const;
+const UNIT_KEYS = ['unité', 'unite', 'UNITE'] as const;
+const RETAIL_STADE = 'detail';
+const KG_UNIT_KEYWORD = 'kg';
 const BIO_KEYWORDS = ['biologique', 'bio'] as const;
-const BIO_MODE_CODE = 'ab';
 
 type DataGouvResource = {
   readonly id: string;
@@ -80,7 +85,7 @@ export class GovPriceService {
 
   #loadLivePrices(): Observable<LivePriceResult> {
     return this.#http.get<DataGouvDataset>(RNM_DATASET_API).pipe(
-      map(dataset => this.#pickLatestRetailResource(dataset)),
+      map(dataset => this.#pickLatestResource(dataset)),
       switchMap(resource => this.#pricesForResource(resource)),
       catchError(() => of(FALLBACK_RESULT)),
     );
@@ -98,17 +103,16 @@ export class GovPriceService {
     return `${TABULAR_API}/${resourceId}/data/?page_size=${TABULAR_PAGE_SIZE}`;
   }
 
-  #pickLatestRetailResource(dataset: DataGouvDataset): DataGouvResource {
-    const retailResource = dataset.resources
-      .filter(resource => resource.format.toLowerCase() === CSV_FORMAT)
-      .filter(resource => this.#isRetailResource(resource.title))
+  #pickLatestResource(dataset: DataGouvDataset): DataGouvResource {
+    const resource = dataset.resources
+      .filter(candidate => candidate.format.toLowerCase() === CSV_FORMAT)
       .sort((a, b) => (b.last_modified ?? '').localeCompare(a.last_modified ?? ''))
       .at(0);
 
-    if (!retailResource) {
-      throw new Error('Aucune cotation détail publiée sur le jeu de données RNM.');
+    if (!resource) {
+      throw new Error('Aucune ressource CSV publiée sur le jeu de données RNM.');
     }
-    return retailResource;
+    return resource;
   }
 
   #parseDate(resource: DataGouvResource): Date | null {
@@ -117,11 +121,6 @@ export class GovPriceService {
     }
     const parsed = new Date(resource.last_modified);
     return Number.isNaN(parsed.getTime()) ? null : parsed;
-  }
-
-  #isRetailResource(title: string): boolean {
-    const normalized = normalizeLabel(title);
-    return RETAIL_STAGE_KEYWORDS.some(keyword => normalized.includes(keyword));
   }
 
   #averageRetailPrices(rows: readonly TabularRow[]): AveragedPrices {
@@ -145,6 +144,9 @@ export class GovPriceService {
   }
 
   #accumulateRow(totals: PriceAccumulators, row: TabularRow): PriceAccumulators {
+    if (!this.#isRetailKgRow(row)) {
+      return totals;
+    }
     const label = this.#readString(row, PRODUCT_LABEL_KEYS);
     const price = this.#readNumber(row, PRICE_KEYS);
     if (label === null || price === null) {
@@ -156,10 +158,19 @@ export class GovPriceService {
       return totals;
     }
 
-    if (this.#isBioRow(row, label)) {
+    if (this.#isBioLabel(label)) {
       return { ...totals, bio: this.#addToBucket(totals.bio, varietyId, price) };
     }
     return { ...totals, conventional: this.#addToBucket(totals.conventional, varietyId, price) };
+  }
+
+  #isRetailKgRow(row: TabularRow): boolean {
+    const stade = this.#readString(row, STADE_KEYS);
+    const unit = this.#readString(row, UNIT_KEYS);
+    if (stade === null || normalizeLabel(stade) !== RETAIL_STADE) {
+      return false;
+    }
+    return unit !== null && normalizeLabel(unit).includes(KG_UNIT_KEYWORD);
   }
 
   #addToBucket(bucket: PriceAccumulator, varietyId: VarietyId, price: number): PriceAccumulator {
@@ -167,13 +178,9 @@ export class GovPriceService {
     return { ...bucket, [varietyId]: { sum: current.sum + price, count: current.count + 1 } };
   }
 
-  #isBioRow(row: TabularRow, label: string): boolean {
-    const mode = this.#readString(row, PRODUCTION_MODE_KEYS);
-    if (mode !== null && normalizeLabel(mode) === BIO_MODE_CODE) {
-      return true;
-    }
-    const haystack = normalizeLabel(`${label} ${mode ?? ''}`);
-    return BIO_KEYWORDS.some(keyword => haystack.includes(keyword));
+  #isBioLabel(label: string): boolean {
+    const normalized = normalizeLabel(label);
+    return BIO_KEYWORDS.some(keyword => normalized.includes(keyword));
   }
 
   #toResult(averaged: AveragedPrices, date: Date | null): LivePriceResult {
