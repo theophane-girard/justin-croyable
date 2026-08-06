@@ -24,6 +24,7 @@ import {
   SEASON_FILTER_ALL,
   SEASON_META,
 } from '../../core/potager.model';
+import { CULTURE_FILTER_ALL, CULTURE_FILTER_OPTIONS } from '../../core/catalog-filter';
 import { buildYearOptions, parseYearValue, yearFilterToValue } from '../../core/period-selector';
 import { GardenStore } from '../../core/garden-store';
 import { HarvestStore } from '../../core/harvest-store';
@@ -140,6 +141,18 @@ const SEASON_FILTER_ITEMS: SegmentItem[] = [
               }
             </app-select>
           }
+          @if (store.rows().length > 0) {
+            <app-select
+              class="w-full sm:w-44"
+              prefixIcon="phosphorPlant"
+              [value]="cultureFilter()"
+              (valueChange)="onCultureChange($event)"
+            >
+              @for (option of cultureOptions; track option.value) {
+                <app-select-item [value]="option.value">{{ option.label }}</app-select-item>
+              }
+            </app-select>
+          }
           <app-segment
             class="order-last w-full sm:order-none sm:w-auto"
             variant="default"
@@ -224,7 +237,7 @@ const SEASON_FILTER_ITEMS: SegmentItem[] = [
         </div>
 
         <app-table
-          [rowData]="store.rows()"
+          [rowData]="displayedRows()"
           [columnDefs]="columns"
           [gridOptions]="gridOptions"
           (rowSelected)="onRowSelected($event)"
@@ -254,8 +267,18 @@ export class GardenComponent {
   protected readonly gridOptions = PLANT_GRID_OPTIONS;
   protected readonly addLink = GARDEN_ADD_LINK;
   protected readonly seasonItems = SEASON_FILTER_ITEMS;
+  protected readonly cultureOptions = CULTURE_FILTER_OPTIONS;
 
   protected readonly selectedId = signal<string | null>(null);
+  protected readonly cultureFilter = signal<string>(CULTURE_FILTER_ALL);
+
+  protected readonly displayedRows = computed<PlantRow[]>(() => {
+    const culture = this.cultureFilter();
+    if (culture === CULTURE_FILTER_ALL) {
+      return this.store.rows();
+    }
+    return this.store.rows().filter(row => row.cropId === culture);
+  });
 
   protected readonly showYearSelector = computed(() => this.#harvests.availableYears().length >= 2);
   protected readonly yearOptions = computed(() => buildYearOptions(this.#harvests.availableYears()));
@@ -264,6 +287,12 @@ export class GardenComponent {
   protected onSeasonChange(value: string | null): void {
     if (value !== null && isSeasonFilter(value)) {
       this.season.setSeason(value);
+    }
+  }
+
+  protected onCultureChange(value: string | string[] | null): void {
+    if (typeof value === 'string') {
+      this.cultureFilter.set(value);
     }
   }
 

@@ -18,6 +18,7 @@ import {
   FabListComponent,
   SegmentComponent,
   type SegmentItem,
+  SelectImports,
   SheetService,
   TableComponent,
 } from '@justin-croyable/design-system';
@@ -25,6 +26,12 @@ import { NgIcon } from '@ng-icons/core';
 import type { ColDef, GridOptions, RowSelectedEvent, ValueFormatterParams } from 'ag-grid-community';
 
 import { CATEGORY_META, type CategoryId, type HarvestRow } from '../../core/potager.model';
+import {
+  CULTURE_FILTER_ALL,
+  CULTURE_FILTER_OPTIONS,
+  VARIETY_FILTER_ALL,
+  varietyFilterOptions,
+} from '../../core/catalog-filter';
 import { HarvestStore } from '../../core/harvest-store';
 import { HARVEST_ADD_LINK } from '../../app.routes';
 
@@ -125,6 +132,7 @@ const BOTTOM_SHEET_SIDE = 'bottom';
     FabListComponent,
     TableComponent,
     EmptyComponent,
+    ...SelectImports,
   ],
   template: `
     <div class="flex flex-col gap-4">
@@ -160,6 +168,31 @@ const BOTTOM_SHEET_SIDE = 'bottom';
           </a>
         </div>
       </div>
+
+      @if (store.rows().length > 0) {
+        <div class="flex flex-wrap items-center gap-2">
+          <app-select
+            class="w-full sm:w-44"
+            prefixIcon="phosphorPlant"
+            [value]="cultureFilter()"
+            (valueChange)="onCultureChange($event)"
+          >
+            @for (option of cultureOptions; track option.value) {
+              <app-select-item [value]="option.value">{{ option.label }}</app-select-item>
+            }
+          </app-select>
+          <app-select
+            class="w-full sm:w-48"
+            prefixIcon="phosphorTag"
+            [value]="varietyFilter()"
+            (valueChange)="onVarietyChange($event)"
+          >
+            @for (option of varietyOptions(); track option.value) {
+              <app-select-item [value]="option.value">{{ option.label }}</app-select-item>
+            }
+          </app-select>
+        </div>
+      }
 
       @if (activeChips().length > 0) {
         <div class="flex flex-wrap items-center gap-2">
@@ -257,23 +290,34 @@ export class HarvestsComponent {
   protected readonly categoryItems = CATEGORY_ITEMS;
   protected readonly sortFieldItems = SORT_FIELD_ITEMS;
   protected readonly sortDirItems = SORT_DIR_ITEMS;
+  protected readonly cultureOptions = CULTURE_FILTER_OPTIONS;
 
   protected readonly selectedId = signal<string | null>(null);
   protected readonly categoryFilter = signal<CategoryId | null>(null);
+  protected readonly cultureFilter = signal<string>(CULTURE_FILTER_ALL);
+  protected readonly varietyFilter = signal<string>(VARIETY_FILTER_ALL);
   protected readonly sortField = signal<SortField>(SORT_FIELD.date);
   protected readonly sortDir = signal<SortDir>(SORT_DIR.desc);
 
   protected readonly categoryValue = computed(() => this.categoryFilter() ?? CATEGORY_ALL);
+  protected readonly varietyOptions = computed(() => varietyFilterOptions(this.cultureFilter()));
 
   protected readonly displayedRows = computed(() => {
     const category = this.categoryFilter();
     const field = this.sortField();
     const direction = this.sortDir();
     const categoryLabel = category ? CATEGORY_META[category].label : null;
+    const culture = this.cultureFilter();
+    const variety = this.varietyFilter();
 
-    const filtered = categoryLabel
-      ? this.store.rows().filter(row => row.categoryLabel === categoryLabel)
-      : this.store.rows();
+    const filtered = this.store
+      .rows()
+      .filter(
+        row =>
+          (categoryLabel === null || row.categoryLabel === categoryLabel) &&
+          (culture === CULTURE_FILTER_ALL || row.cropId === culture) &&
+          (variety === VARIETY_FILTER_ALL || row.varietyId === variety),
+      );
 
     const multiplier = direction === SORT_DIR.asc ? 1 : -1;
     return [...filtered].sort((a, b) => this.#compareRows(a, b, field) * multiplier);
@@ -336,6 +380,20 @@ export class HarvestsComponent {
   protected onSortDirChange(value: string | null): void {
     if (value === SORT_DIR.asc || value === SORT_DIR.desc) {
       this.sortDir.set(value);
+    }
+  }
+
+  protected onCultureChange(value: string | string[] | null): void {
+    if (typeof value !== 'string') {
+      return;
+    }
+    this.cultureFilter.set(value);
+    this.varietyFilter.set(VARIETY_FILTER_ALL);
+  }
+
+  protected onVarietyChange(value: string | string[] | null): void {
+    if (typeof value === 'string') {
+      this.varietyFilter.set(value);
     }
   }
 

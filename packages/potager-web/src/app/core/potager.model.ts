@@ -203,6 +203,7 @@ export type PriceOrigin = (typeof PRICE_ORIGIN)[keyof typeof PRICE_ORIGIN];
 export type PriceRow = {
   readonly varietyId: VarietyId;
   readonly varietyLabel: string;
+  readonly cropId: CropId;
   readonly cropLabel: string;
   readonly categoryLabel: string;
   readonly conventionalPricePerKg: number;

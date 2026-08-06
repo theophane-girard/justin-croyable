@@ -4,6 +4,7 @@ import {
   CardComponent,
   SegmentComponent,
   type SegmentItem,
+  SelectImports,
   TableComponent,
 } from '@justin-croyable/design-system';
 import type { ColDef, GridOptions, ValueFormatterParams } from 'ag-grid-community';
@@ -26,6 +27,12 @@ import {
   resolveBioPrice,
   resolveConventionalPrice,
 } from '../../core/reference-prices';
+import {
+  CULTURE_FILTER_ALL,
+  CULTURE_FILTER_OPTIONS,
+  VARIETY_FILTER_ALL,
+  varietyFilterOptions,
+} from '../../core/catalog-filter';
 import { GovPriceService } from '../../core/gov-price.service';
 
 const EUR_FORMATTER = new Intl.NumberFormat('fr-FR', {
@@ -103,7 +110,7 @@ const SOURCE_LABEL: Readonly<Record<PriceOrigin, (fallbackLabel: string) => stri
 
 @Component({
   selector: 'app-prices',
-  imports: [CardComponent, SegmentComponent, TableComponent],
+  imports: [CardComponent, SegmentComponent, TableComponent, ...SelectImports],
   template: `
     <div class="flex flex-col gap-4">
       <div class="flex flex-wrap items-center justify-between gap-3">
@@ -113,12 +120,34 @@ const SOURCE_LABEL: Readonly<Record<PriceOrigin, (fallbackLabel: string) => stri
             Prix de référence par variété et par culture, prix moyens français (FranceAgriMer — RNM).
           </p>
         </div>
-        <app-segment
-          variant="default"
-          [items]="categoryItems"
-          [value]="categoryValue()"
-          (valueChange)="onCategoryChange($event)"
-        />
+        <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          <app-select
+            class="w-full sm:w-44"
+            prefixIcon="phosphorPlant"
+            [value]="cultureFilter()"
+            (valueChange)="onCultureChange($event)"
+          >
+            @for (option of cultureOptions; track option.value) {
+              <app-select-item [value]="option.value">{{ option.label }}</app-select-item>
+            }
+          </app-select>
+          <app-select
+            class="w-full sm:w-48"
+            prefixIcon="phosphorTag"
+            [value]="varietyFilter()"
+            (valueChange)="onVarietyChange($event)"
+          >
+            @for (option of varietyOptions(); track option.value) {
+              <app-select-item [value]="option.value">{{ option.label }}</app-select-item>
+            }
+          </app-select>
+          <app-segment
+            variant="default"
+            [items]="categoryItems"
+            [value]="categoryValue()"
+            (valueChange)="onCategoryChange($event)"
+          />
+        </div>
       </div>
 
       <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -164,10 +193,14 @@ export class PricesComponent {
   protected readonly columns = PRICE_COLUMNS;
   protected readonly gridOptions = PRICE_GRID_OPTIONS;
   protected readonly categoryItems = CATEGORY_ITEMS;
+  protected readonly cultureOptions = CULTURE_FILTER_OPTIONS;
 
   protected readonly categoryFilter = signal<CategoryId | null>(null);
+  protected readonly cultureFilter = signal<string>(CULTURE_FILTER_ALL);
+  protected readonly varietyFilter = signal<string>(VARIETY_FILTER_ALL);
 
   protected readonly categoryValue = computed(() => this.categoryFilter() ?? CATEGORY_ALL);
+  protected readonly varietyOptions = computed(() => varietyFilterOptions(this.cultureFilter()));
 
   protected readonly rows = computed<PriceRow[]>(() => {
     const live = this.#govPrices.livePrices();
@@ -179,11 +212,15 @@ export class PricesComponent {
 
   protected readonly displayedRows = computed<PriceRow[]>(() => {
     const category = this.categoryFilter();
-    if (category === null) {
-      return this.rows();
-    }
-    const categoryLabel = CATEGORY_META[category].label;
-    return this.rows().filter(row => row.categoryLabel === categoryLabel);
+    const categoryLabel = category ? CATEGORY_META[category].label : null;
+    const culture = this.cultureFilter();
+    const variety = this.varietyFilter();
+    return this.rows().filter(
+      row =>
+        (categoryLabel === null || row.categoryLabel === categoryLabel) &&
+        (culture === CULTURE_FILTER_ALL || row.cropId === culture) &&
+        (variety === VARIETY_FILTER_ALL || row.varietyId === variety),
+    );
   });
 
   protected readonly totalCount = computed(() => this.rows().length);
@@ -211,6 +248,20 @@ export class PricesComponent {
     }
   }
 
+  protected onCultureChange(value: string | string[] | null): void {
+    if (typeof value !== 'string') {
+      return;
+    }
+    this.cultureFilter.set(value);
+    this.varietyFilter.set(VARIETY_FILTER_ALL);
+  }
+
+  protected onVarietyChange(value: string | string[] | null): void {
+    if (typeof value === 'string') {
+      this.varietyFilter.set(value);
+    }
+  }
+
   #toRow(varietyId: VarietyId, live: PricePerKgByVariety | null, rnmDate: Date | null): PriceRow {
     const variety = VARIETY_BY_ID[varietyId];
     const crop = CROP_BY_ID[variety.cropId];
@@ -221,6 +272,7 @@ export class PricesComponent {
     return {
       varietyId,
       varietyLabel: variety.label,
+      cropId: variety.cropId,
       cropLabel: crop.label,
       categoryLabel: CATEGORY_META[crop.category].label,
       conventionalPricePerKg,
