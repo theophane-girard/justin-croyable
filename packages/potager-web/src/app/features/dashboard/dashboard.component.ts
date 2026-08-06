@@ -78,14 +78,14 @@ const SEASON_FILTER_ITEMS: SegmentItem[] = [
           }
           <app-segment
             class="order-last w-full sm:order-none sm:w-auto"
-            variant="accent"
+            variant="default"
             [items]="seasonItems"
             [value]="season.season()"
             (valueChange)="onSeasonChange($event)"
           />
           <app-segment
             class="ml-auto sm:ml-0"
-            variant="accent"
+            variant="default"
             [items]="priceModeItems"
             [value]="store.priceMode()"
             (valueChange)="onPriceModeChange($event)"
