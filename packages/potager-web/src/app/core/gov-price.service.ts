@@ -30,6 +30,7 @@ const PRICE_KEYS = [
 ] as const;
 const STADE_KEYS = ['stade', 'STADE'] as const;
 const UNIT_KEYS = ['unité', 'unite', 'UNITE'] as const;
+const DATE_KEYS = ['date cotation', 'date_cotation', 'date', 'DATE'] as const;
 const RETAIL_STADE = 'detail';
 const KG_UNIT_KEYWORD = 'kg';
 const BIO_KEYWORDS = ['biologique', 'bio'] as const;
@@ -47,8 +48,8 @@ type TabularRow = Readonly<Record<string, unknown>>;
 
 type TabularResponse = { readonly data: readonly TabularRow[] };
 
-type PriceTally = { readonly sum: number; readonly count: number };
-type PriceAccumulator = Partial<Record<VarietyId, PriceTally>>;
+type DayTally = { readonly date: number; readonly sum: number; readonly count: number };
+type PriceAccumulator = Partial<Record<VarietyId, DayTally>>;
 type PriceAccumulators = { readonly conventional: PriceAccumulator; readonly bio: PriceAccumulator };
 type AveragedPrices = {
   readonly conventional: PricePerKgByVariety;
@@ -94,7 +95,7 @@ export class GovPriceService {
   #pricesForResource(resource: DataGouvResource): Observable<LivePriceResult> {
     return this.#http.get<TabularResponse>(this.#tabularUrl(resource.id)).pipe(
       map(response =>
-        this.#toResult(this.#averageRetailPrices(response.data), this.#parseDate(resource)),
+        this.#toResult(this.#latestDayPrices(response.data), this.#parseDate(resource)),
       ),
     );
   }
@@ -123,15 +124,25 @@ export class GovPriceService {
     return Number.isNaN(parsed.getTime()) ? null : parsed;
   }
 
-  #averageRetailPrices(rows: readonly TabularRow[]): AveragedPrices {
-    const accumulators = rows.reduce<PriceAccumulators>((totals, row) => this.#accumulateRow(totals, row), {
-      conventional: {},
-      bio: {},
-    });
+  #latestDayPrices(rows: readonly TabularRow[]): AveragedPrices {
+    const accumulators = rows.reduce<PriceAccumulators>(
+      (totals, row) => this.#accumulateRow(totals, row),
+      { conventional: {}, bio: {} },
+    );
     return {
       conventional: this.#toAverages(accumulators.conventional),
       bio: this.#toAverages(accumulators.bio),
     };
+  }
+
+  #parseCotationDate(row: TabularRow): number | null {
+    const raw = this.#readString(row, DATE_KEYS);
+    const match = raw?.trim().match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    if (!match) {
+      return null;
+    }
+    const time = new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1])).getTime();
+    return Number.isNaN(time) ? null : time;
   }
 
   #toAverages(accumulator: PriceAccumulator): PricePerKgByVariety {
@@ -149,7 +160,8 @@ export class GovPriceService {
     }
     const label = this.#readString(row, PRODUCT_LABEL_KEYS);
     const price = this.#readNumber(row, PRICE_KEYS);
-    if (label === null || price === null) {
+    const date = this.#parseCotationDate(row);
+    if (label === null || price === null || date === null) {
       return totals;
     }
 
@@ -159,9 +171,12 @@ export class GovPriceService {
     }
 
     if (this.#isBioLabel(label)) {
-      return { ...totals, bio: this.#addToBucket(totals.bio, varietyId, price) };
+      return { ...totals, bio: this.#updateLatestDay(totals.bio, varietyId, date, price) };
     }
-    return { ...totals, conventional: this.#addToBucket(totals.conventional, varietyId, price) };
+    return {
+      ...totals,
+      conventional: this.#updateLatestDay(totals.conventional, varietyId, date, price),
+    };
   }
 
   #isRetailKgRow(row: TabularRow): boolean {
@@ -173,9 +188,23 @@ export class GovPriceService {
     return unit !== null && normalizeLabel(unit).includes(KG_UNIT_KEYWORD);
   }
 
-  #addToBucket(bucket: PriceAccumulator, varietyId: VarietyId, price: number): PriceAccumulator {
-    const current = bucket[varietyId] ?? { sum: 0, count: 0 };
-    return { ...bucket, [varietyId]: { sum: current.sum + price, count: current.count + 1 } };
+  #updateLatestDay(
+    bucket: PriceAccumulator,
+    varietyId: VarietyId,
+    date: number,
+    price: number,
+  ): PriceAccumulator {
+    const current = bucket[varietyId];
+    if (current === undefined || date > current.date) {
+      return { ...bucket, [varietyId]: { date, sum: price, count: 1 } };
+    }
+    if (date < current.date) {
+      return bucket;
+    }
+    return {
+      ...bucket,
+      [varietyId]: { date, sum: current.sum + price, count: current.count + 1 },
+    };
   }
 
   #isBioLabel(label: string): boolean {
