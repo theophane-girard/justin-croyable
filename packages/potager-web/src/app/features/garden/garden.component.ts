@@ -141,7 +141,7 @@ const SEASON_FILTER_ITEMS: SegmentItem[] = [
             </app-select>
           }
           <app-segment
-            class="order-last w-full rounded-md sm:order-none sm:w-auto"
+            class="order-last w-full sm:order-none sm:w-auto"
             variant="accent"
             [items]="seasonItems"
             [value]="season.season()"
