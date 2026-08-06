@@ -18,7 +18,9 @@ import {
   phosphorSnowflake,
   phosphorSquaresFour,
   phosphorSun,
+  phosphorTag,
   phosphorTrash,
+  phosphorTrendDown,
   phosphorTrendUp,
 } from '@ng-icons/phosphor-icons/regular';
 
@@ -42,6 +44,8 @@ export const APP_ICONS = {
   phosphorSnowflake,
   phosphorSquaresFour,
   phosphorSun,
+  phosphorTag,
   phosphorTrash,
+  phosphorTrendDown,
   phosphorTrendUp,
 } as const;

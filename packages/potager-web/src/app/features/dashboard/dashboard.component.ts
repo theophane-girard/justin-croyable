@@ -124,13 +124,28 @@ const SAVINGS_GROUP_TITLE: Readonly<Record<SavingsGroup, string>> = {
             <div class="flex items-center justify-between">
               <div class="flex flex-col gap-1">
                 <span class="text-muted-foreground text-sm">Économies nettes</span>
-                <span class="text-primary text-3xl font-bold tabular-nums">
+                <span
+                  class="flex items-center gap-1.5 text-3xl font-bold tabular-nums"
+                  [class.text-primary]="netSavingsPositive()"
+                  [class.text-destructive]="!netSavingsPositive()"
+                >
                   <span appCountUp>{{ netSavingsEur() }}</span> €
+                  @if (netSavingsPositive()) {
+                    <ng-icon name="phosphorTrendUp" class="size-6" />
+                  } @else {
+                    <ng-icon name="phosphorTrendDown" class="size-6" />
+                  }
                 </span>
               </div>
-              <div class="bg-primary/10 text-primary flex size-10 items-center justify-center rounded-lg">
-                <ng-icon name="phosphorPiggyBank" class="size-5" />
-              </div>
+              @if (netSavingsPositive()) {
+                <div class="bg-primary/10 text-primary flex size-10 items-center justify-center rounded-lg">
+                  <ng-icon name="phosphorPiggyBank" class="size-5" />
+                </div>
+              } @else {
+                <div class="bg-destructive/10 text-destructive flex size-10 items-center justify-center rounded-lg">
+                  <ng-icon name="phosphorPiggyBank" class="size-5" />
+                </div>
+              }
             </div>
           </app-card>
 
@@ -235,6 +250,8 @@ export class DashboardComponent {
   protected readonly netSavingsEur = computed(
     () => Math.round((this.store.totalSavingsEur() - this.expenses.totalExpensesEur()) * 100) / 100,
   );
+
+  protected readonly netSavingsPositive = computed(() => this.netSavingsEur() >= 0);
 
   protected onPriceModeChange(value: string): void {
     const mode: PriceMode = value === PRICE_MODE.bio ? PRICE_MODE.bio : PRICE_MODE.conventional;
