@@ -207,10 +207,12 @@ export type PriceRow = {
   readonly cropLabel: string;
   readonly categoryLabel: string;
   readonly conventionalPricePerKg: number;
+  readonly conventionalOrigin: PriceOrigin;
+  readonly conventionalSourceLabel: string;
   readonly bioPricePerKg: number;
+  readonly bioOrigin: PriceOrigin;
+  readonly bioSourceLabel: string;
   readonly bioPremiumPct: number;
-  readonly origin: PriceOrigin;
-  readonly sourceLabel: string;
   readonly priceDate: Date | null;
 };
 

@@ -54,15 +54,17 @@ export function resolveConventionalPrice(
   );
 }
 
-export function resolveBioPrice(varietyId: VarietyId): number {
+export function resolveBioPrice(varietyId: VarietyId, live: PricePerKgByVariety | null): number {
   const fallbackId = cropFallbackVarietyId(VARIETY_BY_ID[varietyId].cropId);
-  return REFERENCE_VARIETY_BIO_PRICES[varietyId] ?? REFERENCE_VARIETY_BIO_PRICES[fallbackId];
+  return (
+    live?.[varietyId] ??
+    live?.[fallbackId] ??
+    REFERENCE_VARIETY_BIO_PRICES[varietyId] ??
+    REFERENCE_VARIETY_BIO_PRICES[fallbackId]
+  );
 }
 
-export function conventionalPriceOrigin(
-  varietyId: VarietyId,
-  live: PricePerKgByVariety | null,
-): PriceOrigin {
+export function priceOrigin(varietyId: VarietyId, live: PricePerKgByVariety | null): PriceOrigin {
   if (live?.[varietyId] != null) {
     return PRICE_ORIGIN.rnm;
   }

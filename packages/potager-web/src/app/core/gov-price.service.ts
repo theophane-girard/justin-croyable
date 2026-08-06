@@ -14,6 +14,20 @@ const CSV_FORMAT = 'csv';
 const RETAIL_STAGE_KEYWORDS = ['detail', 'gms'] as const;
 const PRODUCT_LABEL_KEYS = ['LIBELLE', 'PRODUIT', 'LIBELLE_PRODUIT', 'libelle', 'produit'] as const;
 const PRICE_KEYS = ['PRIX', 'COURS', 'PRIX_MOYEN', 'prix', 'cours'] as const;
+const PRODUCTION_MODE_KEYS = [
+  'MODE_PRODUCTION',
+  'PRODUCTION',
+  'MODE',
+  'QUALITE',
+  'SEGMENT',
+  'mode_production',
+  'production',
+  'mode',
+  'qualite',
+  'segment',
+] as const;
+const BIO_KEYWORDS = ['biologique', 'bio'] as const;
+const BIO_MODE_CODE = 'ab';
 
 type DataGouvResource = {
   readonly id: string;
@@ -28,15 +42,29 @@ type TabularRow = Readonly<Record<string, unknown>>;
 
 type TabularResponse = { readonly data: readonly TabularRow[] };
 
-type PriceAccumulator = Partial<Record<VarietyId, { sum: number; count: number }>>;
+type PriceTally = { readonly sum: number; readonly count: number };
+type PriceAccumulator = Partial<Record<VarietyId, PriceTally>>;
+type PriceAccumulators = { readonly conventional: PriceAccumulator; readonly bio: PriceAccumulator };
+type AveragedPrices = {
+  readonly conventional: PricePerKgByVariety;
+  readonly bio: PricePerKgByVariety;
+};
 
 type LivePriceResult = {
   readonly source: PriceSource;
+  readonly bioSource: PriceSource;
   readonly prices: PricePerKgByVariety | null;
+  readonly bioPrices: PricePerKgByVariety | null;
   readonly date: Date | null;
 };
 
-const FALLBACK_RESULT: LivePriceResult = { source: 'reference', prices: null, date: null };
+const FALLBACK_RESULT: LivePriceResult = {
+  source: 'reference',
+  bioSource: 'reference',
+  prices: null,
+  bioPrices: null,
+  date: null,
+};
 
 @Injectable({ providedIn: 'root' })
 export class GovPriceService {
@@ -45,7 +73,9 @@ export class GovPriceService {
   readonly #result = toSignal(this.#loadLivePrices(), { initialValue: FALLBACK_RESULT });
 
   readonly livePrices = computed(() => this.#result().prices);
+  readonly liveBioPrices = computed(() => this.#result().bioPrices);
   readonly priceSource = computed<PriceSource>(() => this.#result().source);
+  readonly bioPriceSource = computed<PriceSource>(() => this.#result().bioSource);
   readonly priceDate = computed<Date | null>(() => this.#result().date);
 
   #loadLivePrices(): Observable<LivePriceResult> {
@@ -94,12 +124,18 @@ export class GovPriceService {
     return RETAIL_STAGE_KEYWORDS.some(keyword => normalized.includes(keyword));
   }
 
-  #averageRetailPrices(rows: readonly TabularRow[]): PricePerKgByVariety {
-    const accumulator = rows.reduce<PriceAccumulator>(
-      (totals, row) => this.#accumulateRow(totals, row),
-      {},
-    );
+  #averageRetailPrices(rows: readonly TabularRow[]): AveragedPrices {
+    const accumulators = rows.reduce<PriceAccumulators>((totals, row) => this.#accumulateRow(totals, row), {
+      conventional: {},
+      bio: {},
+    });
+    return {
+      conventional: this.#toAverages(accumulators.conventional),
+      bio: this.#toAverages(accumulators.bio),
+    };
+  }
 
+  #toAverages(accumulator: PriceAccumulator): PricePerKgByVariety {
     return Object.entries(accumulator).reduce<PricePerKgByVariety>((prices, [varietyId, tally]) => {
       if (!tally || tally.count === 0) {
         return prices;
@@ -108,7 +144,7 @@ export class GovPriceService {
     }, {});
   }
 
-  #accumulateRow(totals: PriceAccumulator, row: TabularRow): PriceAccumulator {
+  #accumulateRow(totals: PriceAccumulators, row: TabularRow): PriceAccumulators {
     const label = this.#readString(row, PRODUCT_LABEL_KEYS);
     const price = this.#readNumber(row, PRICE_KEYS);
     if (label === null || price === null) {
@@ -120,15 +156,39 @@ export class GovPriceService {
       return totals;
     }
 
-    const current = totals[varietyId] ?? { sum: 0, count: 0 };
-    return { ...totals, [varietyId]: { sum: current.sum + price, count: current.count + 1 } };
+    if (this.#isBioRow(row, label)) {
+      return { ...totals, bio: this.#addToBucket(totals.bio, varietyId, price) };
+    }
+    return { ...totals, conventional: this.#addToBucket(totals.conventional, varietyId, price) };
   }
 
-  #toResult(prices: PricePerKgByVariety, date: Date | null): LivePriceResult {
-    if (Object.keys(prices).length === 0) {
+  #addToBucket(bucket: PriceAccumulator, varietyId: VarietyId, price: number): PriceAccumulator {
+    const current = bucket[varietyId] ?? { sum: 0, count: 0 };
+    return { ...bucket, [varietyId]: { sum: current.sum + price, count: current.count + 1 } };
+  }
+
+  #isBioRow(row: TabularRow, label: string): boolean {
+    const mode = this.#readString(row, PRODUCTION_MODE_KEYS);
+    if (mode !== null && normalizeLabel(mode) === BIO_MODE_CODE) {
+      return true;
+    }
+    const haystack = normalizeLabel(`${label} ${mode ?? ''}`);
+    return BIO_KEYWORDS.some(keyword => haystack.includes(keyword));
+  }
+
+  #toResult(averaged: AveragedPrices, date: Date | null): LivePriceResult {
+    const hasConventional = Object.keys(averaged.conventional).length > 0;
+    const hasBio = Object.keys(averaged.bio).length > 0;
+    if (!hasConventional && !hasBio) {
       return FALLBACK_RESULT;
     }
-    return { source: 'live', prices, date };
+    return {
+      source: hasConventional ? 'live' : 'reference',
+      bioSource: hasBio ? 'live' : 'reference',
+      prices: hasConventional ? averaged.conventional : null,
+      bioPrices: hasBio ? averaged.bio : null,
+      date,
+    };
   }
 
   #readString(row: TabularRow, keys: readonly string[]): string | null {

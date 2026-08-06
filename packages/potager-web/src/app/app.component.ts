@@ -79,10 +79,17 @@ const THEME_VALUE = { light: 'light', dark: 'dark' } as const;
             </div>
             <div class="ml-auto flex items-center gap-2">
               @if (priceModeBio()) {
-                <app-badge type="secondary" class="gap-1">
-                  <ng-icon name="phosphorLeaf" />
-                  Prix bio (référence)
-                </app-badge>
+                @if (priceSourceLive()) {
+                  <app-badge type="secondary" class="gap-1">
+                    <ng-icon name="phosphorCloudArrowDown" />
+                    Prix RNM bio en direct
+                  </app-badge>
+                } @else {
+                  <app-badge type="secondary" class="gap-1">
+                    <ng-icon name="phosphorLeaf" />
+                    Prix bio (référence)
+                  </app-badge>
+                }
               } @else if (priceSourceLive()) {
                 <app-badge type="secondary" class="gap-1">
                   <ng-icon name="phosphorCloudArrowDown" />

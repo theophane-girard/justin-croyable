@@ -23,7 +23,7 @@ import {
   type VarietyId,
 } from '../../core/potager.model';
 import {
-  conventionalPriceOrigin,
+  priceOrigin,
   resolveBioPrice,
   resolveConventionalPrice,
 } from '../../core/reference-prices';
@@ -65,11 +65,12 @@ const PRICE_COLUMNS: ColDef<PriceRow>[] = [
   { field: 'categoryLabel', headerName: 'Catégorie', minWidth: 110 },
   {
     field: 'conventionalPricePerKg',
-    headerName: 'Prix conventionnel (€/kg)',
+    headerName: 'Prix conv. (€/kg)',
     type: 'numericColumn',
-    minWidth: 150,
+    minWidth: 140,
     valueFormatter: formatEurCell,
   },
+  { field: 'conventionalSourceLabel', headerName: 'Source conv.', minWidth: 160 },
   {
     field: 'bioPricePerKg',
     headerName: 'Prix bio (€/kg)',
@@ -77,6 +78,7 @@ const PRICE_COLUMNS: ColDef<PriceRow>[] = [
     minWidth: 130,
     valueFormatter: formatEurCell,
   },
+  { field: 'bioSourceLabel', headerName: 'Source bio', minWidth: 160 },
   {
     field: 'bioPremiumPct',
     headerName: 'Écart bio',
@@ -84,7 +86,6 @@ const PRICE_COLUMNS: ColDef<PriceRow>[] = [
     minWidth: 110,
     valueFormatter: formatPremiumCell,
   },
-  { field: 'sourceLabel', headerName: 'Source du prix', minWidth: 170 },
   { field: 'priceDate', headerName: 'Date du prix', minWidth: 140, valueFormatter: formatDateCell },
 ];
 
@@ -204,10 +205,11 @@ export class PricesComponent {
 
   protected readonly rows = computed<PriceRow[]>(() => {
     const live = this.#govPrices.livePrices();
+    const liveBio = this.#govPrices.liveBioPrices();
     const rnmDate = this.#govPrices.priceDate();
-    return VARIETIES.map(variety => this.#toRow(variety.id as VarietyId, live, rnmDate)).sort(
-      (a, b) => a.cropLabel.localeCompare(b.cropLabel, 'fr'),
-    );
+    return VARIETIES.map(variety =>
+      this.#toRow(variety.id as VarietyId, live, liveBio, rnmDate),
+    ).sort((a, b) => a.cropLabel.localeCompare(b.cropLabel, 'fr'));
   });
 
   protected readonly displayedRows = computed<PriceRow[]>(() => {
@@ -226,11 +228,11 @@ export class PricesComponent {
   protected readonly totalCount = computed(() => this.rows().length);
 
   protected readonly liveCount = computed(
-    () => this.rows().filter(row => row.origin === PRICE_ORIGIN.rnm).length,
+    () => this.rows().filter(row => row.conventionalOrigin === PRICE_ORIGIN.rnm).length,
   );
 
   protected readonly fallbackCount = computed(
-    () => this.rows().filter(row => row.origin === PRICE_ORIGIN.fallback).length,
+    () => this.rows().filter(row => row.conventionalOrigin === PRICE_ORIGIN.fallback).length,
   );
 
   protected readonly rnmDateLabel = computed(() => {
@@ -262,13 +264,21 @@ export class PricesComponent {
     }
   }
 
-  #toRow(varietyId: VarietyId, live: PricePerKgByVariety | null, rnmDate: Date | null): PriceRow {
+  #toRow(
+    varietyId: VarietyId,
+    live: PricePerKgByVariety | null,
+    liveBio: PricePerKgByVariety | null,
+    rnmDate: Date | null,
+  ): PriceRow {
     const variety = VARIETY_BY_ID[varietyId];
     const crop = CROP_BY_ID[variety.cropId];
     const conventionalPricePerKg = resolveConventionalPrice(varietyId, live);
-    const bioPricePerKg = resolveBioPrice(varietyId);
-    const origin = conventionalPriceOrigin(varietyId, live);
+    const bioPricePerKg = resolveBioPrice(varietyId, liveBio);
+    const conventionalOrigin = priceOrigin(varietyId, live);
+    const bioOrigin = priceOrigin(varietyId, liveBio);
     const fallbackLabel = VARIETY_BY_ID[cropFallbackVarietyId(variety.cropId)].label;
+    const isLive =
+      conventionalOrigin !== PRICE_ORIGIN.reference || bioOrigin !== PRICE_ORIGIN.reference;
     return {
       varietyId,
       varietyLabel: variety.label,
@@ -276,11 +286,13 @@ export class PricesComponent {
       cropLabel: crop.label,
       categoryLabel: CATEGORY_META[crop.category].label,
       conventionalPricePerKg,
+      conventionalOrigin,
+      conventionalSourceLabel: SOURCE_LABEL[conventionalOrigin](fallbackLabel),
       bioPricePerKg,
+      bioOrigin,
+      bioSourceLabel: SOURCE_LABEL[bioOrigin](fallbackLabel),
       bioPremiumPct: this.#premium(conventionalPricePerKg, bioPricePerKg),
-      origin,
-      sourceLabel: SOURCE_LABEL[origin](fallbackLabel),
-      priceDate: origin === PRICE_ORIGIN.reference ? null : rnmDate,
+      priceDate: isLive ? rnmDate : null,
     };
   }
 
