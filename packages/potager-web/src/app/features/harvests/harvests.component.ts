@@ -50,7 +50,8 @@ function formatEurCell(params: ValueFormatterParams<HarvestRow, number>): string
 
 const HARVEST_COLUMNS: ColDef<HarvestRow>[] = [
   { field: 'harvestedOn', headerName: 'Date', minWidth: 150, valueFormatter: formatDateCell },
-  { field: 'cropLabel', headerName: 'Culture', minWidth: 150, flex: 1 },
+  { field: 'cropLabel', headerName: 'Culture', minWidth: 140, flex: 1 },
+  { field: 'varietyLabel', headerName: 'Variété', minWidth: 160, flex: 1 },
   { field: 'categoryLabel', headerName: 'Catégorie', minWidth: 120 },
   { field: 'weightKg', headerName: 'Poids (kg)', type: 'numericColumn', valueFormatter: formatKgCell },
   {

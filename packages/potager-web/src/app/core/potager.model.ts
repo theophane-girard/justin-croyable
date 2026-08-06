@@ -75,10 +75,11 @@ export type Crop = {
   readonly icon: string;
   readonly referencePricePerKg: number;
   readonly referenceBioPricePerKg: number;
+  readonly fallbackVarietyId?: string;
 };
 
 export const CROPS = [
-  { id: 'tomate', label: 'Tomate', category: 'legume', icon: 'phosphorLeaf', referencePricePerKg: 3.2, referenceBioPricePerKg: 5.2 },
+  { id: 'tomate', label: 'Tomate', category: 'legume', icon: 'phosphorLeaf', referencePricePerKg: 3.2, referenceBioPricePerKg: 5.2, fallbackVarietyId: 'tomate-coeur-de-boeuf' },
   { id: 'courgette', label: 'Courgette', category: 'legume', icon: 'phosphorLeaf', referencePricePerKg: 2.5, referenceBioPricePerKg: 4.2 },
   { id: 'carotte', label: 'Carotte', category: 'legume', icon: 'phosphorLeaf', referencePricePerKg: 1.6, referenceBioPricePerKg: 2.8 },
   { id: 'pomme-de-terre', label: 'Pomme de terre', category: 'legume', icon: 'phosphorLeaf', referencePricePerKg: 1.8, referenceBioPricePerKg: 2.9 },
@@ -115,21 +116,99 @@ export type PricePerKgByCrop = Partial<Record<CropId, number>>;
 
 export type PriceSource = 'live' | 'reference';
 
-export type HarvestEntry = {
+export type Variety = {
   readonly id: string;
   readonly cropId: CropId;
+  readonly label: string;
+  readonly referencePricePerKg: number;
+  readonly referenceBioPricePerKg: number;
+  readonly rnmKeywords: readonly string[];
+};
+
+const TOMATO_CROP_ID: CropId = 'tomate';
+
+const TOMATO_VARIETIES = [
+  { id: 'tomate-grappe', cropId: TOMATO_CROP_ID, label: 'Tomate grappe', referencePricePerKg: 3, referenceBioPricePerKg: 4.8, rnmKeywords: ['tomate grappe'] },
+  { id: 'tomate-ronde', cropId: TOMATO_CROP_ID, label: 'Tomate ronde', referencePricePerKg: 2.8, referenceBioPricePerKg: 4.5, rnmKeywords: ['tomate ronde'] },
+  { id: 'tomate-coeur-de-boeuf', cropId: TOMATO_CROP_ID, label: 'Tomate cœur de bœuf', referencePricePerKg: 5, referenceBioPricePerKg: 8, rnmKeywords: ['tomate coeur'] },
+  { id: 'tomate-cerise', cropId: TOMATO_CROP_ID, label: 'Tomate cerise', referencePricePerKg: 6, referenceBioPricePerKg: 9.5, rnmKeywords: ['tomate cerise'] },
+  { id: 'tomate-allongee', cropId: TOMATO_CROP_ID, label: 'Tomate allongée (Roma)', referencePricePerKg: 3.2, referenceBioPricePerKg: 5.2, rnmKeywords: ['tomate allongee', 'tomate roma'] },
+  { id: 'tomate-noire-de-crimee', cropId: TOMATO_CROP_ID, label: 'Tomate noire de Crimée', referencePricePerKg: 6, referenceBioPricePerKg: 9.5, rnmKeywords: [] },
+  { id: 'tomate-ananas', cropId: TOMATO_CROP_ID, label: 'Tomate ananas', referencePricePerKg: 6.5, referenceBioPricePerKg: 10.5, rnmKeywords: [] },
+  { id: 'tomate-green-zebra', cropId: TOMATO_CROP_ID, label: 'Tomate Green Zebra', referencePricePerKg: 6, referenceBioPricePerKg: 9.5, rnmKeywords: [] },
+] as const satisfies readonly Variety[];
+
+type TomatoVarietyId = (typeof TOMATO_VARIETIES)[number]['id'];
+
+const DEFAULT_VARIETY_KEYWORDS: Partial<Record<CropId, readonly string[]>> = {
+  'pomme-de-terre': ['pomme de terre'],
+  salade: ['salade', 'laitue'],
+  'haricot-vert': ['haricot vert'],
+};
+
+function defaultVarietyKeywords(cropId: CropId): readonly string[] {
+  return DEFAULT_VARIETY_KEYWORDS[cropId] ?? [cropId];
+}
+
+const DEFAULT_VARIETIES: readonly Variety[] = CROPS.filter(
+  crop => crop.id !== TOMATO_CROP_ID,
+).map(crop => ({
+  id: crop.id,
+  cropId: crop.id,
+  label: crop.label,
+  referencePricePerKg: crop.referencePricePerKg,
+  referenceBioPricePerKg: crop.referenceBioPricePerKg,
+  rnmKeywords: defaultVarietyKeywords(crop.id),
+}));
+
+export const VARIETIES: readonly Variety[] = [...TOMATO_VARIETIES, ...DEFAULT_VARIETIES];
+
+export type VarietyId = Exclude<CropId, typeof TOMATO_CROP_ID> | TomatoVarietyId;
+
+export const VARIETY_BY_ID: Readonly<Record<VarietyId, Variety>> = VARIETIES.reduce(
+  (accumulator, variety) => ({ ...accumulator, [variety.id]: variety }),
+  {} as Record<VarietyId, Variety>,
+);
+
+export const VARIETIES_BY_CROP: Readonly<Record<CropId, readonly Variety[]>> = VARIETIES.reduce(
+  (accumulator, variety) => ({
+    ...accumulator,
+    [variety.cropId]: [...(accumulator[variety.cropId] ?? []), variety],
+  }),
+  {} as Record<CropId, readonly Variety[]>,
+);
+
+export function isVarietyId(value: string): value is VarietyId {
+  return value in VARIETY_BY_ID;
+}
+
+export function cropFallbackVarietyId(cropId: CropId): VarietyId {
+  const fallback = CROP_BY_ID[cropId].fallbackVarietyId;
+  if (fallback !== undefined && isVarietyId(fallback)) {
+    return fallback;
+  }
+  return cropId as VarietyId;
+}
+
+export type PricePerKgByVariety = Partial<Record<VarietyId, number>>;
+
+export type HarvestEntry = {
+  readonly id: string;
+  readonly varietyId: VarietyId;
   readonly weightKg: number;
   readonly harvestedOn: string;
 };
 
 export type HarvestDraft = {
-  readonly cropId: CropId;
+  readonly varietyId: VarietyId;
   readonly weightKg: number;
   readonly harvestedOn: Date;
 };
 
 export type HarvestRow = {
   readonly id: string;
+  readonly varietyId: VarietyId;
+  readonly varietyLabel: string;
   readonly cropId: CropId;
   readonly cropLabel: string;
   readonly categoryLabel: string;

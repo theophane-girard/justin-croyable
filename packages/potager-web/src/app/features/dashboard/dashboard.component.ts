@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import {
@@ -40,6 +40,19 @@ const SEASON_FILTER_ITEMS: SegmentItem[] = [
   { value: SEASON.summer, label: SEASON_META.summer.label, icon: SEASON_META.summer.icon },
   { value: SEASON.winter, label: SEASON_META.winter.label, icon: SEASON_META.winter.icon },
 ];
+
+const SAVINGS_GROUP = { crop: 'crop', variety: 'variety' } as const;
+type SavingsGroup = (typeof SAVINGS_GROUP)[keyof typeof SAVINGS_GROUP];
+
+const SAVINGS_GROUP_ITEMS: SegmentItem[] = [
+  { value: SAVINGS_GROUP.crop, label: 'Culture' },
+  { value: SAVINGS_GROUP.variety, label: 'Variété' },
+];
+
+const SAVINGS_GROUP_TITLE: Readonly<Record<SavingsGroup, string>> = {
+  [SAVINGS_GROUP.crop]: 'Économies par culture',
+  [SAVINGS_GROUP.variety]: 'Économies par variété',
+};
 
 @Component({
   selector: 'app-dashboard',
@@ -173,10 +186,19 @@ const SEASON_FILTER_ITEMS: SegmentItem[] = [
 
         <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <app-card
-            title="Économies par culture"
-            description="Valeur estimée de chaque culture au prix moyen français."
+            [title]="savingsCardTitle()"
+            description="Valeur estimée au prix moyen français."
           >
-            <app-chart [options]="savingsByCropOptions()" height="18rem" />
+            <div class="mb-3 flex justify-end">
+              <app-segment
+                variant="default"
+                size="sm"
+                [items]="savingsGroupItems"
+                [value]="savingsGroup()"
+                (valueChange)="onSavingsGroupChange($event)"
+              />
+            </div>
+            <app-chart [options]="savingsChartOptions()" height="18rem" />
           </app-card>
 
           <app-card
@@ -200,6 +222,11 @@ export class DashboardComponent {
   protected readonly harvestsLink = `/${APP_PATHS.harvests}`;
   protected readonly priceModeItems = PRICE_MODE_ITEMS;
   protected readonly seasonItems = SEASON_FILTER_ITEMS;
+  protected readonly savingsGroupItems = SAVINGS_GROUP_ITEMS;
+
+  protected readonly savingsGroup = signal<SavingsGroup>(SAVINGS_GROUP.crop);
+
+  protected readonly savingsCardTitle = computed(() => SAVINGS_GROUP_TITLE[this.savingsGroup()]);
 
   protected readonly showYearSelector = computed(() => this.store.availableYears().length >= 2);
   protected readonly yearOptions = computed(() => buildYearOptions(this.store.availableYears()));
@@ -230,6 +257,12 @@ export class DashboardComponent {
     }
   }
 
+  protected onSavingsGroupChange(value: string | null): void {
+    if (value === SAVINGS_GROUP.crop || value === SAVINGS_GROUP.variety) {
+      this.savingsGroup.set(value);
+    }
+  }
+
   protected readonly monthlyOptions = computed<EChartsCoreOption>(() => ({
     tooltip: { trigger: 'axis' },
     legend: { data: ['Valeur récoltée (€)', 'Dépenses (€)'] },
@@ -248,8 +281,12 @@ export class DashboardComponent {
     ],
   }));
 
-  protected readonly savingsByCropOptions = computed<EChartsCoreOption>(() => {
-    const top = this.store.savingsByCrop().slice(0, TOP_CROPS_COUNT);
+  protected readonly savingsChartOptions = computed<EChartsCoreOption>(() => {
+    const source =
+      this.savingsGroup() === SAVINGS_GROUP.variety
+        ? this.store.savingsByVariety()
+        : this.store.savingsByCrop();
+    const top = source.slice(0, TOP_CROPS_COUNT);
     return {
       tooltip: { trigger: 'axis' },
       grid: { left: 12, right: 24, top: 12, bottom: 8, containLabel: true },

@@ -1,60 +1,58 @@
-import { CROPS, type CropId, type PricePerKgByCrop } from './potager.model';
+import {
+  cropFallbackVarietyId,
+  type PricePerKgByVariety,
+  VARIETIES,
+  VARIETY_BY_ID,
+  type VarietyId,
+} from './potager.model';
 
-export const REFERENCE_PRICES: Readonly<Record<CropId, number>> = CROPS.reduce(
-  (accumulator, crop) => ({ ...accumulator, [crop.id]: crop.referencePricePerKg }),
-  {} as Record<CropId, number>,
+export const REFERENCE_VARIETY_PRICES: Readonly<Record<VarietyId, number>> = VARIETIES.reduce(
+  (accumulator, variety) => ({ ...accumulator, [variety.id]: variety.referencePricePerKg }),
+  {} as Record<VarietyId, number>,
 );
 
-export const REFERENCE_BIO_PRICES: Readonly<Record<CropId, number>> = CROPS.reduce(
-  (accumulator, crop) => ({ ...accumulator, [crop.id]: crop.referenceBioPricePerKg }),
-  {} as Record<CropId, number>,
+export const REFERENCE_VARIETY_BIO_PRICES: Readonly<Record<VarietyId, number>> = VARIETIES.reduce(
+  (accumulator, variety) => ({ ...accumulator, [variety.id]: variety.referenceBioPricePerKg }),
+  {} as Record<VarietyId, number>,
 );
-
-export const RNM_LABEL_MATCHERS: readonly { readonly keyword: string; readonly cropId: CropId }[] = [
-  { keyword: 'tomate', cropId: 'tomate' },
-  { keyword: 'courgette', cropId: 'courgette' },
-  { keyword: 'carotte', cropId: 'carotte' },
-  { keyword: 'pomme de terre', cropId: 'pomme-de-terre' },
-  { keyword: 'salade', cropId: 'salade' },
-  { keyword: 'laitue', cropId: 'salade' },
-  { keyword: 'haricot vert', cropId: 'haricot-vert' },
-  { keyword: 'poivron', cropId: 'poivron' },
-  { keyword: 'aubergine', cropId: 'aubergine' },
-  { keyword: 'concombre', cropId: 'concombre' },
-  { keyword: 'radis', cropId: 'radis' },
-  { keyword: 'oignon', cropId: 'oignon' },
-  { keyword: 'poireau', cropId: 'poireau' },
-  { keyword: 'epinard', cropId: 'epinard' },
-  { keyword: 'courge', cropId: 'courge' },
-  { keyword: 'fraise', cropId: 'fraise' },
-  { keyword: 'framboise', cropId: 'framboise' },
-  { keyword: 'pomme', cropId: 'pomme' },
-  { keyword: 'poire', cropId: 'poire' },
-  { keyword: 'prune', cropId: 'prune' },
-  { keyword: 'cerise', cropId: 'cerise' },
-  { keyword: 'abricot', cropId: 'abricot' },
-  { keyword: 'peche', cropId: 'peche' },
-  { keyword: 'raisin', cropId: 'raisin' },
-  { keyword: 'rhubarbe', cropId: 'rhubarbe' },
-];
 
 export function normalizeLabel(label: string): string {
   return label
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[̀-ͯ]/g, '')
     .toLowerCase()
     .trim();
 }
 
-export function matchCropId(rawLabel: string): CropId | null {
+type VarietyMatcher = { readonly keyword: string; readonly varietyId: VarietyId };
+
+const VARIETY_MATCHERS: readonly VarietyMatcher[] = VARIETIES.flatMap(variety =>
+  variety.rnmKeywords.map(keyword => ({
+    keyword: normalizeLabel(keyword),
+    varietyId: variety.id as VarietyId,
+  })),
+).sort((a, b) => b.keyword.length - a.keyword.length);
+
+export function matchVarietyId(rawLabel: string): VarietyId | null {
   const normalized = normalizeLabel(rawLabel);
-  const matcher = RNM_LABEL_MATCHERS.find(candidate => normalized.includes(candidate.keyword));
-  return matcher?.cropId ?? null;
+  const matcher = VARIETY_MATCHERS.find(candidate => normalized.includes(candidate.keyword));
+  return matcher?.varietyId ?? null;
 }
 
-export function mergePrices(live: PricePerKgByCrop | null): Record<CropId, number> {
-  if (!live) {
-    return { ...REFERENCE_PRICES };
-  }
-  return { ...REFERENCE_PRICES, ...live };
+export function resolveConventionalPrice(
+  varietyId: VarietyId,
+  live: PricePerKgByVariety | null,
+): number {
+  const fallbackId = cropFallbackVarietyId(VARIETY_BY_ID[varietyId].cropId);
+  return (
+    live?.[varietyId] ??
+    live?.[fallbackId] ??
+    REFERENCE_VARIETY_PRICES[varietyId] ??
+    REFERENCE_VARIETY_PRICES[fallbackId]
+  );
+}
+
+export function resolveBioPrice(varietyId: VarietyId): number {
+  const fallbackId = cropFallbackVarietyId(VARIETY_BY_ID[varietyId].cropId);
+  return REFERENCE_VARIETY_BIO_PRICES[varietyId] ?? REFERENCE_VARIETY_BIO_PRICES[fallbackId];
 }

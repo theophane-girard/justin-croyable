@@ -3,8 +3,8 @@ import { computed, inject, Injectable } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { catchError, map, type Observable, of, switchMap } from 'rxjs';
 
-import { type CropId, type PricePerKgByCrop, type PriceSource } from './potager.model';
-import { matchCropId, normalizeLabel } from './reference-prices';
+import { type PricePerKgByVariety, type PriceSource, type VarietyId } from './potager.model';
+import { matchVarietyId, normalizeLabel } from './reference-prices';
 
 const RNM_DATASET_API =
   'https://www.data.gouv.fr/api/1/datasets/cotations-du-reseau-des-nouvelles-des-marches/';
@@ -28,9 +28,9 @@ type TabularRow = Readonly<Record<string, unknown>>;
 
 type TabularResponse = { readonly data: readonly TabularRow[] };
 
-type PriceAccumulator = Partial<Record<CropId, { sum: number; count: number }>>;
+type PriceAccumulator = Partial<Record<VarietyId, { sum: number; count: number }>>;
 
-type LivePriceResult = { readonly source: PriceSource; readonly prices: PricePerKgByCrop | null };
+type LivePriceResult = { readonly source: PriceSource; readonly prices: PricePerKgByVariety | null };
 
 const FALLBACK_RESULT: LivePriceResult = { source: 'reference', prices: null };
 
@@ -75,17 +75,17 @@ export class GovPriceService {
     return RETAIL_STAGE_KEYWORDS.some(keyword => normalized.includes(keyword));
   }
 
-  #averageRetailPrices(rows: readonly TabularRow[]): PricePerKgByCrop {
+  #averageRetailPrices(rows: readonly TabularRow[]): PricePerKgByVariety {
     const accumulator = rows.reduce<PriceAccumulator>(
       (totals, row) => this.#accumulateRow(totals, row),
       {},
     );
 
-    return Object.entries(accumulator).reduce<PricePerKgByCrop>((prices, [cropId, tally]) => {
+    return Object.entries(accumulator).reduce<PricePerKgByVariety>((prices, [varietyId, tally]) => {
       if (!tally || tally.count === 0) {
         return prices;
       }
-      return { ...prices, [cropId as CropId]: this.#roundToCents(tally.sum / tally.count) };
+      return { ...prices, [varietyId as VarietyId]: this.#roundToCents(tally.sum / tally.count) };
     }, {});
   }
 
@@ -96,16 +96,16 @@ export class GovPriceService {
       return totals;
     }
 
-    const cropId = matchCropId(label);
-    if (cropId === null) {
+    const varietyId = matchVarietyId(label);
+    if (varietyId === null) {
       return totals;
     }
 
-    const current = totals[cropId] ?? { sum: 0, count: 0 };
-    return { ...totals, [cropId]: { sum: current.sum + price, count: current.count + 1 } };
+    const current = totals[varietyId] ?? { sum: 0, count: 0 };
+    return { ...totals, [varietyId]: { sum: current.sum + price, count: current.count + 1 } };
   }
 
-  #toResult(prices: PricePerKgByCrop): LivePriceResult {
+  #toResult(prices: PricePerKgByVariety): LivePriceResult {
     if (Object.keys(prices).length === 0) {
       return FALLBACK_RESULT;
     }
