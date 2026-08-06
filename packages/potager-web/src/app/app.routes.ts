@@ -5,6 +5,7 @@ export const APP_PATHS = {
   harvests: 'recoltes',
   expenses: 'depenses',
   garden: 'jardin',
+  prices: 'prix-moyens',
   add: 'ajouter',
 } as const;
 
@@ -17,6 +18,7 @@ export const EXPENSES_LINK = `/${APP_PATHS.expenses}`;
 export const EXPENSE_ADD_LINK = `/${APP_PATHS.expenses}/${APP_PATHS.add}`;
 export const GARDEN_LINK = `/${APP_PATHS.garden}`;
 export const GARDEN_ADD_LINK = `/${APP_PATHS.garden}/${APP_PATHS.add}`;
+export const PRICES_LINK = `/${APP_PATHS.prices}`;
 
 export const APP_ROUTES: Route[] = [
   {
@@ -75,6 +77,11 @@ export const APP_ROUTES: Route[] = [
         title: 'Ajouter un plant — Potager',
       },
     ],
+  },
+  {
+    path: APP_PATHS.prices,
+    loadComponent: () => import('./features/prices/prices.component').then(m => m.PricesComponent),
+    title: 'Prix moyens — Potager',
   },
   {
     path: '**',

@@ -1,5 +1,7 @@
 import {
   cropFallbackVarietyId,
+  PRICE_ORIGIN,
+  type PriceOrigin,
   type PricePerKgByVariety,
   VARIETIES,
   VARIETY_BY_ID,
@@ -55,4 +57,18 @@ export function resolveConventionalPrice(
 export function resolveBioPrice(varietyId: VarietyId): number {
   const fallbackId = cropFallbackVarietyId(VARIETY_BY_ID[varietyId].cropId);
   return REFERENCE_VARIETY_BIO_PRICES[varietyId] ?? REFERENCE_VARIETY_BIO_PRICES[fallbackId];
+}
+
+export function conventionalPriceOrigin(
+  varietyId: VarietyId,
+  live: PricePerKgByVariety | null,
+): PriceOrigin {
+  if (live?.[varietyId] != null) {
+    return PRICE_ORIGIN.rnm;
+  }
+  const fallbackId = cropFallbackVarietyId(VARIETY_BY_ID[varietyId].cropId);
+  if (live?.[fallbackId] != null) {
+    return PRICE_ORIGIN.fallback;
+  }
+  return PRICE_ORIGIN.reference;
 }

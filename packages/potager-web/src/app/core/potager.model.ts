@@ -192,6 +192,27 @@ export function cropFallbackVarietyId(cropId: CropId): VarietyId {
 
 export type PricePerKgByVariety = Partial<Record<VarietyId, number>>;
 
+export const PRICE_ORIGIN = {
+  rnm: 'rnm',
+  fallback: 'fallback',
+  reference: 'reference',
+} as const;
+
+export type PriceOrigin = (typeof PRICE_ORIGIN)[keyof typeof PRICE_ORIGIN];
+
+export type PriceRow = {
+  readonly varietyId: VarietyId;
+  readonly varietyLabel: string;
+  readonly cropLabel: string;
+  readonly categoryLabel: string;
+  readonly conventionalPricePerKg: number;
+  readonly bioPricePerKg: number;
+  readonly bioPremiumPct: number;
+  readonly origin: PriceOrigin;
+  readonly sourceLabel: string;
+  readonly priceDate: Date | null;
+};
+
 export type HarvestEntry = {
   readonly id: string;
   readonly varietyId: VarietyId;

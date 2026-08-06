@@ -30,9 +30,13 @@ type TabularResponse = { readonly data: readonly TabularRow[] };
 
 type PriceAccumulator = Partial<Record<VarietyId, { sum: number; count: number }>>;
 
-type LivePriceResult = { readonly source: PriceSource; readonly prices: PricePerKgByVariety | null };
+type LivePriceResult = {
+  readonly source: PriceSource;
+  readonly prices: PricePerKgByVariety | null;
+  readonly date: Date | null;
+};
 
-const FALLBACK_RESULT: LivePriceResult = { source: 'reference', prices: null };
+const FALLBACK_RESULT: LivePriceResult = { source: 'reference', prices: null, date: null };
 
 @Injectable({ providedIn: 'root' })
 export class GovPriceService {
@@ -42,14 +46,21 @@ export class GovPriceService {
 
   readonly livePrices = computed(() => this.#result().prices);
   readonly priceSource = computed<PriceSource>(() => this.#result().source);
+  readonly priceDate = computed<Date | null>(() => this.#result().date);
 
   #loadLivePrices(): Observable<LivePriceResult> {
     return this.#http.get<DataGouvDataset>(RNM_DATASET_API).pipe(
-      map(dataset => this.#pickLatestRetailResourceId(dataset)),
-      switchMap(resourceId => this.#http.get<TabularResponse>(this.#tabularUrl(resourceId))),
-      map(response => this.#averageRetailPrices(response.data)),
-      map(prices => this.#toResult(prices)),
+      map(dataset => this.#pickLatestRetailResource(dataset)),
+      switchMap(resource => this.#pricesForResource(resource)),
       catchError(() => of(FALLBACK_RESULT)),
+    );
+  }
+
+  #pricesForResource(resource: DataGouvResource): Observable<LivePriceResult> {
+    return this.#http.get<TabularResponse>(this.#tabularUrl(resource.id)).pipe(
+      map(response =>
+        this.#toResult(this.#averageRetailPrices(response.data), this.#parseDate(resource)),
+      ),
     );
   }
 
@@ -57,7 +68,7 @@ export class GovPriceService {
     return `${TABULAR_API}/${resourceId}/data/?page_size=${TABULAR_PAGE_SIZE}`;
   }
 
-  #pickLatestRetailResourceId(dataset: DataGouvDataset): string {
+  #pickLatestRetailResource(dataset: DataGouvDataset): DataGouvResource {
     const retailResource = dataset.resources
       .filter(resource => resource.format.toLowerCase() === CSV_FORMAT)
       .filter(resource => this.#isRetailResource(resource.title))
@@ -67,7 +78,15 @@ export class GovPriceService {
     if (!retailResource) {
       throw new Error('Aucune cotation détail publiée sur le jeu de données RNM.');
     }
-    return retailResource.id;
+    return retailResource;
+  }
+
+  #parseDate(resource: DataGouvResource): Date | null {
+    if (resource.last_modified === undefined) {
+      return null;
+    }
+    const parsed = new Date(resource.last_modified);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
   }
 
   #isRetailResource(title: string): boolean {
@@ -105,11 +124,11 @@ export class GovPriceService {
     return { ...totals, [varietyId]: { sum: current.sum + price, count: current.count + 1 } };
   }
 
-  #toResult(prices: PricePerKgByVariety): LivePriceResult {
+  #toResult(prices: PricePerKgByVariety, date: Date | null): LivePriceResult {
     if (Object.keys(prices).length === 0) {
       return FALLBACK_RESULT;
     }
-    return { source: 'live', prices };
+    return { source: 'live', prices, date };
   }
 
   #readString(row: TabularRow, keys: readonly string[]): string | null {
