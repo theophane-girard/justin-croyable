@@ -128,14 +128,14 @@ export type Variety = {
 const TOMATO_CROP_ID: CropId = 'tomate';
 
 const TOMATO_VARIETIES = [
-  { id: 'tomate-grappe', cropId: TOMATO_CROP_ID, label: 'Tomate grappe', referencePricePerKg: 3, referenceBioPricePerKg: 4.8, rnmKeywords: ['tomate grappe'] },
-  { id: 'tomate-ronde', cropId: TOMATO_CROP_ID, label: 'Tomate ronde', referencePricePerKg: 2.8, referenceBioPricePerKg: 4.5, rnmKeywords: ['tomate ronde'] },
-  { id: 'tomate-coeur-de-boeuf', cropId: TOMATO_CROP_ID, label: 'Tomate cœur de bœuf', referencePricePerKg: 5, referenceBioPricePerKg: 8, rnmKeywords: ['tomate coeur'] },
-  { id: 'tomate-cerise', cropId: TOMATO_CROP_ID, label: 'Tomate cerise', referencePricePerKg: 6, referenceBioPricePerKg: 9.5, rnmKeywords: ['tomate cerise'] },
-  { id: 'tomate-allongee', cropId: TOMATO_CROP_ID, label: 'Tomate allongée (Roma)', referencePricePerKg: 3.2, referenceBioPricePerKg: 5.2, rnmKeywords: ['tomate allongee', 'tomate roma'] },
-  { id: 'tomate-noire-de-crimee', cropId: TOMATO_CROP_ID, label: 'Tomate noire de Crimée', referencePricePerKg: 6, referenceBioPricePerKg: 9.5, rnmKeywords: [] },
-  { id: 'tomate-ananas', cropId: TOMATO_CROP_ID, label: 'Tomate ananas', referencePricePerKg: 6.5, referenceBioPricePerKg: 10.5, rnmKeywords: [] },
-  { id: 'tomate-green-zebra', cropId: TOMATO_CROP_ID, label: 'Tomate Green Zebra', referencePricePerKg: 6, referenceBioPricePerKg: 9.5, rnmKeywords: [] },
+  { id: 'tomate-grappe', cropId: TOMATO_CROP_ID, label: 'Tomate grappe', referencePricePerKg: 2.6, referenceBioPricePerKg: 3.8, rnmKeywords: ['tomate grappe'] },
+  { id: 'tomate-ronde', cropId: TOMATO_CROP_ID, label: 'Tomate ronde', referencePricePerKg: 2.4, referenceBioPricePerKg: 3.6, rnmKeywords: ['tomate ronde'] },
+  { id: 'tomate-coeur-de-boeuf', cropId: TOMATO_CROP_ID, label: 'Tomate cœur de bœuf', referencePricePerKg: 3.5, referenceBioPricePerKg: 4.5, rnmKeywords: ['tomate coeur'] },
+  { id: 'tomate-cerise', cropId: TOMATO_CROP_ID, label: 'Tomate cerise', referencePricePerKg: 4.8, referenceBioPricePerKg: 6.5, rnmKeywords: ['tomate cerise'] },
+  { id: 'tomate-allongee', cropId: TOMATO_CROP_ID, label: 'Tomate allongée (Roma)', referencePricePerKg: 2.6, referenceBioPricePerKg: 3.8, rnmKeywords: ['tomate allongee', 'tomate roma'] },
+  { id: 'tomate-noire-de-crimee', cropId: TOMATO_CROP_ID, label: 'Tomate noire de Crimée', referencePricePerKg: 3.8, referenceBioPricePerKg: 5, rnmKeywords: [] },
+  { id: 'tomate-ananas', cropId: TOMATO_CROP_ID, label: 'Tomate ananas', referencePricePerKg: 4.2, referenceBioPricePerKg: 5.5, rnmKeywords: [] },
+  { id: 'tomate-green-zebra', cropId: TOMATO_CROP_ID, label: 'Tomate Green Zebra', referencePricePerKg: 3.8, referenceBioPricePerKg: 5, rnmKeywords: [] },
 ] as const satisfies readonly Variety[];
 
 type TomatoVarietyId = (typeof TOMATO_VARIETIES)[number]['id'];
