@@ -1,0 +1,16 @@
+node_modules
+**/node_modules
+dist
+**/dist
+.git
+.github
+.angular
+.nx
+.firebase
+tmp
+out-tsc
+**/*.spec.ts
+**/*.stories.ts
+**/.env
+**/.env.*
+!**/.env.example
