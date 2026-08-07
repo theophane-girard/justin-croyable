@@ -187,7 +187,12 @@ const BOTTOM_SHEET_SIDE = 'bottom';
     </div>
 
     @if (store.rows().length > 0) {
-      <app-fab class="sm:hidden" position="bottom-right" triggerLabel="Actions sur les dépenses">
+      <app-fab
+        class="sm:hidden"
+        position="bottom-right"
+        triggerIcon="phosphorDotsThreeVertical"
+        triggerLabel="Actions sur les dépenses"
+      >
         <app-fab-list>
           <a appFabButton [routerLink]="addLink" aria-label="Ajouter une dépense">
             <ng-icon name="phosphorPlus" />

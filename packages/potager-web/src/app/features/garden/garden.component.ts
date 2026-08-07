@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  signal,
+  TemplateRef,
+  viewChild,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import {
@@ -12,6 +20,7 @@ import {
   SegmentComponent,
   type SegmentItem,
   SelectImports,
+  SheetService,
   TableComponent,
 } from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
@@ -141,18 +150,6 @@ const SEASON_FILTER_ITEMS: SegmentItem[] = [
               }
             </app-select>
           }
-          @if (store.rows().length > 0) {
-            <app-select
-              class="w-full sm:w-44"
-              prefixIcon="phosphorPlant"
-              [value]="cultureFilter()"
-              (valueChange)="onCultureChange($event)"
-            >
-              @for (option of cultureOptions; track option.value) {
-                <app-select-item [value]="option.value">{{ option.label }}</app-select-item>
-              }
-            </app-select>
-          }
           <app-segment
             class="order-last w-full sm:order-none sm:w-auto"
             variant="default"
@@ -161,6 +158,16 @@ const SEASON_FILTER_ITEMS: SegmentItem[] = [
             (valueChange)="onSeasonChange($event)"
           />
           @if (store.rows().length > 0) {
+            <button
+              appButton
+              variant="outline"
+              size="sm"
+              class="hidden sm:inline-flex"
+              (click)="openFilter()"
+            >
+              <ng-icon name="phosphorFunnel" class="size-4" />
+              Filtrer
+            </button>
             <button
               appButton
               variant="outline"
@@ -247,14 +254,37 @@ const SEASON_FILTER_ITEMS: SegmentItem[] = [
     </div>
 
     @if (store.rows().length > 0) {
-      <app-fab class="sm:hidden" position="bottom-right" triggerLabel="Actions sur le jardin">
+      <app-fab
+        class="sm:hidden"
+        position="bottom-right"
+        triggerIcon="phosphorDotsThreeVertical"
+        triggerLabel="Actions sur le jardin"
+      >
         <app-fab-list>
           <a appFabButton [routerLink]="addLink" aria-label="Ajouter un plant">
             <ng-icon name="phosphorPlus" />
           </a>
+          <button appFabButton type="button" variant="secondary" (click)="openFilter()" aria-label="Filtrer">
+            <ng-icon name="phosphorFunnel" />
+          </button>
         </app-fab-list>
       </app-fab>
     }
+
+    <ng-template #filterSheet>
+      <div class="flex flex-col gap-4 p-4">
+        <app-select
+          label="Culture"
+          prefixIcon="phosphorPlant"
+          [value]="cultureFilter()"
+          (valueChange)="onCultureChange($event)"
+        >
+          @for (option of cultureOptions; track option.value) {
+            <app-select-item [value]="option.value">{{ option.label }}</app-select-item>
+          }
+        </app-select>
+      </div>
+    </ng-template>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -262,6 +292,9 @@ export class GardenComponent {
   protected readonly store = inject(GardenStore);
   protected readonly season = inject(SeasonStore);
   readonly #harvests = inject(HarvestStore);
+  readonly #sheet = inject(SheetService);
+
+  private readonly filterSheetTemplate = viewChild.required<TemplateRef<unknown>>('filterSheet');
 
   protected readonly columns = PLANT_COLUMNS;
   protected readonly gridOptions = PLANT_GRID_OPTIONS;
@@ -288,6 +321,16 @@ export class GardenComponent {
     if (value !== null && isSeasonFilter(value)) {
       this.season.setSeason(value);
     }
+  }
+
+  protected openFilter(): void {
+    this.#sheet.create({
+      title: 'Filtrer',
+      side: 'bottom',
+      okText: 'Fermer',
+      cancelText: null,
+      content: this.filterSheetTemplate(),
+    });
   }
 
   protected onCultureChange(value: string | string[] | null): void {

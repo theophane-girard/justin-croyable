@@ -169,31 +169,6 @@ const BOTTOM_SHEET_SIDE = 'bottom';
         </div>
       </div>
 
-      @if (store.rows().length > 0) {
-        <div class="flex flex-wrap items-center gap-2">
-          <app-select
-            class="w-full sm:w-44"
-            prefixIcon="phosphorPlant"
-            [value]="cultureFilter()"
-            (valueChange)="onCultureChange($event)"
-          >
-            @for (option of cultureOptions; track option.value) {
-              <app-select-item [value]="option.value">{{ option.label }}</app-select-item>
-            }
-          </app-select>
-          <app-select
-            class="w-full sm:w-48"
-            prefixIcon="phosphorTag"
-            [value]="varietyFilter()"
-            (valueChange)="onVarietyChange($event)"
-          >
-            @for (option of varietyOptions(); track option.value) {
-              <app-select-item [value]="option.value">{{ option.label }}</app-select-item>
-            }
-          </app-select>
-        </div>
-      }
-
       @if (activeChips().length > 0) {
         <div class="flex flex-wrap items-center gap-2">
           @for (chip of activeChips(); track chip.id) {
@@ -225,7 +200,12 @@ const BOTTOM_SHEET_SIDE = 'bottom';
     </div>
 
     @if (store.rows().length > 0) {
-      <app-fab class="sm:hidden" position="bottom-right" triggerLabel="Actions sur les récoltes">
+      <app-fab
+        class="sm:hidden"
+        position="bottom-right"
+        triggerIcon="phosphorDotsThreeVertical"
+        triggerLabel="Actions sur les récoltes"
+      >
         <app-fab-list>
           <a appFabButton [routerLink]="addLink" aria-label="Ajouter une récolte">
             <ng-icon name="phosphorPlus" />
@@ -241,14 +221,36 @@ const BOTTOM_SHEET_SIDE = 'bottom';
     }
 
     <ng-template #filterSheet>
-      <div class="flex flex-col gap-3 p-4">
-        <label class="text-sm font-medium">Catégorie</label>
-        <app-segment
-          variant="accent"
-          [items]="categoryItems"
-          [value]="categoryValue()"
-          (valueChange)="onCategoryChange($event)"
-        />
+      <div class="flex flex-col gap-4 p-4">
+        <app-select
+          label="Culture"
+          prefixIcon="phosphorPlant"
+          [value]="cultureFilter()"
+          (valueChange)="onCultureChange($event)"
+        >
+          @for (option of cultureOptions; track option.value) {
+            <app-select-item [value]="option.value">{{ option.label }}</app-select-item>
+          }
+        </app-select>
+        <app-select
+          label="Variété"
+          prefixIcon="phosphorTag"
+          [value]="varietyFilter()"
+          (valueChange)="onVarietyChange($event)"
+        >
+          @for (option of varietyOptions(); track option.value) {
+            <app-select-item [value]="option.value">{{ option.label }}</app-select-item>
+          }
+        </app-select>
+        <div class="flex flex-col gap-2">
+          <label class="text-sm font-medium">Catégorie</label>
+          <app-segment
+            variant="accent"
+            [items]="categoryItems"
+            [value]="categoryValue()"
+            (valueChange)="onCategoryChange($event)"
+          />
+        </div>
       </div>
     </ng-template>
 

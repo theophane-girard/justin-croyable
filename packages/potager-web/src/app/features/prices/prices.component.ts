@@ -1,12 +1,24 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  signal,
+  TemplateRef,
+  viewChild,
+} from '@angular/core';
 
 import {
+  ButtonComponent,
   CardComponent,
+  FabButtonComponent,
   SegmentComponent,
   type SegmentItem,
   SelectImports,
+  SheetService,
   TableComponent,
 } from '@justin-croyable/design-system';
+import { NgIcon } from '@ng-icons/core';
 import type { ColDef, GridOptions, ValueFormatterParams } from 'ag-grid-community';
 
 import {
@@ -111,7 +123,15 @@ const SOURCE_LABEL: Readonly<Record<PriceOrigin, (fallbackLabel: string) => stri
 
 @Component({
   selector: 'app-prices',
-  imports: [CardComponent, SegmentComponent, TableComponent, ...SelectImports],
+  imports: [
+    CardComponent,
+    SegmentComponent,
+    TableComponent,
+    ButtonComponent,
+    FabButtonComponent,
+    NgIcon,
+    ...SelectImports,
+  ],
   template: `
     <div class="flex flex-col gap-4">
       <div class="flex flex-wrap items-center justify-between gap-3">
@@ -121,34 +141,16 @@ const SOURCE_LABEL: Readonly<Record<PriceOrigin, (fallbackLabel: string) => stri
             Prix de référence par variété et par culture, prix moyens français (FranceAgriMer — RNM).
           </p>
         </div>
-        <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-          <app-select
-            class="w-full sm:w-44"
-            prefixIcon="phosphorPlant"
-            [value]="cultureFilter()"
-            (valueChange)="onCultureChange($event)"
-          >
-            @for (option of cultureOptions; track option.value) {
-              <app-select-item [value]="option.value">{{ option.label }}</app-select-item>
-            }
-          </app-select>
-          <app-select
-            class="w-full sm:w-48"
-            prefixIcon="phosphorTag"
-            [value]="varietyFilter()"
-            (valueChange)="onVarietyChange($event)"
-          >
-            @for (option of varietyOptions(); track option.value) {
-              <app-select-item [value]="option.value">{{ option.label }}</app-select-item>
-            }
-          </app-select>
-          <app-segment
-            variant="default"
-            [items]="categoryItems"
-            [value]="categoryValue()"
-            (valueChange)="onCategoryChange($event)"
-          />
-        </div>
+        <button
+          appButton
+          variant="outline"
+          size="sm"
+          class="hidden sm:inline-flex"
+          (click)="openFilter()"
+        >
+          <ng-icon name="phosphorFunnel" class="size-4" />
+          Filtrer
+        </button>
       </div>
 
       <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -185,11 +187,59 @@ const SOURCE_LABEL: Readonly<Record<PriceOrigin, (fallbackLabel: string) => stri
         height="32rem"
       />
     </div>
+
+    <button
+      appFabButton
+      variant="secondary"
+      position="bottom-right"
+      class="sm:hidden"
+      aria-label="Filtrer les prix"
+      (click)="openFilter()"
+    >
+      <ng-icon name="phosphorFunnel" />
+    </button>
+
+    <ng-template #filterSheet>
+      <div class="flex flex-col gap-4 p-4">
+        <app-select
+          label="Culture"
+          prefixIcon="phosphorPlant"
+          [value]="cultureFilter()"
+          (valueChange)="onCultureChange($event)"
+        >
+          @for (option of cultureOptions; track option.value) {
+            <app-select-item [value]="option.value">{{ option.label }}</app-select-item>
+          }
+        </app-select>
+        <app-select
+          label="Variété"
+          prefixIcon="phosphorTag"
+          [value]="varietyFilter()"
+          (valueChange)="onVarietyChange($event)"
+        >
+          @for (option of varietyOptions(); track option.value) {
+            <app-select-item [value]="option.value">{{ option.label }}</app-select-item>
+          }
+        </app-select>
+        <div class="flex flex-col gap-2">
+          <label class="text-sm font-medium">Catégorie</label>
+          <app-segment
+            variant="accent"
+            [items]="categoryItems"
+            [value]="categoryValue()"
+            (valueChange)="onCategoryChange($event)"
+          />
+        </div>
+      </div>
+    </ng-template>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PricesComponent {
   readonly #govPrices = inject(GovPriceService);
+  readonly #sheet = inject(SheetService);
+
+  private readonly filterSheetTemplate = viewChild.required<TemplateRef<unknown>>('filterSheet');
 
   protected readonly columns = PRICE_COLUMNS;
   protected readonly gridOptions = PRICE_GRID_OPTIONS;
@@ -248,6 +298,16 @@ export class PricesComponent {
     if (value in CATEGORY_META) {
       this.categoryFilter.set(value as CategoryId);
     }
+  }
+
+  protected openFilter(): void {
+    this.#sheet.create({
+      title: 'Filtrer',
+      side: 'bottom',
+      okText: 'Fermer',
+      cancelText: null,
+      content: this.filterSheetTemplate(),
+    });
   }
 
   protected onCultureChange(value: string | string[] | null): void {
