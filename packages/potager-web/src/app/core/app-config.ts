@@ -1,3 +1,5 @@
+const FIREBASE_PLACEHOLDER_PREFIX = 'A_REMPLACER';
+
 export const FIREBASE_CONFIG = {
   apiKey: 'A_REMPLACER_FIREBASE_API_KEY',
   authDomain: 'a-remplacer.firebaseapp.com',
@@ -6,3 +8,5 @@ export const FIREBASE_CONFIG = {
 } as const;
 
 export const API_BASE_URL = 'http://localhost:3000';
+
+export const AUTH_GATE_ENABLED = !FIREBASE_CONFIG.apiKey.startsWith(FIREBASE_PLACEHOLDER_PREFIX);

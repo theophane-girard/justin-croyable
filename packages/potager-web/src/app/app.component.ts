@@ -21,9 +21,12 @@ import {
 } from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
 
+import { AUTH_GATE_ENABLED } from './core/app-config';
+import { AuthService } from './core/auth.service';
 import { HarvestStore } from './core/harvest-store';
 import { PRICE_MODE } from './core/potager.model';
 import { AuthMenuComponent } from './features/auth/auth-menu.component';
+import { LoginComponent } from './features/auth/login.component';
 import { APP_PATHS } from './app.routes';
 
 type NavItem = { readonly path: string; readonly link: string; readonly label: string; readonly icon: string };
@@ -49,8 +52,16 @@ const THEME_VALUE = { light: 'light', dark: 'dark' } as const;
     BadgeComponent,
     SkeletonComponent,
     AuthMenuComponent,
+    LoginComponent,
   ],
   template: `
+    @if (showLogin()) {
+      <app-login />
+    } @else if (showSplash()) {
+      <div class="bg-background flex h-dvh items-center justify-center">
+        <app-skeleton class="h-10 w-40" />
+      </div>
+    } @else {
     <div class="bg-background text-foreground h-dvh overflow-hidden">
       <app-layout direction="horizontal" class="h-full">
         <app-sidebar
@@ -147,6 +158,7 @@ const THEME_VALUE = { light: 'light', dark: 'dark' } as const;
         </app-layout>
       </app-layout>
     </div>
+    }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -154,6 +166,12 @@ export class AppComponent {
   protected readonly theme = inject(ThemeService);
   readonly #store = inject(HarvestStore);
   readonly #router = inject(Router);
+  readonly #auth = inject(AuthService);
+
+  protected readonly showSplash = computed(() => AUTH_GATE_ENABLED && !this.#auth.ready());
+  protected readonly showLogin = computed(
+    () => AUTH_GATE_ENABLED && this.#auth.ready() && !this.#auth.isAuthenticated(),
+  );
 
   protected readonly sidebarCollapsed = signal(false);
 
