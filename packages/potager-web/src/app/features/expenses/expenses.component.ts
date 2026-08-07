@@ -36,16 +36,16 @@ import {
 import { ExpenseStore } from '../../core/expense-store';
 import { GardenStore } from '../../core/garden-store';
 import { TagCellComponent } from '../../shared/tag-cell.component';
-import { CATEGORY_TAG_PARAMS } from '../../shared/table-badges';
+import { TagListCellComponent } from '../../shared/tag-list-cell.component';
+import { CATEGORY_TAG_COLOR } from '../../shared/table-badges';
 import { EXPENSE_ADD_LINK } from '../../app.routes';
 
 type ExpenseTableRow = ExpenseRow & {
-  readonly allocationLabel: string;
+  readonly allocationLabels: readonly string[];
   readonly seasonLabel: string;
 };
 
 const ALL_PLANTS_LABEL = 'Tous les plants';
-const UNKNOWN_ALLOCATION_LABEL = '—';
 
 const DATE_FORMATTER = new Intl.DateTimeFormat('fr-FR', {
   day: '2-digit',
@@ -70,9 +70,15 @@ const EXPENSE_COLUMNS: ColDef<ExpenseTableRow>[] = [
     headerName: 'Catégorie',
     minWidth: 150,
     cellRenderer: TagCellComponent,
-    cellRendererParams: CATEGORY_TAG_PARAMS,
+    cellRendererParams: { color: CATEGORY_TAG_COLOR },
   },
-  { field: 'allocationLabel', headerName: 'Affectation', minWidth: 170 },
+  {
+    field: 'allocationLabels',
+    headerName: 'Affectation',
+    minWidth: 200,
+    cellRenderer: TagListCellComponent,
+    cellRendererParams: { color: 'primary', max: 2 },
+  },
   { field: 'seasonLabel', headerName: 'Saison', minWidth: 100 },
   { field: 'amountEur', headerName: 'Montant', type: 'numericColumn', valueFormatter: formatEurCell },
 ];
@@ -396,20 +402,20 @@ export class ExpensesComponent {
   #toTableRow(row: ExpenseRow): ExpenseTableRow {
     return {
       ...row,
-      allocationLabel: this.#allocationLabel(row),
+      allocationLabels: this.#allocationLabels(row),
       seasonLabel: SEASON_META[row.season].label,
     };
   }
 
-  #allocationLabel(row: ExpenseRow): string {
+  #allocationLabels(row: ExpenseRow): readonly string[] {
     if (row.plantIds.length === 0) {
-      return ALL_PLANTS_LABEL;
+      return [ALL_PLANTS_LABEL];
     }
     const labels = this.#plantLabelById();
     const resolved = row.plantIds
       .map(id => labels.get(id))
       .filter((label): label is string => label !== undefined);
-    return resolved.length > 0 ? [...new Set(resolved)].join(', ') : UNKNOWN_ALLOCATION_LABEL;
+    return [...new Set(resolved)];
   }
 
   #compareRows(a: ExpenseRow, b: ExpenseRow, field: SortField): number {

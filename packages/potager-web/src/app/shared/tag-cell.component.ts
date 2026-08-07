@@ -1,30 +1,30 @@
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 
-import { BadgeComponent, type BadgeTypeVariants } from '@justin-croyable/design-system';
+import { CellTagComponent, type CellTagColor } from '@justin-croyable/design-system';
 import type { ICellRendererAngularComp } from 'ag-grid-angular';
 import type { ICellRendererParams } from 'ag-grid-community';
 
-type BadgeTypeResolver = BadgeTypeVariants | ((params: ICellRendererParams) => BadgeTypeVariants);
+type CellTagColorResolver = CellTagColor | ((params: ICellRendererParams) => CellTagColor);
 
 export type TagCellParams = ICellRendererParams & {
-  readonly badgeType?: BadgeTypeResolver;
-  readonly badgeClass?: string;
+  readonly color?: CellTagColorResolver;
+  readonly icon?: string | null;
 };
 
 @Component({
   selector: 'app-tag-cell',
-  imports: [BadgeComponent],
+  imports: [CellTagComponent],
   template: `
     @if (label()) {
-      <app-badge [type]="type()" [class]="badgeClass()">{{ label() }}</app-badge>
+      <app-cell-tag [label]="label()" [color]="color()" [icon]="icon()" />
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TagCellComponent implements ICellRendererAngularComp {
   protected readonly label = signal('');
-  protected readonly type = signal<BadgeTypeVariants>('secondary');
-  protected readonly badgeClass = signal('');
+  protected readonly color = signal<CellTagColor>('neutral');
+  protected readonly icon = signal<string | null>(null);
 
   agInit(params: TagCellParams): void {
     this.#update(params);
@@ -37,8 +37,8 @@ export class TagCellComponent implements ICellRendererAngularComp {
 
   #update(params: TagCellParams): void {
     this.label.set(params.value === null || params.value === undefined ? '' : String(params.value));
-    const resolver = params.badgeType;
-    this.type.set(typeof resolver === 'function' ? resolver(params) : (resolver ?? 'secondary'));
-    this.badgeClass.set(params.badgeClass ?? '');
+    const resolver = params.color;
+    this.color.set(typeof resolver === 'function' ? resolver(params) : (resolver ?? 'neutral'));
+    this.icon.set(params.icon ?? null);
   }
 }

@@ -51,7 +51,7 @@ import {
 } from '../../core/catalog-filter';
 import { GovPriceService } from '../../core/gov-price.service';
 import { TagCellComponent } from '../../shared/tag-cell.component';
-import { CATEGORY_TAG_PARAMS, priceOriginBadgeType } from '../../shared/table-badges';
+import { CATEGORY_TAG_COLOR, priceOriginTagColor } from '../../shared/table-badges';
 
 const EUR_FORMATTER = new Intl.NumberFormat('fr-FR', {
   style: 'currency',
@@ -84,7 +84,7 @@ const PRICE_COLUMNS: ColDef<PriceRow>[] = [
     minWidth: 130,
     flex: 1,
     cellRenderer: TagCellComponent,
-    cellRendererParams: { badgeType: 'outline' },
+    cellRendererParams: { color: 'primary' },
   },
   {
     field: 'varietyLabel',
@@ -92,14 +92,14 @@ const PRICE_COLUMNS: ColDef<PriceRow>[] = [
     minWidth: 170,
     flex: 1,
     cellRenderer: TagCellComponent,
-    cellRendererParams: { badgeType: 'secondary' },
+    cellRendererParams: { color: 'info' },
   },
   {
     field: 'categoryLabel',
     headerName: 'Catégorie',
     minWidth: 110,
     cellRenderer: TagCellComponent,
-    cellRendererParams: CATEGORY_TAG_PARAMS,
+    cellRendererParams: { color: CATEGORY_TAG_COLOR },
   },
   {
     field: 'conventionalPricePerKg',
@@ -114,8 +114,8 @@ const PRICE_COLUMNS: ColDef<PriceRow>[] = [
     minWidth: 160,
     cellRenderer: TagCellComponent,
     cellRendererParams: {
-      badgeType: (params: ICellRendererParams<PriceRow>) =>
-        priceOriginBadgeType(params.data?.conventionalOrigin),
+      color: (params: ICellRendererParams<PriceRow>) =>
+        priceOriginTagColor(params.data?.conventionalOrigin),
     },
   },
   {
@@ -131,8 +131,8 @@ const PRICE_COLUMNS: ColDef<PriceRow>[] = [
     minWidth: 160,
     cellRenderer: TagCellComponent,
     cellRendererParams: {
-      badgeType: (params: ICellRendererParams<PriceRow>) =>
-        priceOriginBadgeType(params.data?.bioOrigin),
+      color: (params: ICellRendererParams<PriceRow>) =>
+        priceOriginTagColor(params.data?.bioOrigin),
     },
   },
   {
