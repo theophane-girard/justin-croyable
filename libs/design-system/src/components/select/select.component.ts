@@ -38,6 +38,7 @@ import type { ClassValue } from 'clsx';
 import { filter } from 'rxjs';
 
 import { BadgeComponent } from '../badge';
+import { SheetHandleComponent } from '../sheet-handle';
 import { SelectItemComponent } from './select-item.component';
 import {
   selectContentVariants,
@@ -61,7 +62,7 @@ const COMPACT_MODE_WIDTH_THRESHOLD = 100;
 
 @Component({
   selector: 'app-select, [app-select]',
-  imports: [OverlayModule, BadgeComponent, NgIcon, IdDirective],
+  imports: [OverlayModule, BadgeComponent, NgIcon, IdDirective, SheetHandleComponent],
   template: `
     @if (label()) {
       <label [id]="labelId()" [attr.for]="triggerId()" [class]="labelClasses()">
@@ -131,6 +132,7 @@ const COMPACT_MODE_WIDTH_THRESHOLD = 100;
     <ng-template #dropdownTemplate>
       <div
         id="dropdown"
+        #dropdownEl
         [class]="contentClasses()"
         role="listbox"
         [attr.data-state]="'open'"
@@ -139,11 +141,14 @@ const COMPACT_MODE_WIDTH_THRESHOLD = 100;
         "
         tabindex="-1"
       >
-        @if (isMobile() && sheetHeader()) {
-          <div
-            class="bg-popover text-foreground sticky top-0 z-10 border-b px-3 py-3 text-sm font-medium"
-          >
-            {{ sheetHeader() }}
+        @if (isMobile()) {
+          <div class="bg-popover sticky top-0 z-10">
+            <app-sheet-handle [sheetElement]="dropdownEl" (dismissed)="dismissFromHandle()" />
+            @if (sheetHeader()) {
+              <div class="text-foreground border-b px-3 py-3 text-sm font-medium">
+                {{ sheetHeader() }}
+              </div>
+            }
           </div>
         }
         <div class="p-1">
@@ -504,6 +509,17 @@ export class SelectComponent implements FormValueControl<SelectValue>, OnDestroy
     if (shouldTouch) {
       this.touch.emit();
     }
+    this.updateFocusWhenNormalMode();
+  }
+
+  protected dismissFromHandle(): void {
+    this.isFocus.set(false);
+    if (this.overlayRef?.hasAttached()) {
+      this.overlayRef.detach();
+    }
+    this.isOpen.set(false);
+    this.focusedIndex.set(-1);
+    this.touch.emit();
     this.updateFocusWhenNormalMode();
   }
 

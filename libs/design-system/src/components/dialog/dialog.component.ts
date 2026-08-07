@@ -28,7 +28,9 @@ import { lucideX } from '@ng-icons/lucide';
 import type { ClassValue } from 'clsx';
 
 import { IdDirective } from '../../core';
+import { ViewportService } from '../../core/services/viewport.service';
 import { mergeClasses, noopFn } from '../../utils/merge-classes';
+import { SheetHandleComponent } from '../sheet-handle';
 
 import type { DialogRef } from './dialog-ref';
 import {
@@ -73,9 +75,21 @@ export class DialogOptions<T, U> {
 
 @Component({
   selector: 'app-dialog',
-  imports: [A11yModule, OverlayModule, PortalModule, ButtonComponent, IdDirective, NgIcon],
+  imports: [
+    A11yModule,
+    OverlayModule,
+    PortalModule,
+    ButtonComponent,
+    IdDirective,
+    NgIcon,
+    SheetHandleComponent,
+  ],
   template: `
     <ng-container appId="app-dialog" #idRef="appId">
+      @if (isMobile()) {
+        <app-sheet-handle class="-mt-2" [sheetElement]="rootElement" (dismissed)="onDismiss()" />
+      }
+
       @if (config.closable || config.closable === undefined) {
         <button
           type="button"
@@ -226,6 +240,10 @@ export class DialogComponent<T, U> extends BasePortalOutlet {
   private readonly host = inject(ElementRef<HTMLElement>);
   protected readonly config = inject(DialogOptions<T, U>);
   private readonly idRef = viewChild.required<IdDirective>('idRef');
+  private readonly viewport = inject(ViewportService);
+
+  protected readonly isMobile = this.viewport.isMobile;
+  protected readonly rootElement = this.host.nativeElement;
 
   protected readonly classes = computed(() => mergeClasses(dialogVariants(), this.config.customClasses));
   protected readonly headerClasses = computed(() => dialogHeaderVariants());
@@ -255,6 +273,7 @@ export class DialogComponent<T, U> extends BasePortalOutlet {
 
   okTriggered = output<void>();
   cancelTriggered = output<void>();
+  dismissTriggered = output<void>();
 
   getNativeElement(): HTMLElement {
     return this.host.nativeElement;
@@ -280,5 +299,9 @@ export class DialogComponent<T, U> extends BasePortalOutlet {
 
   onCloseClick() {
     this.cancelTriggered.emit();
+  }
+
+  onDismiss() {
+    this.dismissTriggered.emit();
   }
 }

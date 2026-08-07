@@ -130,7 +130,7 @@ const meta: Meta<DialogArgs> = {
     docs: {
       description: {
         component:
-          "Boîte de dialogue modale ouverte par service : `DialogService.create()` reçoit les options — titre, description, contenu, libellés des actions — et renvoie un `DialogRef` pour la fermer et récupérer un résultat. Le contenu accepte une chaîne, un `TemplateRef` ou un composant, auquel les données passent par `injectDialogData()`. Pour un panneau latéral plutôt qu'une modale centrée, voir `app-sheet`.",
+          "Boîte de dialogue modale ouverte par service : `DialogService.create()` reçoit les options — titre, description, contenu, libellés des actions — et renvoie un `DialogRef` pour la fermer et récupérer un résultat. Le contenu accepte une chaîne, un `TemplateRef` ou un composant, auquel les données passent par `injectDialogData()`. Sur mobile (< sm), la modale s'affiche en bottom sheet ancré en bas, coiffé d'une poignée : la glisser vers le haut agrandit la hauteur, vers le bas ferme la boîte. Pour un panneau latéral plutôt qu'une modale centrée, voir `app-sheet`.",
       },
     },
   },

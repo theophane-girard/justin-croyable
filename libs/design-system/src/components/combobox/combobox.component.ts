@@ -40,6 +40,7 @@ import {
 } from '../command';
 import { EmptyComponent } from '../empty';
 import { PopoverComponent, PopoverDirective } from '../popover';
+import { SheetHandleComponent } from '../sheet-handle';
 import { IdDirective } from '../../core';
 import {
   MOBILE_SHEET_CONTENT_CLASSES,
@@ -82,6 +83,7 @@ export interface ComboboxGroup {
     PopoverComponent,
     EmptyComponent,
     IdDirective,
+    SheetHandleComponent,
   ],
   template: `
     @if (label()) {
@@ -137,20 +139,26 @@ export interface ComboboxGroup {
     }
 
     <ng-template #popoverContent>
-      <app-popover [class]="popoverClasses()">
-        @if (isMobile() && sheetHeader()) {
-          <div
-            class="bg-popover text-foreground sticky top-0 z-10 border-b px-3 py-3 text-sm font-medium"
-          >
-            {{ sheetHeader() }}
+      <app-popover #popoverCmp [class]="popoverClasses()">
+        @if (isMobile()) {
+          <div class="bg-popover sticky top-0 z-10">
+            <app-sheet-handle
+              [sheetElement]="popoverCmp.elementRef.nativeElement"
+              (dismissed)="dismissFromHandle()"
+            />
+            @if (sheetHeader()) {
+              <div class="text-foreground border-b px-3 py-3 text-sm font-medium">
+                {{ sheetHeader() }}
+              </div>
+            }
           </div>
         }
-        <app-command class="min-h-auto" (commandSelected)="handleSelect($event)" #commandRef>
+        <app-command [class]="commandClasses()" (commandSelected)="handleSelect($event)" #commandRef>
           @if (searchable()) {
             <app-command-input [placeholder]="searchPlaceholder()" #commandInputRef />
           }
 
-          <app-command-list id="combobox-listbox" role="listbox">
+          <app-command-list id="combobox-listbox" role="listbox" [class]="commandListClasses()">
             @if (emptyText()) {
               <app-command-empty>
                 <app-empty [description]="emptyText()" />
@@ -305,6 +313,16 @@ export class ComboboxComponent implements ControlValueAccessor {
 
   protected readonly buttonClasses = computed(() => 'w-full justify-between');
 
+  protected readonly isMobileSheet = computed(() => this.isMobile() && this.searchable());
+
+  protected readonly commandClasses = computed(() =>
+    this.isMobileSheet() ? 'min-h-[50vh]' : 'min-h-auto',
+  );
+
+  protected readonly commandListClasses = computed(() =>
+    this.isMobileSheet() ? 'max-h-[calc(50vh-3rem)]' : '',
+  );
+
   protected readonly popoverClasses = computed(() => {
     if (this.isMobile()) {
       return `${MOBILE_SHEET_CONTENT_CLASSES} ${MOBILE_SHEET_ENTER_CLASSES} p-0`;
@@ -400,6 +418,11 @@ export class ComboboxComponent implements ControlValueAccessor {
     this.popoverDirective().hide();
 
     // Return focus to the combobox button after selection
+    this.buttonRef().nativeElement.focus();
+  }
+
+  protected dismissFromHandle(): void {
+    this.popoverDirective().hide(false);
     this.buttonRef().nativeElement.focus();
   }
 
