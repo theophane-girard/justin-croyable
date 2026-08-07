@@ -221,6 +221,8 @@ export type HarvestEntry = {
   readonly varietyId: VarietyId;
   readonly weightKg: number;
   readonly harvestedOn: string;
+  readonly conventionalPricePerKg?: number;
+  readonly bioPricePerKg?: number;
 };
 
 export type HarvestDraft = {

@@ -189,6 +189,8 @@ export class HarvestStore {
       varietyId: draft.varietyId,
       weightKg: draft.weightKg,
       harvestedOn: this.#toIsoDate(draft.harvestedOn),
+      conventionalPricePerKg: resolveConventionalPrice(draft.varietyId, this.#livePrices()),
+      bioPricePerKg: resolveBioPrice(draft.varietyId, this.#liveBioPrices()),
     };
     this.#entries.update(entries => [...entries, entry]);
   }
@@ -209,8 +211,9 @@ export class HarvestStore {
   ): HarvestRow {
     const variety = VARIETY_BY_ID[entry.varietyId];
     const crop = CROP_BY_ID[variety.cropId];
-    const conventionalPricePerKg = resolveConventionalPrice(entry.varietyId, live);
-    const bioPricePerKg = resolveBioPrice(entry.varietyId, liveBio);
+    const conventionalPricePerKg =
+      entry.conventionalPricePerKg ?? resolveConventionalPrice(entry.varietyId, live);
+    const bioPricePerKg = entry.bioPricePerKg ?? resolveBioPrice(entry.varietyId, liveBio);
     const pricePerKg = mode === PRICE_MODE.bio ? bioPricePerKg : conventionalPricePerKg;
     const harvestedOn = new Date(entry.harvestedOn);
     return {
@@ -293,8 +296,14 @@ export class HarvestStore {
       typeof candidate['varietyId'] === 'string' &&
       isVarietyId(candidate['varietyId']) &&
       typeof candidate['weightKg'] === 'number' &&
-      typeof candidate['harvestedOn'] === 'string'
+      typeof candidate['harvestedOn'] === 'string' &&
+      this.#isOptionalNumber(candidate['conventionalPricePerKg']) &&
+      this.#isOptionalNumber(candidate['bioPricePerKg'])
     );
+  }
+
+  #isOptionalNumber(value: unknown): boolean {
+    return value === undefined || typeof value === 'number';
   }
 
   #persist(entries: readonly HarvestEntry[]): void {
