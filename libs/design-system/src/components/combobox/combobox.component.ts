@@ -40,6 +40,7 @@ import {
 } from '../command';
 import { EmptyComponent } from '../empty';
 import { PopoverComponent, PopoverDirective } from '../popover';
+import { SheetHandleComponent } from '../sheet-handle';
 import { IdDirective } from '../../core';
 import {
   MOBILE_SHEET_CONTENT_CLASSES,
@@ -82,6 +83,7 @@ export interface ComboboxGroup {
     PopoverComponent,
     EmptyComponent,
     IdDirective,
+    SheetHandleComponent,
   ],
   template: `
     @if (label()) {
@@ -137,12 +139,18 @@ export interface ComboboxGroup {
     }
 
     <ng-template #popoverContent>
-      <app-popover [class]="popoverClasses()">
-        @if (isMobile() && sheetHeader()) {
-          <div
-            class="bg-popover text-foreground sticky top-0 z-10 border-b px-3 py-3 text-sm font-medium"
-          >
-            {{ sheetHeader() }}
+      <app-popover #popoverCmp [class]="popoverClasses()">
+        @if (isMobile()) {
+          <div class="bg-popover sticky top-0 z-10">
+            <app-sheet-handle
+              [sheetElement]="popoverCmp.elementRef.nativeElement"
+              (dismissed)="dismissFromHandle()"
+            />
+            @if (sheetHeader()) {
+              <div class="text-foreground border-b px-3 py-3 text-sm font-medium">
+                {{ sheetHeader() }}
+              </div>
+            }
           </div>
         }
         <app-command class="min-h-auto" (commandSelected)="handleSelect($event)" #commandRef>
@@ -400,6 +408,11 @@ export class ComboboxComponent implements ControlValueAccessor {
     this.popoverDirective().hide();
 
     // Return focus to the combobox button after selection
+    this.buttonRef().nativeElement.focus();
+  }
+
+  protected dismissFromHandle(): void {
+    this.popoverDirective().hide(false);
     this.buttonRef().nativeElement.focus();
   }
 

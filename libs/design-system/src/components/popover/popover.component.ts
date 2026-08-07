@@ -176,12 +176,12 @@ export class PopoverDirective implements OnInit, OnDestroy {
     return this.mobileSheet() && this.viewport.isMobile();
   }
 
-  hide() {
+  hide(animate = true) {
     if (!this.isVisible()) {
       return;
     }
 
-    if (this.overlayIsSheet && this.overlayRef?.hasAttached()) {
+    if (animate && this.overlayIsSheet && this.overlayRef?.hasAttached()) {
       const overlayRef = this.overlayRef;
       const content = overlayRef.overlayElement.firstElementChild as HTMLElement | null;
       if (content) {
@@ -417,6 +417,8 @@ export class PopoverDirective implements OnInit, OnDestroy {
   },
 })
 export class PopoverComponent {
+  readonly elementRef = inject(ElementRef<HTMLElement>);
+
   readonly class = input<string>('');
 
   protected readonly classes = computed(() => mergeClasses(popoverVariants(), this.class()));

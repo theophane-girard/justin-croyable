@@ -23,7 +23,7 @@ const meta: Meta<SelectArgs> = {
     docs: {
       description: {
         component:
-          "Liste déroulante bâtie sur le CDK Overlay, pilotable au clavier (flèches, Entrée, Échap, Début/Fin). En mode `multiple`, les valeurs choisies s'affichent en badges et `maxLabelCount` limite le nombre de libellés visibles avant compactage. `prefixIcon` affiche une icône (ng-icon) en préfixe du déclencheur. Sur mobile (< sm), la liste s'ouvre en bottom sheet ancré en bas — avec en-tête rappelant le champ et animations d'ouverture/fermeture — au lieu du popover ancré.",
+          "Liste déroulante bâtie sur le CDK Overlay, pilotable au clavier (flèches, Entrée, Échap, Début/Fin). En mode `multiple`, les valeurs choisies s'affichent en badges et `maxLabelCount` limite le nombre de libellés visibles avant compactage. `prefixIcon` affiche une icône (ng-icon) en préfixe du déclencheur. Sur mobile (< sm), la liste s'ouvre en bottom sheet ancré en bas — avec en-tête rappelant le champ, une poignée (glisser vers le haut pour agrandir, vers le bas pour fermer) et des animations d'ouverture/fermeture — au lieu du popover ancré.",
       },
     },
   },

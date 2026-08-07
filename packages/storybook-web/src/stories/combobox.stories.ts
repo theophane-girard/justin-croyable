@@ -39,7 +39,7 @@ const meta: Meta<ComboboxArgs> = {
     docs: {
       description: {
         component:
-          "Composition de Popover + Command : un bouton déclencheur ouvre une liste filtrable. Les options se passent à plat via `options`, ou regroupées via `groups` (les deux entrées sont exclusives dans la pratique). `prefixIcon` affiche une icône (ng-icon) en préfixe du déclencheur. Sur mobile (< sm), la liste s'ouvre en bottom sheet ancré en bas — avec en-tête rappelant le champ et animations d'ouverture/fermeture — au lieu du popover ancré.",
+          "Composition de Popover + Command : un bouton déclencheur ouvre une liste filtrable. Les options se passent à plat via `options`, ou regroupées via `groups` (les deux entrées sont exclusives dans la pratique). `prefixIcon` affiche une icône (ng-icon) en préfixe du déclencheur. Sur mobile (< sm), la liste s'ouvre en bottom sheet ancré en bas — avec en-tête rappelant le champ, une poignée (glisser vers le haut pour agrandir, vers le bas pour fermer) et des animations d'ouverture/fermeture — au lieu du popover ancré.",
       },
     },
   },

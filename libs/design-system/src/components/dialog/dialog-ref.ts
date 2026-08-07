@@ -77,6 +77,10 @@ export class DialogRef<T = unknown, R = unknown, U = unknown> {
       .pipe(takeUntil(detached$))
       .subscribe(() => this.trigger(TRIGGER_ACTION.OK));
 
+    outputToObservable(this.containerInstance.dismissTriggered)
+      .pipe(takeUntil(detached$))
+      .subscribe(() => this.dismissImmediately());
+
     if (config.maskClosable ?? true) {
       this.overlayRef
         .outsidePointerEvents()
@@ -115,6 +119,13 @@ export class DialogRef<T = unknown, R = unknown, U = unknown> {
     }
 
     this.disposeTimer = setTimeout(() => this.dispose(), this.animationDuration);
+  }
+
+  private dismissImmediately() {
+    if (this._isClosing()) return;
+
+    this._isClosing.set(true);
+    this.dispose();
   }
 
   private dispose() {

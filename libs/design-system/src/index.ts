@@ -53,6 +53,7 @@ export * from './components/select';
 export * from './components/segment';
 export * from './components/separator';
 export * from './components/sheet';
+export * from './components/sheet-handle';
 export * from './components/skeleton';
 export * from './components/slider';
 export * from './components/sonner';
