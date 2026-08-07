@@ -14,7 +14,7 @@ import {
 } from '@angular/core';
 
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { NavigationEnd, Router } from '@angular/router';
+import { NavigationStart, Router } from '@angular/router';
 
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideChevronLeft, lucideChevronRight } from '@ng-icons/lucide';
@@ -90,7 +90,7 @@ export class SidebarComponent {
 
     this.router.events
       .pipe(
-        filter((event) => event instanceof NavigationEnd),
+        filter((event) => event instanceof NavigationStart),
         takeUntilDestroyed(),
       )
       .subscribe(() => this.sidebarService.closeMobile());
