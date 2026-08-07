@@ -23,6 +23,7 @@ import { NgIcon } from '@ng-icons/core';
 
 import { HarvestStore } from './core/harvest-store';
 import { PRICE_MODE } from './core/potager.model';
+import { AuthMenuComponent } from './features/auth/auth-menu.component';
 import { APP_PATHS } from './app.routes';
 
 type NavItem = { readonly path: string; readonly link: string; readonly label: string; readonly icon: string };
@@ -47,6 +48,7 @@ const THEME_VALUE = { light: 'light', dark: 'dark' } as const;
     SegmentComponent,
     BadgeComponent,
     SkeletonComponent,
+    AuthMenuComponent,
   ],
   template: `
     <div class="bg-background text-foreground h-dvh overflow-hidden">
@@ -118,6 +120,7 @@ const THEME_VALUE = { light: 'light', dark: 'dark' } as const;
                   Prix de référence
                 </app-badge>
               }
+              <app-auth-menu />
             </div>
           </app-header>
 

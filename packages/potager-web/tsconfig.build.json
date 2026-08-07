@@ -23,6 +23,9 @@
   "exclude": ["dist", "out-tsc"],
   "references": [
     {
+      "path": "../../libs/api-contract/tsconfig.lib.json"
+    },
+    {
       "path": "../../libs/design-system/tsconfig.lib.json"
     }
   ]
