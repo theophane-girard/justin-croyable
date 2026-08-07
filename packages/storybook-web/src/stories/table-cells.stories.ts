@@ -43,7 +43,7 @@ type LigneProjet = {
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class StatutCellRenderer implements ICellRendererAngularComp {
+class StatutCellRenderer implements ICellRendererAngularComp {
   protected readonly statut = signal<StatutCellule | null>(null);
 
   agInit(params: ICellRendererParams<LigneProjet, StatutCellule>): void {
@@ -62,7 +62,7 @@ export class StatutCellRenderer implements ICellRendererAngularComp {
   template: `<app-cell-tag-list [items]="etiquettes()" [max]="2" />`,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class EtiquettesCellRenderer implements ICellRendererAngularComp {
+class EtiquettesCellRenderer implements ICellRendererAngularComp {
   protected readonly etiquettes = signal<readonly CellTagListItem[]>([]);
 
   agInit(params: ICellRendererParams<LigneProjet, readonly CellTagListItem[]>): void {
@@ -85,7 +85,7 @@ export class EtiquettesCellRenderer implements ICellRendererAngularComp {
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AvancementCellRenderer implements ICellRendererAngularComp {
+class AvancementCellRenderer implements ICellRendererAngularComp {
   protected readonly avancement = signal<AvancementCellule | null>(null);
 
   agInit(params: ICellRendererParams<LigneProjet, AvancementCellule>): void {
