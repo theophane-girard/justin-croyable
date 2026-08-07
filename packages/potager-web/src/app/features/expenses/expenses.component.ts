@@ -35,6 +35,7 @@ import {
 } from '../../core/potager.model';
 import { ExpenseStore } from '../../core/expense-store';
 import { GardenStore } from '../../core/garden-store';
+import { TagCellComponent } from '../../shared/tag-cell.component';
 import { EXPENSE_ADD_LINK } from '../../app.routes';
 
 type ExpenseTableRow = ExpenseRow & {
@@ -63,7 +64,13 @@ function formatEurCell(params: ValueFormatterParams<ExpenseTableRow, number>): s
 const EXPENSE_COLUMNS: ColDef<ExpenseTableRow>[] = [
   { field: 'spentOn', headerName: 'Date', minWidth: 140, valueFormatter: formatDateCell },
   { field: 'label', headerName: 'Libellé', minWidth: 170, flex: 1 },
-  { field: 'categoryLabel', headerName: 'Catégorie', minWidth: 150 },
+  {
+    field: 'categoryLabel',
+    headerName: 'Catégorie',
+    minWidth: 150,
+    cellRenderer: TagCellComponent,
+    cellRendererParams: { badgeType: 'secondary' },
+  },
   { field: 'allocationLabel', headerName: 'Affectation', minWidth: 170 },
   { field: 'seasonLabel', headerName: 'Saison', minWidth: 100 },
   { field: 'amountEur', headerName: 'Montant', type: 'numericColumn', valueFormatter: formatEurCell },

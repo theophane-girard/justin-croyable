@@ -19,7 +19,12 @@ import {
   TableComponent,
 } from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
-import type { ColDef, GridOptions, ValueFormatterParams } from 'ag-grid-community';
+import type {
+  ColDef,
+  GridOptions,
+  ICellRendererParams,
+  ValueFormatterParams,
+} from 'ag-grid-community';
 
 import {
   CATEGORY_META,
@@ -46,6 +51,8 @@ import {
   varietyFilterOptions,
 } from '../../core/catalog-filter';
 import { GovPriceService } from '../../core/gov-price.service';
+import { TagCellComponent } from '../../shared/tag-cell.component';
+import { categoryBadgeType, priceOriginBadgeType } from '../../shared/table-badges';
 
 const EUR_FORMATTER = new Intl.NumberFormat('fr-FR', {
   style: 'currency',
@@ -72,9 +79,29 @@ function formatDateCell(params: ValueFormatterParams<PriceRow, Date | null>): st
 }
 
 const PRICE_COLUMNS: ColDef<PriceRow>[] = [
-  { field: 'cropLabel', headerName: 'Culture', minWidth: 130, flex: 1 },
-  { field: 'varietyLabel', headerName: 'Variété', minWidth: 170, flex: 1 },
-  { field: 'categoryLabel', headerName: 'Catégorie', minWidth: 110 },
+  {
+    field: 'cropLabel',
+    headerName: 'Culture',
+    minWidth: 130,
+    flex: 1,
+    cellRenderer: TagCellComponent,
+    cellRendererParams: { badgeType: 'outline' },
+  },
+  {
+    field: 'varietyLabel',
+    headerName: 'Variété',
+    minWidth: 170,
+    flex: 1,
+    cellRenderer: TagCellComponent,
+    cellRendererParams: { badgeType: 'secondary' },
+  },
+  {
+    field: 'categoryLabel',
+    headerName: 'Catégorie',
+    minWidth: 110,
+    cellRenderer: TagCellComponent,
+    cellRendererParams: { badgeType: categoryBadgeType },
+  },
   {
     field: 'conventionalPricePerKg',
     headerName: 'Prix conv. (€/kg)',
@@ -82,7 +109,16 @@ const PRICE_COLUMNS: ColDef<PriceRow>[] = [
     minWidth: 140,
     valueFormatter: formatEurCell,
   },
-  { field: 'conventionalSourceLabel', headerName: 'Source conv.', minWidth: 160 },
+  {
+    field: 'conventionalSourceLabel',
+    headerName: 'Source conv.',
+    minWidth: 160,
+    cellRenderer: TagCellComponent,
+    cellRendererParams: {
+      badgeType: (params: ICellRendererParams<PriceRow>) =>
+        priceOriginBadgeType(params.data?.conventionalOrigin),
+    },
+  },
   {
     field: 'bioPricePerKg',
     headerName: 'Prix bio (€/kg)',
@@ -90,7 +126,16 @@ const PRICE_COLUMNS: ColDef<PriceRow>[] = [
     minWidth: 130,
     valueFormatter: formatEurCell,
   },
-  { field: 'bioSourceLabel', headerName: 'Source bio', minWidth: 160 },
+  {
+    field: 'bioSourceLabel',
+    headerName: 'Source bio',
+    minWidth: 160,
+    cellRenderer: TagCellComponent,
+    cellRendererParams: {
+      badgeType: (params: ICellRendererParams<PriceRow>) =>
+        priceOriginBadgeType(params.data?.bioOrigin),
+    },
+  },
   {
     field: 'bioPremiumPct',
     headerName: 'Écart bio',

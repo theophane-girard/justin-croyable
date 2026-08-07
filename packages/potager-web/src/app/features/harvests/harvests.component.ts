@@ -33,6 +33,8 @@ import {
   varietyFilterOptions,
 } from '../../core/catalog-filter';
 import { HarvestStore } from '../../core/harvest-store';
+import { TagCellComponent } from '../../shared/tag-cell.component';
+import { categoryBadgeType } from '../../shared/table-badges';
 import { HARVEST_ADD_LINK } from '../../app.routes';
 
 const DATE_FORMATTER = new Intl.DateTimeFormat('fr-FR', {
@@ -57,9 +59,29 @@ function formatEurCell(params: ValueFormatterParams<HarvestRow, number>): string
 
 const HARVEST_COLUMNS: ColDef<HarvestRow>[] = [
   { field: 'harvestedOn', headerName: 'Date', minWidth: 150, valueFormatter: formatDateCell },
-  { field: 'cropLabel', headerName: 'Culture', minWidth: 140, flex: 1 },
-  { field: 'varietyLabel', headerName: 'Variété', minWidth: 160, flex: 1 },
-  { field: 'categoryLabel', headerName: 'Catégorie', minWidth: 120 },
+  {
+    field: 'cropLabel',
+    headerName: 'Culture',
+    minWidth: 140,
+    flex: 1,
+    cellRenderer: TagCellComponent,
+    cellRendererParams: { badgeType: 'outline' },
+  },
+  {
+    field: 'varietyLabel',
+    headerName: 'Variété',
+    minWidth: 160,
+    flex: 1,
+    cellRenderer: TagCellComponent,
+    cellRendererParams: { badgeType: 'secondary' },
+  },
+  {
+    field: 'categoryLabel',
+    headerName: 'Catégorie',
+    minWidth: 120,
+    cellRenderer: TagCellComponent,
+    cellRendererParams: { badgeType: categoryBadgeType },
+  },
   { field: 'weightKg', headerName: 'Poids (kg)', type: 'numericColumn', valueFormatter: formatKgCell },
   {
     field: 'conventionalPricePerKg',

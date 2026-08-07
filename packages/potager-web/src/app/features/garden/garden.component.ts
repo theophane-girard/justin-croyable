@@ -38,6 +38,8 @@ import { buildYearOptions, parseYearValue, yearFilterToValue } from '../../core/
 import { GardenStore } from '../../core/garden-store';
 import { HarvestStore } from '../../core/harvest-store';
 import { SeasonStore } from '../../core/season-store';
+import { TagCellComponent } from '../../shared/tag-cell.component';
+import { categoryBadgeType } from '../../shared/table-badges';
 import { GARDEN_ADD_LINK } from '../../app.routes';
 
 const NUMBER_FORMATTER = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
@@ -65,8 +67,21 @@ function formatYieldCell(params: ValueFormatterParams<PlantRow, number>): string
 }
 
 const PLANT_COLUMNS: ColDef<PlantRow>[] = [
-  { field: 'cropLabel', headerName: 'Culture', minWidth: 150, flex: 1 },
-  { field: 'categoryLabel', headerName: 'Catégorie', minWidth: 110 },
+  {
+    field: 'cropLabel',
+    headerName: 'Culture',
+    minWidth: 150,
+    flex: 1,
+    cellRenderer: TagCellComponent,
+    cellRendererParams: { badgeType: 'outline' },
+  },
+  {
+    field: 'categoryLabel',
+    headerName: 'Catégorie',
+    minWidth: 110,
+    cellRenderer: TagCellComponent,
+    cellRendererParams: { badgeType: categoryBadgeType },
+  },
   { field: 'quantity', headerName: 'Plants', type: 'numericColumn', valueFormatter: formatCountCell },
   { field: 'harvestedKg', headerName: 'Récolté (kg)', type: 'numericColumn', valueFormatter: formatKgCell },
   {
