@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  signal,
+  TemplateRef,
+  viewChild,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import {
@@ -7,9 +15,11 @@ import {
   ChartComponent,
   CountUpDirective,
   EmptyComponent,
+  FabButtonComponent,
   SegmentComponent,
   type SegmentItem,
   SelectImports,
+  SheetService,
 } from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
 import type { EChartsCoreOption } from 'echarts/core';
@@ -64,6 +74,7 @@ const SAVINGS_GROUP_TITLE: Readonly<Record<SavingsGroup, string>> = {
     CountUpDirective,
     ButtonComponent,
     EmptyComponent,
+    FabButtonComponent,
     SegmentComponent,
     ...SelectImports,
   ],
@@ -76,7 +87,7 @@ const SAVINGS_GROUP_TITLE: Readonly<Record<SavingsGroup, string>> = {
             Économies nettes : valeur récoltée aux prix moyens français, dépenses déduites.
           </p>
         </div>
-        <div class="flex w-full flex-wrap items-center gap-2 sm:ml-auto sm:w-auto sm:flex-nowrap">
+        <div class="hidden items-center gap-2 sm:ml-auto sm:flex sm:w-auto sm:flex-nowrap">
           @if (showYearSelector()) {
             <app-select
               class="w-36"
@@ -217,6 +228,54 @@ const SAVINGS_GROUP_TITLE: Readonly<Record<SavingsGroup, string>> = {
       </div>
     }
     </div>
+
+    @if (store.entryCount() > 0) {
+      <button
+        appFabButton
+        variant="secondary"
+        position="bottom-right"
+        class="sm:hidden"
+        aria-label="Filtrer le tableau de bord"
+        (click)="openFilter()"
+      >
+        <ng-icon name="phosphorFunnel" />
+      </button>
+    }
+
+    <ng-template #filterSheet>
+      <div class="flex flex-col gap-4 p-4">
+        @if (showYearSelector()) {
+          <app-select
+            label="Année"
+            prefixIcon="phosphorCalendarBlank"
+            [value]="yearValue()"
+            (valueChange)="onYearChange($event)"
+          >
+            @for (option of yearOptions(); track option.value) {
+              <app-select-item [value]="option.value">{{ option.label }}</app-select-item>
+            }
+          </app-select>
+        }
+        <div class="flex flex-col gap-2">
+          <label class="text-sm font-medium">Saison</label>
+          <app-segment
+            variant="accent"
+            [items]="seasonItems"
+            [value]="season.season()"
+            (valueChange)="onSeasonChange($event)"
+          />
+        </div>
+        <div class="flex flex-col gap-2">
+          <label class="text-sm font-medium">Prix</label>
+          <app-segment
+            variant="accent"
+            [items]="priceModeItems"
+            [value]="store.priceMode()"
+            (valueChange)="onPriceModeChange($event)"
+          />
+        </div>
+      </div>
+    </ng-template>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -224,6 +283,9 @@ export class DashboardComponent {
   protected readonly store = inject(HarvestStore);
   protected readonly expenses = inject(ExpenseStore);
   protected readonly season = inject(SeasonStore);
+  readonly #sheet = inject(SheetService);
+
+  private readonly filterSheetTemplate = viewChild.required<TemplateRef<unknown>>('filterSheet');
 
   protected readonly harvestsLink = `/${APP_PATHS.harvests}`;
   protected readonly priceModeItems = PRICE_MODE_ITEMS;
@@ -243,6 +305,16 @@ export class DashboardComponent {
   );
 
   protected readonly netSavingsPositive = computed(() => this.netSavingsEur() >= 0);
+
+  protected openFilter(): void {
+    this.#sheet.create({
+      title: 'Filtrer',
+      side: 'bottom',
+      okText: 'Fermer',
+      cancelText: null,
+      content: this.filterSheetTemplate(),
+    });
+  }
 
   protected onPriceModeChange(value: string): void {
     const mode: PriceMode = value === PRICE_MODE.bio ? PRICE_MODE.bio : PRICE_MODE.conventional;

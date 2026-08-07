@@ -1,13 +1,4 @@
-import { isPlatformBrowser } from '@angular/common';
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  effect,
-  inject,
-  PLATFORM_ID,
-  signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import {
   NavigationCancel,
@@ -160,7 +151,6 @@ export class AppComponent {
   protected readonly theme = inject(ThemeService);
   readonly #store = inject(HarvestStore);
   readonly #router = inject(Router);
-  readonly #platformId = inject(PLATFORM_ID);
 
   protected readonly sidebarCollapsed = signal(false);
 
@@ -177,18 +167,6 @@ export class AppComponent {
     ),
     { initialValue: false },
   );
-
-  constructor() {
-    effect(() => {
-      if (this.navigating() && this.#isMobileViewport()) {
-        this.sidebarCollapsed.set(true);
-      }
-    });
-  }
-
-  #isMobileViewport(): boolean {
-    return isPlatformBrowser(this.#platformId) && window.innerWidth < 640;
-  }
 
   protected readonly priceSourceLive = computed(() => this.#store.priceSource() === 'live');
   protected readonly priceModeBio = computed(() => this.#store.priceMode() === PRICE_MODE.bio);
