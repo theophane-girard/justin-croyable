@@ -39,7 +39,7 @@ import { GardenStore } from '../../core/garden-store';
 import { HarvestStore } from '../../core/harvest-store';
 import { SeasonStore } from '../../core/season-store';
 import { TagCellComponent } from '../../shared/tag-cell.component';
-import { categoryBadgeType } from '../../shared/table-badges';
+import { CATEGORY_TAG_PARAMS } from '../../shared/table-badges';
 import { GARDEN_ADD_LINK } from '../../app.routes';
 
 const NUMBER_FORMATTER = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
@@ -80,7 +80,7 @@ const PLANT_COLUMNS: ColDef<PlantRow>[] = [
     headerName: 'Catégorie',
     minWidth: 110,
     cellRenderer: TagCellComponent,
-    cellRendererParams: { badgeType: categoryBadgeType },
+    cellRendererParams: CATEGORY_TAG_PARAMS,
   },
   { field: 'quantity', headerName: 'Plants', type: 'numericColumn', valueFormatter: formatCountCell },
   { field: 'harvestedKg', headerName: 'Récolté (kg)', type: 'numericColumn', valueFormatter: formatKgCell },

@@ -52,7 +52,7 @@ import {
 } from '../../core/catalog-filter';
 import { GovPriceService } from '../../core/gov-price.service';
 import { TagCellComponent } from '../../shared/tag-cell.component';
-import { categoryBadgeType, priceOriginBadgeType } from '../../shared/table-badges';
+import { CATEGORY_TAG_PARAMS, priceOriginBadgeType } from '../../shared/table-badges';
 
 const EUR_FORMATTER = new Intl.NumberFormat('fr-FR', {
   style: 'currency',
@@ -100,7 +100,7 @@ const PRICE_COLUMNS: ColDef<PriceRow>[] = [
     headerName: 'Catégorie',
     minWidth: 110,
     cellRenderer: TagCellComponent,
-    cellRendererParams: { badgeType: categoryBadgeType },
+    cellRendererParams: CATEGORY_TAG_PARAMS,
   },
   {
     field: 'conventionalPricePerKg',

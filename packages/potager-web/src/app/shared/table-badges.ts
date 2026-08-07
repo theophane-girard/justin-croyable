@@ -1,11 +1,11 @@
 import { type BadgeTypeVariants } from '@justin-croyable/design-system';
-import type { ICellRendererParams } from 'ag-grid-community';
 
-import { CATEGORY_META, PRICE_ORIGIN, type PriceOrigin } from '../core/potager.model';
+import { PRICE_ORIGIN, type PriceOrigin } from '../core/potager.model';
 
-export function categoryBadgeType(params: ICellRendererParams): BadgeTypeVariants {
-  return params.value === CATEGORY_META.fruit.label ? 'default' : 'secondary';
-}
+export const CATEGORY_TAG_PARAMS = {
+  badgeType: 'secondary' as BadgeTypeVariants,
+  badgeClass: 'bg-muted text-muted-foreground',
+};
 
 const PRICE_ORIGIN_BADGE: Readonly<Record<PriceOrigin, BadgeTypeVariants>> = {
   [PRICE_ORIGIN.rnm]: 'default',

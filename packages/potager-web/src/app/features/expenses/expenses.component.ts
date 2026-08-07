@@ -36,6 +36,7 @@ import {
 import { ExpenseStore } from '../../core/expense-store';
 import { GardenStore } from '../../core/garden-store';
 import { TagCellComponent } from '../../shared/tag-cell.component';
+import { CATEGORY_TAG_PARAMS } from '../../shared/table-badges';
 import { EXPENSE_ADD_LINK } from '../../app.routes';
 
 type ExpenseTableRow = ExpenseRow & {
@@ -69,7 +70,7 @@ const EXPENSE_COLUMNS: ColDef<ExpenseTableRow>[] = [
     headerName: 'Catégorie',
     minWidth: 150,
     cellRenderer: TagCellComponent,
-    cellRendererParams: { badgeType: 'secondary' },
+    cellRendererParams: CATEGORY_TAG_PARAMS,
   },
   { field: 'allocationLabel', headerName: 'Affectation', minWidth: 170 },
   { field: 'seasonLabel', headerName: 'Saison', minWidth: 100 },

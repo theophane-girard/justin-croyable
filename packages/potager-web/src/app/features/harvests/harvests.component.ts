@@ -34,7 +34,7 @@ import {
 } from '../../core/catalog-filter';
 import { HarvestStore } from '../../core/harvest-store';
 import { TagCellComponent } from '../../shared/tag-cell.component';
-import { categoryBadgeType } from '../../shared/table-badges';
+import { CATEGORY_TAG_PARAMS } from '../../shared/table-badges';
 import { HARVEST_ADD_LINK } from '../../app.routes';
 
 const DATE_FORMATTER = new Intl.DateTimeFormat('fr-FR', {
@@ -80,7 +80,7 @@ const HARVEST_COLUMNS: ColDef<HarvestRow>[] = [
     headerName: 'Catégorie',
     minWidth: 120,
     cellRenderer: TagCellComponent,
-    cellRendererParams: { badgeType: categoryBadgeType },
+    cellRendererParams: CATEGORY_TAG_PARAMS,
   },
   { field: 'weightKg', headerName: 'Poids (kg)', type: 'numericColumn', valueFormatter: formatKgCell },
   {
