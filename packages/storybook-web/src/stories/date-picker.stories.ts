@@ -1,8 +1,8 @@
+import { type ButtonVariant } from '@justin-croyable/design-system/components/button';
 import {
   DatePickerComponent,
-  type ButtonVariant,
   type DatePickerSizeVariants,
-} from '@justin-croyable/design-system';
+} from '@justin-croyable/design-system/components/date-picker';
 import type { Meta, StoryObj } from '@storybook/angular-vite';
 import { expect, userEvent, waitFor } from 'storybook/test';
 

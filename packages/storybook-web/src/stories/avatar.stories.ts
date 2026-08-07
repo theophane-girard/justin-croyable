@@ -2,7 +2,7 @@ import {
   AvatarComponent,
   AvatarGroupComponent,
   type AvatarSizeVariants,
-} from '@justin-croyable/design-system';
+} from '@justin-croyable/design-system/components/avatar';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
 
 type AvatarArgs = {

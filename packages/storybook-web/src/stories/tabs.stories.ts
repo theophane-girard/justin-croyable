@@ -1,4 +1,4 @@
-import { TabComponent, TabGroupComponent } from '@justin-croyable/design-system';
+import { TabComponent, TabGroupComponent } from '@justin-croyable/design-system/components/tabs';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
 import { expect, userEvent, waitFor } from 'storybook/test';
 

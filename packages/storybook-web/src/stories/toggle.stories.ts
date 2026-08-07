@@ -2,7 +2,7 @@ import {
   ToggleComponent,
   type ToggleSizeVariants,
   type ToggleTypeVariants,
-} from '@justin-croyable/design-system';
+} from '@justin-croyable/design-system/components/toggle';
 import type { Meta, StoryObj } from '@storybook/angular-vite';
 import { expect, userEvent, waitFor } from 'storybook/test';
 

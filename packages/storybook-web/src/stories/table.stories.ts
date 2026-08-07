@@ -4,7 +4,7 @@ import {
   type LazyLoadFilterModel,
   type LazyLoadSort,
   TableComponent,
-} from '@justin-croyable/design-system';
+} from '@justin-croyable/design-system/components/table';
 import type { ColDef, GridApi, GridReadyEvent } from 'ag-grid-community';
 import type { Meta, StoryObj } from '@storybook/angular-vite';
 import { delay, type Observable, of } from 'rxjs';

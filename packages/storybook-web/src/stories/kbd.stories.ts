@@ -1,4 +1,4 @@
-import { KbdComponent, KbdGroupComponent } from '@justin-croyable/design-system';
+import { KbdComponent, KbdGroupComponent } from '@justin-croyable/design-system/components/kbd';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
 
 type KbdArgs = { touche: string };

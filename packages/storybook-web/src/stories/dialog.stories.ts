@@ -1,9 +1,9 @@
 import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
+import { ButtonComponent } from '@justin-croyable/design-system/components/button';
 import {
-  ButtonComponent,
-  DialogService,
   type DialogConfirmTone,
-} from '@justin-croyable/design-system';
+  DialogService,
+} from '@justin-croyable/design-system/components/dialog';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
 

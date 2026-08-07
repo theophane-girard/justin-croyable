@@ -1,10 +1,10 @@
+import { ButtonComponent } from '@justin-croyable/design-system/components/button';
 import {
-  ButtonComponent,
   PopoverComponent,
   PopoverDirective,
   type PopoverPlacement,
   type PopoverTrigger,
-} from '@justin-croyable/design-system';
+} from '@justin-croyable/design-system/components/popover';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
 import { expect, userEvent, waitFor } from 'storybook/test';
 

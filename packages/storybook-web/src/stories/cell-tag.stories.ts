@@ -1,4 +1,7 @@
-import { CellTagComponent, type CellTagColor } from '@justin-croyable/design-system';
+import {
+  type CellTagColor,
+  CellTagComponent,
+} from '@justin-croyable/design-system/components/table';
 import { provideIcons } from '@ng-icons/core';
 import {
   phosphorCheckCircle,

@@ -1,4 +1,8 @@
-import { ChipComponent, type ChipShape, type ChipVariant } from '@justin-croyable/design-system';
+import {
+  ChipComponent,
+  type ChipShape,
+  type ChipVariant,
+} from '@justin-croyable/design-system/components/chip';
 import { provideIcons } from '@ng-icons/core';
 import { phosphorX } from '@ng-icons/phosphor-icons/regular';
 import { applicationConfig, type Meta, type StoryObj } from '@storybook/angular-vite';

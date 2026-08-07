@@ -1,4 +1,7 @@
-import { CellTagListComponent, type CellTagListItem } from '@justin-croyable/design-system';
+import {
+  CellTagListComponent,
+  type CellTagListItem,
+} from '@justin-croyable/design-system/components/table';
 import { provideIcons } from '@ng-icons/core';
 import { phosphorLeaf, phosphorTree } from '@ng-icons/phosphor-icons/regular';
 import { applicationConfig, type Meta, type StoryObj } from '@storybook/angular-vite';

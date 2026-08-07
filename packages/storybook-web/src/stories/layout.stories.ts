@@ -1,4 +1,5 @@
-import { ButtonComponent, LayoutImports, type TabItem } from '@justin-croyable/design-system';
+import { ButtonComponent } from '@justin-croyable/design-system/components/button';
+import { LayoutImports, type TabItem } from '@justin-croyable/design-system/components/layout';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
 
 type LayoutArgs = {

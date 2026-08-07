@@ -1,4 +1,8 @@
-import { CalendarComponent, type CalendarMode, type CalendarValue } from '@justin-croyable/design-system';
+import {
+  CalendarComponent,
+  type CalendarMode,
+  type CalendarValue,
+} from '@justin-croyable/design-system/components/calendar';
 import type { Meta, StoryObj } from '@storybook/angular-vite';
 import { expect, userEvent, waitFor } from 'storybook/test';
 

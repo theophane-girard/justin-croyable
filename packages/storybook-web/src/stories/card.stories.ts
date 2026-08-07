@@ -1,4 +1,5 @@
-import { ButtonComponent, CardComponent } from '@justin-croyable/design-system';
+import { ButtonComponent } from '@justin-croyable/design-system/components/button';
+import { CardComponent } from '@justin-croyable/design-system/components/card';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
 
 type CardArgs = {

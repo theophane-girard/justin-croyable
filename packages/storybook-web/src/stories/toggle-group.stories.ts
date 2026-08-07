@@ -1,9 +1,11 @@
 import {
-  ToggleGroupComponent,
-  type ToggleGroupItem,
   type ToggleSizeVariants,
   type ToggleTypeVariants,
-} from '@justin-croyable/design-system';
+} from '@justin-croyable/design-system/components/toggle';
+import {
+  ToggleGroupComponent,
+  type ToggleGroupItem,
+} from '@justin-croyable/design-system/components/toggle-group';
 import type { Meta, StoryObj } from '@storybook/angular-vite';
 import { expect, userEvent, waitFor } from 'storybook/test';
 

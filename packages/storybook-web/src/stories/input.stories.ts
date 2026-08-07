@@ -2,7 +2,7 @@ import {
   InputDirective,
   type InputSizeVariants,
   type InputStatusVariants,
-} from '@justin-croyable/design-system';
+} from '@justin-croyable/design-system/components/input';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
 import { expect, userEvent } from 'storybook/test';
 
