@@ -23,7 +23,11 @@ import type { ColDef, ICellRendererParams } from 'ag-grid-community';
 import { applicationConfig, type Meta, type StoryObj } from '@storybook/angular-vite';
 import { expect, waitFor } from 'storybook/test';
 
-type StatutCellule = { readonly label: string; readonly color: CellTagColor; readonly icon: string };
+type StatutCellule = {
+  readonly label: string;
+  readonly color: CellTagColor;
+  readonly icon: string;
+};
 type AvancementCellule = { readonly value: number; readonly color: CellProgressBarColor };
 
 type LigneProjet = {
@@ -41,6 +45,7 @@ type LigneProjet = {
       <app-cell-tag [color]="valeur.color" [label]="valeur.label" [icon]="valeur.icon" />
     }
   `,
+  host: { class: 'flex h-full w-full items-center' },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 class StatutCellRenderer implements ICellRendererAngularComp {
@@ -60,6 +65,7 @@ class StatutCellRenderer implements ICellRendererAngularComp {
   selector: 'app-etiquettes-cell',
   imports: [CellTagListComponent],
   template: `<app-cell-tag-list [items]="etiquettes()" [max]="2" />`,
+  host: { class: 'flex h-full w-full items-center' },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 class EtiquettesCellRenderer implements ICellRendererAngularComp {
@@ -83,6 +89,7 @@ class EtiquettesCellRenderer implements ICellRendererAngularComp {
       <app-cell-progress-bar [value]="valeur.value" [color]="valeur.color" />
     }
   `,
+  host: { class: 'flex h-full w-full items-center' },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 class AvancementCellRenderer implements ICellRendererAngularComp {
@@ -196,7 +203,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          "Assemblage des trois composants de cellule (`app-cell-tag`, `app-cell-tag-list`, `app-cell-progress-bar`) dans `app-table`. Chaque composant présentationnel est branché via un `cellRenderer` AG Grid minimal qui implémente `ICellRendererAngularComp` et mappe `params.value` sur les entrées du composant.",
+          'Assemblage des trois composants de cellule (`app-cell-tag`, `app-cell-tag-list`, `app-cell-progress-bar`) dans `app-table`. Chaque composant présentationnel est branché via un `cellRenderer` AG Grid minimal qui implémente `ICellRendererAngularComp` et mappe `params.value` sur les entrées du composant.',
       },
     },
   },

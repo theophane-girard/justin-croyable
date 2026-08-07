@@ -20,7 +20,7 @@ import { cellProgressBarVariants, type CellProgressBarColor } from './cell-progr
   template: `
     <app-progress [value]="value()" [class]="progressClasses()" />
     @if (showValue()) {
-      <span class="text-muted-foreground w-9 shrink-0 text-right text-xs tabular-nums">
+      <span class="text-muted-foreground text-center text-xs tabular-nums">
         {{ displayValue() }}
       </span>
     }
@@ -48,10 +48,13 @@ export class CellProgressBarComponent {
   protected readonly displayValue = computed(() => `${Math.round(this.clampedValue())}%`);
 
   protected readonly progressClasses = computed(() =>
-    mergeClasses('h-2 min-w-0 flex-1', cellProgressBarVariants({ color: this.color() })),
+    mergeClasses(
+      'h-2 w-full [&_[data-slot=progress-indicator]]:rounded-full',
+      cellProgressBarVariants({ color: this.color() }),
+    ),
   );
 
   protected readonly classes = computed(() =>
-    mergeClasses('flex w-full items-center gap-2', this.class()),
+    mergeClasses('flex w-full flex-col items-center justify-center gap-1', this.class()),
   );
 }
