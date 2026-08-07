@@ -18,12 +18,12 @@ import { cellProgressBarVariants, type CellProgressBarColor } from './cell-progr
   selector: 'app-cell-progress-bar',
   imports: [ProgressComponent],
   template: `
-    <app-progress [value]="value()" [class]="progressClasses()" />
     @if (showValue()) {
       <span class="text-muted-foreground text-center text-xs tabular-nums">
         {{ displayValue() }}
       </span>
     }
+    <app-progress [value]="value()" [class]="progressClasses()" />
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
