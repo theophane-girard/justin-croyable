@@ -1,6 +1,12 @@
 import { provideHttpClient, withFetch } from '@angular/common/http';
 import { type ApplicationConfig, provideZonelessChangeDetection } from '@angular/core';
-import { provideRouter, withComponentInputBinding, withInMemoryScrolling } from '@angular/router';
+import {
+  PreloadAllModules,
+  provideRouter,
+  withComponentInputBinding,
+  withInMemoryScrolling,
+  withPreloading,
+} from '@angular/router';
 
 import {
   provideJustinCroyableDS,
@@ -21,6 +27,7 @@ export const appConfig: ApplicationConfig = {
       APP_ROUTES,
       withComponentInputBinding(),
       withInMemoryScrolling({ scrollPositionRestoration: 'enabled' }),
+      withPreloading(PreloadAllModules),
     ),
     provideJustinCroyableDS(
       withIcons(APP_ICONS),

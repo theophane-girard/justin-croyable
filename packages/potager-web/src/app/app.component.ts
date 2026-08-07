@@ -23,7 +23,7 @@ const NAV_ITEMS: readonly NavItem[] = [
   { path: APP_PATHS.harvests, link: `/${APP_PATHS.harvests}`, label: 'Récoltes', icon: 'phosphorListBullets' },
   { path: APP_PATHS.expenses, link: `/${APP_PATHS.expenses}`, label: 'Dépenses', icon: 'phosphorReceipt' },
   { path: APP_PATHS.garden, link: `/${APP_PATHS.garden}`, label: 'Mon jardin', icon: 'phosphorPottedPlant' },
-  { path: APP_PATHS.prices, link: `/${APP_PATHS.prices}`, label: 'Prix moyens', icon: 'phosphorTag' },
+  { path: APP_PATHS.prices, link: `/${APP_PATHS.prices}`, label: 'Prix moyens', icon: 'phosphorCoins' },
 ];
 
 const THEME_VALUE = { light: 'light', dark: 'dark' } as const;
