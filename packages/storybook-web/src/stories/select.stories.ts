@@ -1,4 +1,7 @@
-import { SelectImports, type SelectSizeVariants } from '@justin-croyable/design-system';
+import {
+  SelectImports,
+  type SelectSizeVariants,
+} from '@justin-croyable/design-system/components/select';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
 

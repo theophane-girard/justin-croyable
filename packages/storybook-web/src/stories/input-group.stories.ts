@@ -1,8 +1,8 @@
 import {
   InputDirective,
-  InputGroupComponent,
   type InputSizeVariants,
-} from '@justin-croyable/design-system';
+} from '@justin-croyable/design-system/components/input';
+import { InputGroupComponent } from '@justin-croyable/design-system/components/input-group';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
 import { expect, userEvent } from 'storybook/test';
 

@@ -3,7 +3,7 @@ import {
   type SegmentItem,
   type SegmentSize,
   type SegmentVariant,
-} from '@justin-croyable/design-system';
+} from '@justin-croyable/design-system/components/segment';
 import { provideIcons } from '@ng-icons/core';
 import {
   phosphorChartBar,

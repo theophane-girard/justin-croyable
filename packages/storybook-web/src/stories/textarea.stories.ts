@@ -1,4 +1,4 @@
-import { TextareaComponent } from '@justin-croyable/design-system';
+import { TextareaComponent } from '@justin-croyable/design-system/components/textarea';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
 import { expect, userEvent } from 'storybook/test';
 

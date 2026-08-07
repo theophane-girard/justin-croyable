@@ -99,9 +99,21 @@ jobs:
       - name: Tests
         timeout-minutes: 18
         run: |
+          # `nx affected` sélectionne les PROJETS impactés ; `--changed` restreint
+          # ENSUITE, au sein de chaque projet Vitest, aux seuls fichiers de test dont
+          # le graphe d'imports touche un fichier modifié depuis NX_BASE. Les stories
+          # importent le DS en deep import (…/components/<x>), donc changer un composant
+          # ne rejoue que SES stories, pas les 47. `--passWithNoTests` : un projet
+          # affecté sans test impacté (ex. changement de config) reste vert.
+          # Sans NX_BASE (détection en échec), on retombe sur le run complet plutôt que
+          # de risquer un skip silencieux.
+          ARGS_VITEST=(--passWithNoTests)
+          if [ -n "$NX_BASE" ]; then
+            ARGS_VITEST+=(--changed "$NX_BASE")
+          fi
           for tentative in 1 2 3; do
             echo "::group::Tests — tentative $tentative"
-            if timeout 330 npx nx affected -t test --skip-nx-cache; then
+            if timeout 330 npx nx affected -t test --skip-nx-cache -- "${ARGS_VITEST[@]}"; then
               echo "::endgroup::"
               exit 0
             fi

@@ -1,9 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
-import {
-  ButtonComponent,
-  SheetService,
-  type SheetVariants,
-} from '@justin-croyable/design-system';
+import { ButtonComponent } from '@justin-croyable/design-system/components/button';
+import { SheetService, type SheetVariants } from '@justin-croyable/design-system/components/sheet';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
 

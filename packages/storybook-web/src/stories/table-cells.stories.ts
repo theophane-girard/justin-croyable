@@ -1,13 +1,13 @@
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import {
-  CellProgressBarComponent,
   type CellProgressBarColor,
-  CellTagComponent,
+  CellProgressBarComponent,
   type CellTagColor,
+  CellTagComponent,
   CellTagListComponent,
   type CellTagListItem,
   TableComponent,
-} from '@justin-croyable/design-system';
+} from '@justin-croyable/design-system/components/table';
 import { provideIcons } from '@ng-icons/core';
 import {
   phosphorCheckCircle,

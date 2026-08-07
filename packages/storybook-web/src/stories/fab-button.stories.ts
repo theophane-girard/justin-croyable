@@ -1,11 +1,11 @@
 import {
   FabButtonComponent,
-  FabContainerComponent,
-  FabListComponent,
   type FabButtonPosition,
   type FabButtonSize,
   type FabButtonType,
-} from '@justin-croyable/design-system';
+  FabContainerComponent,
+  FabListComponent,
+} from '@justin-croyable/design-system/components/fab-button';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   phosphorCamera,

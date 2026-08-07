@@ -1,4 +1,4 @@
-import { CommandImports } from '@justin-croyable/design-system';
+import { CommandImports } from '@justin-croyable/design-system/components/command';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
 import { expect, userEvent, waitFor } from 'storybook/test';
 

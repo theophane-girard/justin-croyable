@@ -2,7 +2,7 @@ import {
   BadgeComponent,
   type BadgeShapeVariants,
   type BadgeTypeVariants,
-} from '@justin-croyable/design-system';
+} from '@justin-croyable/design-system/components/badge';
 import type { Meta, StoryObj } from '@storybook/angular-vite';
 
 type BadgeArgs = {

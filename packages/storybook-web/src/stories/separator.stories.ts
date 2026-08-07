@@ -1,4 +1,4 @@
-import { SeparatorComponent } from '@justin-croyable/design-system';
+import { SeparatorComponent } from '@justin-croyable/design-system/components/separator';
 import type { Meta, StoryObj } from '@storybook/angular-vite';
 
 type SeparatorArgs = {

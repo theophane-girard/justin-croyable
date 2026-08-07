@@ -1,4 +1,4 @@
-import { LoaderComponent } from '@justin-croyable/design-system';
+import { LoaderComponent } from '@justin-croyable/design-system/components/loader';
 import type { Meta, StoryObj } from '@storybook/angular-vite';
 
 type LoaderArgs = { size: 'sm' | 'default' | 'lg' };

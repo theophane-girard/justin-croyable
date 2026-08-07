@@ -2,7 +2,7 @@ import {
   SwitchComponent,
   type SwitchSizeVariants,
   type SwitchTypeVariants,
-} from '@justin-croyable/design-system';
+} from '@justin-croyable/design-system/components/switch';
 import type { Meta, StoryObj } from '@storybook/angular-vite';
 import { expect, userEvent, waitFor } from 'storybook/test';
 

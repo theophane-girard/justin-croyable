@@ -1,4 +1,9 @@
-import { ButtonComponent, type ButtonShape, type ButtonSize, type ButtonVariant } from '@justin-croyable/design-system';
+import {
+  ButtonComponent,
+  type ButtonShape,
+  type ButtonSize,
+  type ButtonVariant,
+} from '@justin-croyable/design-system/components/button';
 import type { Meta, StoryObj } from '@storybook/angular-vite';
 
 type ButtonArgs = {
