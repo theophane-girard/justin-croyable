@@ -1,6 +1,23 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  PLATFORM_ID,
+  signal,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
+import {
+  NavigationCancel,
+  NavigationEnd,
+  NavigationError,
+  NavigationStart,
+  Router,
+  RouterLink,
+  RouterOutlet,
+} from '@angular/router';
 import { filter, map } from 'rxjs';
 
 import {
@@ -8,6 +25,7 @@ import {
   LayoutImports,
   SegmentComponent,
   type SegmentItem,
+  SkeletonComponent,
   ThemeService,
 } from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
@@ -30,7 +48,15 @@ const THEME_VALUE = { light: 'light', dark: 'dark' } as const;
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, ...LayoutImports, NgIcon, SegmentComponent, BadgeComponent],
+  imports: [
+    RouterOutlet,
+    RouterLink,
+    ...LayoutImports,
+    NgIcon,
+    SegmentComponent,
+    BadgeComponent,
+    SkeletonComponent,
+  ],
   template: `
     <div class="bg-background text-foreground h-dvh overflow-hidden">
       <app-layout direction="horizontal" class="h-full">
@@ -104,8 +130,21 @@ const THEME_VALUE = { light: 'light', dark: 'dark' } as const;
             </div>
           </app-header>
 
-          <app-content class="min-h-0 overflow-auto p-4">
+          <app-content class="relative min-h-0 overflow-auto p-4">
             <router-outlet />
+            @if (navigating()) {
+              <div class="bg-background absolute inset-0 z-10 flex flex-col gap-4 p-4">
+                <app-skeleton class="h-7 w-56" />
+                <app-skeleton class="h-4 w-80 max-w-full" />
+                <div class="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                  <app-skeleton class="h-24" />
+                  <app-skeleton class="h-24" />
+                  <app-skeleton class="h-24" />
+                  <app-skeleton class="h-24" />
+                </div>
+                <app-skeleton class="h-80" />
+              </div>
+            }
           </app-content>
 
           <app-footer class="text-muted-foreground flex items-center px-4 text-xs">
@@ -121,8 +160,35 @@ export class AppComponent {
   protected readonly theme = inject(ThemeService);
   readonly #store = inject(HarvestStore);
   readonly #router = inject(Router);
+  readonly #platformId = inject(PLATFORM_ID);
 
   protected readonly sidebarCollapsed = signal(false);
+
+  protected readonly navigating = toSignal(
+    this.#router.events.pipe(
+      filter(
+        (event): event is NavigationStart | NavigationEnd | NavigationCancel | NavigationError =>
+          event instanceof NavigationStart ||
+          event instanceof NavigationEnd ||
+          event instanceof NavigationCancel ||
+          event instanceof NavigationError,
+      ),
+      map(event => event instanceof NavigationStart),
+    ),
+    { initialValue: false },
+  );
+
+  constructor() {
+    effect(() => {
+      if (this.navigating() && this.#isMobileViewport()) {
+        this.sidebarCollapsed.set(true);
+      }
+    });
+  }
+
+  #isMobileViewport(): boolean {
+    return isPlatformBrowser(this.#platformId) && window.innerWidth < 640;
+  }
 
   protected readonly priceSourceLive = computed(() => this.#store.priceSource() === 'live');
   protected readonly priceModeBio = computed(() => this.#store.priceMode() === PRICE_MODE.bio);
