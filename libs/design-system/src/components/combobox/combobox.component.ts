@@ -153,12 +153,12 @@ export interface ComboboxGroup {
             }
           </div>
         }
-        <app-command class="min-h-auto" (commandSelected)="handleSelect($event)" #commandRef>
+        <app-command [class]="commandClasses()" (commandSelected)="handleSelect($event)" #commandRef>
           @if (searchable()) {
             <app-command-input [placeholder]="searchPlaceholder()" #commandInputRef />
           }
 
-          <app-command-list id="combobox-listbox" role="listbox">
+          <app-command-list id="combobox-listbox" role="listbox" [class]="commandListClasses()">
             @if (emptyText()) {
               <app-command-empty>
                 <app-empty [description]="emptyText()" />
@@ -312,6 +312,16 @@ export class ComboboxComponent implements ControlValueAccessor {
   );
 
   protected readonly buttonClasses = computed(() => 'w-full justify-between');
+
+  protected readonly isMobileSheet = computed(() => this.isMobile() && this.searchable());
+
+  protected readonly commandClasses = computed(() =>
+    this.isMobileSheet() ? 'min-h-[50vh]' : 'min-h-auto',
+  );
+
+  protected readonly commandListClasses = computed(() =>
+    this.isMobileSheet() ? 'max-h-[calc(50vh-3rem)]' : '',
+  );
 
   protected readonly popoverClasses = computed(() => {
     if (this.isMobile()) {
