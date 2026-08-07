@@ -17,6 +17,12 @@
     },
     {
       "path": "./packages/potager-web"
+    },
+    {
+      "path": "./packages/potager-api"
+    },
+    {
+      "path": "./libs/api-contract"
     }
   ]
 }
