@@ -1,10 +1,9 @@
 import { defineConfig } from 'drizzle-kit';
 
-const connectionString = process.env['DATABASE_URL'];
-
-if (!connectionString) {
-  throw new Error('DATABASE_URL est requis pour drizzle-kit.');
-}
+// `generate` fonctionne hors-ligne (diff du schéma → SQL) : une URL factice
+// suffit. `migrate` / `push` échoueront à la connexion si DATABASE_URL n'est
+// pas fourni, ce qui est le comportement attendu.
+const connectionString = process.env['DATABASE_URL'] ?? 'postgres://localhost:5432/potager';
 
 export default defineConfig({
   schema: './src/db/schema.ts',
