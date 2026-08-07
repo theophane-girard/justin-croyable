@@ -10,7 +10,6 @@ import {
 
 import {
   ButtonComponent,
-  CardComponent,
   FabButtonComponent,
   SegmentComponent,
   type SegmentItem,
@@ -169,7 +168,6 @@ const SOURCE_LABEL: Readonly<Record<PriceOrigin, (fallbackLabel: string) => stri
 @Component({
   selector: 'app-prices',
   imports: [
-    CardComponent,
     SegmentComponent,
     TableComponent,
     ButtonComponent,
@@ -196,33 +194,6 @@ const SOURCE_LABEL: Readonly<Record<PriceOrigin, (fallbackLabel: string) => stri
           <ng-icon name="phosphorFunnel" class="size-4" />
           Filtrer
         </button>
-      </div>
-
-      <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <app-card>
-          <div class="flex flex-col gap-1">
-            <span class="text-muted-foreground text-sm">Variétés</span>
-            <span class="text-foreground text-2xl font-bold tabular-nums">{{ totalCount() }}</span>
-          </div>
-        </app-card>
-        <app-card>
-          <div class="flex flex-col gap-1">
-            <span class="text-muted-foreground text-sm">Cotées en direct</span>
-            <span class="text-primary text-2xl font-bold tabular-nums">{{ liveCount() }}</span>
-          </div>
-        </app-card>
-        <app-card>
-          <div class="flex flex-col gap-1">
-            <span class="text-muted-foreground text-sm">Via fallback</span>
-            <span class="text-foreground text-2xl font-bold tabular-nums">{{ fallbackCount() }}</span>
-          </div>
-        </app-card>
-        <app-card>
-          <div class="flex flex-col gap-1">
-            <span class="text-muted-foreground text-sm">Date RNM</span>
-            <span class="text-foreground text-lg font-semibold">{{ rnmDateLabel() }}</span>
-          </div>
-        </app-card>
       </div>
 
       <app-table
@@ -318,21 +289,6 @@ export class PricesComponent {
         (culture === CULTURE_FILTER_ALL || row.cropId === culture) &&
         (variety === VARIETY_FILTER_ALL || row.varietyId === variety),
     );
-  });
-
-  protected readonly totalCount = computed(() => this.rows().length);
-
-  protected readonly liveCount = computed(
-    () => this.rows().filter(row => row.conventionalOrigin === PRICE_ORIGIN.rnm).length,
-  );
-
-  protected readonly fallbackCount = computed(
-    () => this.rows().filter(row => row.conventionalOrigin === PRICE_ORIGIN.fallback).length,
-  );
-
-  protected readonly rnmDateLabel = computed(() => {
-    const date = this.#govPrices.priceDate();
-    return date instanceof Date ? DATE_FORMATTER.format(date) : 'Indisponible';
   });
 
   protected onCategoryChange(value: string | null): void {
