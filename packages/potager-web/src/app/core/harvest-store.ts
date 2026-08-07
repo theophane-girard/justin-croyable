@@ -8,13 +8,21 @@ import {
   type HarvestDraft,
   type HarvestEntry,
   type HarvestRow,
-  isCropId,
+  isVarietyId,
+  matchesSeason,
+  matchesYear,
+  type PricePerKgByVariety,
   PRICE_MODE,
   type PriceMode,
   type PriceSource,
+  seasonForDate,
+  VARIETY_BY_ID,
+  YEAR_ALL,
+  type YearFilter,
 } from './potager.model';
 import { GovPriceService } from './gov-price.service';
-import { mergePrices, REFERENCE_BIO_PRICES } from './reference-prices';
+import { SeasonStore } from './season-store';
+import { resolveBioPrice, resolveConventionalPrice } from './reference-prices';
 
 export const MONTHS_FR = [
   'Jan',
@@ -31,27 +39,43 @@ export const MONTHS_FR = [
   'Déc',
 ] as const;
 
-const STORAGE_KEY = 'potager.harvests.v1';
+const STORAGE_KEY = 'potager.harvests.v3';
 const MONTHS_IN_YEAR = 12;
 
 type NamedValue = { readonly label: string; readonly value: number };
 
 const SEED_ENTRIES: readonly HarvestEntry[] = [
-  { id: 'seed-1', cropId: 'fraise', weightKg: 2.4, harvestedOn: '2026-05-18' },
-  { id: 'seed-2', cropId: 'tomate', weightKg: 6.1, harvestedOn: '2026-07-22' },
-  { id: 'seed-3', cropId: 'courgette', weightKg: 8.3, harvestedOn: '2026-07-05' },
-  { id: 'seed-4', cropId: 'salade', weightKg: 3.2, harvestedOn: '2026-06-12' },
-  { id: 'seed-5', cropId: 'haricot-vert', weightKg: 2.9, harvestedOn: '2026-08-01' },
-  { id: 'seed-6', cropId: 'framboise', weightKg: 1.1, harvestedOn: '2026-06-28' },
-  { id: 'seed-7', cropId: 'pomme-de-terre', weightKg: 11.5, harvestedOn: '2026-08-03' },
-  { id: 'seed-8', cropId: 'radis', weightKg: 1.6, harvestedOn: '2026-04-20' },
-  { id: 'seed-9', cropId: 'tomate', weightKg: 4.7, harvestedOn: '2026-08-02' },
-  { id: 'seed-10', cropId: 'courge', weightKg: 5.4, harvestedOn: '2026-09-15' },
+  { id: 'seed-1', varietyId: 'fraise', weightKg: 2.4, harvestedOn: '2026-05-18' },
+  { id: 'seed-2', varietyId: 'tomate-coeur-de-boeuf', weightKg: 6.1, harvestedOn: '2026-07-22' },
+  { id: 'seed-3', varietyId: 'courgette', weightKg: 8.3, harvestedOn: '2026-07-05' },
+  { id: 'seed-4', varietyId: 'salade', weightKg: 3.2, harvestedOn: '2026-06-12' },
+  { id: 'seed-5', varietyId: 'haricot-vert', weightKg: 2.9, harvestedOn: '2026-08-01' },
+  { id: 'seed-6', varietyId: 'framboise', weightKg: 1.1, harvestedOn: '2026-06-28' },
+  { id: 'seed-7', varietyId: 'pomme-de-terre', weightKg: 11.5, harvestedOn: '2026-08-03' },
+  { id: 'seed-8', varietyId: 'radis', weightKg: 1.6, harvestedOn: '2026-04-20' },
+  { id: 'seed-9', varietyId: 'tomate-cerise', weightKg: 4.7, harvestedOn: '2026-08-02' },
+  { id: 'seed-10', varietyId: 'courge', weightKg: 5.4, harvestedOn: '2026-09-15' },
+  { id: 'seed-23', varietyId: 'tomate-noire-de-crimee', weightKg: 3.5, harvestedOn: '2026-08-14' },
+  { id: 'seed-24', varietyId: 'tomate-grappe', weightKg: 5.9, harvestedOn: '2026-07-30' },
+  { id: 'seed-11', varietyId: 'tomate-coeur-de-boeuf', weightKg: 5.2, harvestedOn: '2025-07-18' },
+  { id: 'seed-12', varietyId: 'fraise', weightKg: 1.9, harvestedOn: '2025-05-24' },
+  { id: 'seed-13', varietyId: 'courgette', weightKg: 6.8, harvestedOn: '2025-08-09' },
+  { id: 'seed-14', varietyId: 'poireau', weightKg: 3.1, harvestedOn: '2025-11-12' },
+  { id: 'seed-15', varietyId: 'salade', weightKg: 2.6, harvestedOn: '2025-06-15' },
+  { id: 'seed-16', varietyId: 'haricot-vert', weightKg: 3.4, harvestedOn: '2025-07-28' },
+  { id: 'seed-17', varietyId: 'pomme-de-terre', weightKg: 9.7, harvestedOn: '2025-08-20' },
+  { id: 'seed-18', varietyId: 'radis', weightKg: 1.3, harvestedOn: '2025-04-22' },
+  { id: 'seed-19', varietyId: 'courge', weightKg: 4.9, harvestedOn: '2025-09-18' },
+  { id: 'seed-20', varietyId: 'tomate-cerise', weightKg: 3.8, harvestedOn: '2025-08-05' },
+  { id: 'seed-21', varietyId: 'framboise', weightKg: 0.9, harvestedOn: '2025-06-30' },
+  { id: 'seed-22', varietyId: 'carotte', weightKg: 4.2, harvestedOn: '2025-10-08' },
 ];
 
 @Injectable({ providedIn: 'root' })
 export class HarvestStore {
   readonly #govPrices = inject(GovPriceService);
+  readonly #seasonStore = inject(SeasonStore);
+  readonly #season = this.#seasonStore.season;
   readonly #platformId = inject(PLATFORM_ID);
 
   readonly #entries = signal<readonly HarvestEntry[]>(this.#restore());
@@ -62,49 +86,97 @@ export class HarvestStore {
   readonly entries = this.#entries.asReadonly();
 
   readonly priceSource = computed<PriceSource>(() =>
-    this.#priceMode() === PRICE_MODE.bio ? 'reference' : this.#govPrices.priceSource(),
+    this.#priceMode() === PRICE_MODE.bio
+      ? this.#govPrices.bioPriceSource()
+      : this.#govPrices.priceSource(),
   );
 
-  readonly #conventionalPrices = computed<Record<CropId, number>>(() =>
-    mergePrices(this.#govPrices.livePrices()),
+  readonly #livePrices = computed<PricePerKgByVariety | null>(() => this.#govPrices.livePrices());
+  readonly #liveBioPrices = computed<PricePerKgByVariety | null>(() =>
+    this.#govPrices.liveBioPrices(),
   );
 
   readonly rows = computed<HarvestRow[]>(() => {
-    const conventional = this.#conventionalPrices();
+    const live = this.#livePrices();
+    const liveBio = this.#liveBioPrices();
     const mode = this.#priceMode();
     return this.#entries()
-      .map(entry => this.#toRow(entry, conventional, mode))
+      .map(entry => this.#toRow(entry, live, liveBio, mode))
       .sort((a, b) => b.harvestedOn.getTime() - a.harvestedOn.getTime());
+  });
+
+  readonly availableYears = computed<number[]>(() =>
+    Array.from(
+      new Set(this.#entries().map(entry => new Date(entry.harvestedOn).getFullYear())),
+    ).sort((a, b) => b - a),
+  );
+
+  readonly effectiveYear = computed<YearFilter>(() => {
+    const selection = this.#seasonStore.yearSelection();
+    if (selection === YEAR_ALL) {
+      return YEAR_ALL;
+    }
+    const years = this.availableYears();
+    if (typeof selection === 'number' && years.includes(selection)) {
+      return selection;
+    }
+    return years[0] ?? new Date().getFullYear();
+  });
+
+  readonly #periodRows = computed<HarvestRow[]>(() => {
+    const season = this.#season();
+    const year = this.effectiveYear();
+    return this.rows().filter(
+      row => matchesSeason(row.season, season) && matchesYear(row.harvestedOn.getFullYear(), year),
+    );
   });
 
   readonly entryCount = computed(() => this.#entries().length);
 
   readonly totalWeightKg = computed(() =>
-    this.#roundToCents(this.#entries().reduce((total, entry) => total + entry.weightKg, 0)),
+    this.#roundToCents(this.#periodRows().reduce((total, row) => total + row.weightKg, 0)),
   );
 
   readonly totalSavingsEur = computed(() =>
-    this.#roundToCents(this.rows().reduce((total, row) => total + row.savingsEur, 0)),
+    this.#roundToCents(this.#periodRows().reduce((total, row) => total + row.savingsEur, 0)),
   );
 
-  readonly cropCount = computed(() => new Set(this.#entries().map(entry => entry.cropId)).size);
+  readonly cropCount = computed(
+    () => new Set(this.#entries().map(entry => VARIETY_BY_ID[entry.varietyId].cropId)).size,
+  );
+
+  readonly periodWeightByCropId = computed<Partial<Record<CropId, number>>>(() =>
+    this.#periodRows().reduce<Partial<Record<CropId, number>>>((accumulator, row) => {
+      accumulator[row.cropId] = this.#roundToCents((accumulator[row.cropId] ?? 0) + row.weightKg);
+      return accumulator;
+    }, {}),
+  );
+
+  readonly periodValueByCropId = computed<Partial<Record<CropId, number>>>(() =>
+    this.#periodRows().reduce<Partial<Record<CropId, number>>>((accumulator, row) => {
+      accumulator[row.cropId] = this.#roundToCents((accumulator[row.cropId] ?? 0) + row.savingsEur);
+      return accumulator;
+    }, {}),
+  );
 
   readonly monthlyWeights = computed(() =>
-    this.#bucketByMonth(this.rows(), row => row.weightKg),
+    this.#bucketByMonth(this.#periodRows(), row => row.weightKg),
   );
 
   readonly monthlySavings = computed(() =>
-    this.#bucketByMonth(this.rows(), row => row.savingsEur),
+    this.#bucketByMonth(this.#periodRows(), row => row.savingsEur),
   );
 
   readonly savingsByCrop = computed<NamedValue[]>(() =>
-    this.#groupBy(this.rows(), row => row.cropLabel, row => row.savingsEur).sort(
+    this.#groupBy(this.#periodRows(), row => row.cropLabel, row => row.savingsEur).sort(
       (a, b) => b.value - a.value,
     ),
   );
 
-  readonly weightByCategory = computed<NamedValue[]>(() =>
-    this.#groupBy(this.rows(), row => row.categoryLabel, row => row.weightKg),
+  readonly savingsByVariety = computed<NamedValue[]>(() =>
+    this.#groupBy(this.#periodRows(), row => row.varietyLabel, row => row.savingsEur).sort(
+      (a, b) => b.value - a.value,
+    ),
   );
 
   constructor() {
@@ -114,9 +186,11 @@ export class HarvestStore {
   add(draft: HarvestDraft): void {
     const entry: HarvestEntry = {
       id: this.#createId(),
-      cropId: draft.cropId,
+      varietyId: draft.varietyId,
       weightKg: draft.weightKg,
       harvestedOn: this.#toIsoDate(draft.harvestedOn),
+      conventionalPricePerKg: resolveConventionalPrice(draft.varietyId, this.#livePrices()),
+      bioPricePerKg: resolveBioPrice(draft.varietyId, this.#liveBioPrices()),
     };
     this.#entries.update(entries => [...entries, entry]);
   }
@@ -129,16 +203,28 @@ export class HarvestStore {
     this.#priceMode.set(mode);
   }
 
-  #toRow(entry: HarvestEntry, conventional: Record<CropId, number>, mode: PriceMode): HarvestRow {
-    const crop = CROP_BY_ID[entry.cropId];
-    const conventionalPricePerKg = conventional[entry.cropId];
-    const bioPricePerKg = REFERENCE_BIO_PRICES[entry.cropId];
+  #toRow(
+    entry: HarvestEntry,
+    live: PricePerKgByVariety | null,
+    liveBio: PricePerKgByVariety | null,
+    mode: PriceMode,
+  ): HarvestRow {
+    const variety = VARIETY_BY_ID[entry.varietyId];
+    const crop = CROP_BY_ID[variety.cropId];
+    const conventionalPricePerKg =
+      entry.conventionalPricePerKg ?? resolveConventionalPrice(entry.varietyId, live);
+    const bioPricePerKg = entry.bioPricePerKg ?? resolveBioPrice(entry.varietyId, liveBio);
     const pricePerKg = mode === PRICE_MODE.bio ? bioPricePerKg : conventionalPricePerKg;
+    const harvestedOn = new Date(entry.harvestedOn);
     return {
       id: entry.id,
+      varietyId: entry.varietyId,
+      varietyLabel: variety.label,
+      cropId: variety.cropId,
       cropLabel: crop.label,
       categoryLabel: CATEGORY_META[crop.category].label,
-      harvestedOn: new Date(entry.harvestedOn),
+      harvestedOn,
+      season: seasonForDate(harvestedOn),
       weightKg: entry.weightKg,
       conventionalPricePerKg,
       bioPricePerKg,
@@ -207,11 +293,17 @@ export class HarvestStore {
     const candidate = item as Record<string, unknown>;
     return (
       typeof candidate['id'] === 'string' &&
-      typeof candidate['cropId'] === 'string' &&
-      isCropId(candidate['cropId']) &&
+      typeof candidate['varietyId'] === 'string' &&
+      isVarietyId(candidate['varietyId']) &&
       typeof candidate['weightKg'] === 'number' &&
-      typeof candidate['harvestedOn'] === 'string'
+      typeof candidate['harvestedOn'] === 'string' &&
+      this.#isOptionalNumber(candidate['conventionalPricePerKg']) &&
+      this.#isOptionalNumber(candidate['bioPricePerKg'])
     );
+  }
+
+  #isOptionalNumber(value: unknown): boolean {
+    return value === undefined || typeof value === 'number';
   }
 
   #persist(entries: readonly HarvestEntry[]): void {

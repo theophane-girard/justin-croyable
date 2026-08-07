@@ -3,14 +3,22 @@ import { type Route } from '@angular/router';
 export const APP_PATHS = {
   dashboard: '',
   harvests: 'recoltes',
-  harvestAdd: 'ajouter',
+  expenses: 'depenses',
+  garden: 'jardin',
+  prices: 'prix-moyens',
+  add: 'ajouter',
 } as const;
 
 export type AppPath = (typeof APP_PATHS)[keyof typeof APP_PATHS];
 
 export const DASHBOARD_LINK = '/';
 export const HARVESTS_LINK = `/${APP_PATHS.harvests}`;
-export const HARVEST_ADD_LINK = `/${APP_PATHS.harvests}/${APP_PATHS.harvestAdd}`;
+export const HARVEST_ADD_LINK = `/${APP_PATHS.harvests}/${APP_PATHS.add}`;
+export const EXPENSES_LINK = `/${APP_PATHS.expenses}`;
+export const EXPENSE_ADD_LINK = `/${APP_PATHS.expenses}/${APP_PATHS.add}`;
+export const GARDEN_LINK = `/${APP_PATHS.garden}`;
+export const GARDEN_ADD_LINK = `/${APP_PATHS.garden}/${APP_PATHS.add}`;
+export const PRICES_LINK = `/${APP_PATHS.prices}`;
 
 export const APP_ROUTES: Route[] = [
   {
@@ -29,12 +37,51 @@ export const APP_ROUTES: Route[] = [
         title: 'Récoltes — Potager',
       },
       {
-        path: APP_PATHS.harvestAdd,
+        path: APP_PATHS.add,
         loadComponent: () =>
           import('./features/harvests/add-harvest.component').then(m => m.AddHarvestComponent),
         title: 'Ajouter une récolte — Potager',
       },
     ],
+  },
+  {
+    path: APP_PATHS.expenses,
+    children: [
+      {
+        path: '',
+        loadComponent: () =>
+          import('./features/expenses/expenses.component').then(m => m.ExpensesComponent),
+        title: 'Dépenses — Potager',
+      },
+      {
+        path: APP_PATHS.add,
+        loadComponent: () =>
+          import('./features/expenses/add-expense.component').then(m => m.AddExpenseComponent),
+        title: 'Ajouter une dépense — Potager',
+      },
+    ],
+  },
+  {
+    path: APP_PATHS.garden,
+    children: [
+      {
+        path: '',
+        loadComponent: () =>
+          import('./features/garden/garden.component').then(m => m.GardenComponent),
+        title: 'Mon jardin — Potager',
+      },
+      {
+        path: APP_PATHS.add,
+        loadComponent: () =>
+          import('./features/garden/add-plant.component').then(m => m.AddPlantComponent),
+        title: 'Ajouter un plant — Potager',
+      },
+    ],
+  },
+  {
+    path: APP_PATHS.prices,
+    loadComponent: () => import('./features/prices/prices.component').then(m => m.PricesComponent),
+    title: 'Prix moyens — Potager',
   },
   {
     path: '**',

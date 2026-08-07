@@ -11,7 +11,7 @@ import {
 } from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
 
-import { CROPS, isCropId } from '../../core/potager.model';
+import { CROPS, isCropId, isVarietyId, VARIETIES_BY_CROP } from '../../core/potager.model';
 import { HarvestStore } from '../../core/harvest-store';
 import { HARVESTS_LINK } from '../../app.routes';
 
@@ -32,7 +32,9 @@ import { HARVESTS_LINK } from '../../app.routes';
       <div class="flex items-center justify-between gap-2">
         <div class="flex flex-col">
           <h2 class="text-foreground text-lg font-semibold">Nouvelle récolte</h2>
-          <p class="text-muted-foreground text-sm">Renseignez la culture, le poids et la date.</p>
+          <p class="text-muted-foreground text-sm">
+            Renseignez la culture, la variété, le poids et la date.
+          </p>
         </div>
         <div class="flex items-center gap-2">
           <a appButton variant="outline" [routerLink]="harvestsLink">Annuler</a>
@@ -57,6 +59,19 @@ import { HARVESTS_LINK } from '../../app.routes';
             }
           </app-select>
 
+          <app-select
+            label="Variété"
+            placeholder="Sélectionner une variété…"
+            [required]="true"
+            [disabled]="varieties().length === 0"
+            [value]="varietyId()"
+            (valueChange)="onVarietyChange($event)"
+          >
+            @for (variety of varieties(); track variety.id) {
+              <app-select-item [value]="variety.id">{{ variety.label }}</app-select-item>
+            }
+          </app-select>
+
           <app-input-group label="Poids récolté" hint="En kilogrammes." [required]="true">
             <input
               app-input
@@ -70,7 +85,7 @@ import { HARVESTS_LINK } from '../../app.routes';
             />
           </app-input-group>
 
-          <div class="flex flex-col gap-2 md:col-span-2">
+          <div class="flex flex-col gap-2">
             <label class="text-sm font-medium">Date de récolte</label>
             <app-date-picker
               placeholder="Choisir une date"
@@ -94,8 +109,14 @@ export class AddHarvestComponent {
   protected readonly harvestsLink = HARVESTS_LINK;
 
   protected readonly cropId = signal<string>('');
+  protected readonly varietyId = signal<string>('');
   protected readonly weightInput = signal<string>('');
   protected readonly date = signal<Date | null>(new Date());
+
+  protected readonly varieties = computed(() => {
+    const cropId = this.cropId();
+    return isCropId(cropId) ? VARIETIES_BY_CROP[cropId] : [];
+  });
 
   protected readonly weightKg = computed(() => {
     const parsed = Number.parseFloat(this.weightInput().replace(',', '.'));
@@ -103,7 +124,7 @@ export class AddHarvestComponent {
   });
 
   protected readonly canSubmit = computed(
-    () => isCropId(this.cropId()) && this.weightKg() !== null && this.date() !== null,
+    () => isVarietyId(this.varietyId()) && this.weightKg() !== null && this.date() !== null,
   );
 
   protected onCropChange(value: string | string[] | null): void {
@@ -111,6 +132,15 @@ export class AddHarvestComponent {
       return;
     }
     this.cropId.set(value);
+    const varieties = isCropId(value) ? VARIETIES_BY_CROP[value] : [];
+    this.varietyId.set(varieties.length === 1 ? varieties[0].id : '');
+  }
+
+  protected onVarietyChange(value: string | string[] | null): void {
+    if (typeof value !== 'string') {
+      return;
+    }
+    this.varietyId.set(value);
   }
 
   protected onWeightInput(event: Event): void {
@@ -119,13 +149,13 @@ export class AddHarvestComponent {
   }
 
   protected onSave(): void {
-    const cropId = this.cropId();
+    const varietyId = this.varietyId();
     const weightKg = this.weightKg();
     const harvestedOn = this.date();
-    if (!isCropId(cropId) || weightKg === null || harvestedOn === null) {
+    if (!isVarietyId(varietyId) || weightKg === null || harvestedOn === null) {
       return;
     }
-    this.store.add({ cropId, weightKg, harvestedOn });
+    this.store.add({ varietyId, weightKg, harvestedOn });
     this.#router.navigateByUrl(HARVESTS_LINK);
   }
 }

@@ -25,80 +25,65 @@ import {
 import { NgIcon } from '@ng-icons/core';
 import type { ColDef, GridOptions, RowSelectedEvent, ValueFormatterParams } from 'ag-grid-community';
 
-import { CATEGORY_META, type CategoryId, type HarvestRow } from '../../core/potager.model';
 import {
-  CULTURE_FILTER_ALL,
-  CULTURE_FILTER_OPTIONS,
-  VARIETY_FILTER_ALL,
-  varietyFilterOptions,
-} from '../../core/catalog-filter';
-import { HarvestStore } from '../../core/harvest-store';
+  EXPENSE_CATEGORIES,
+  EXPENSE_CATEGORY_META,
+  type ExpenseCategoryId,
+  type ExpenseRow,
+  isExpenseCategoryId,
+  SEASON_META,
+} from '../../core/potager.model';
+import { ExpenseStore } from '../../core/expense-store';
+import { GardenStore } from '../../core/garden-store';
 import { TagCellComponent } from '../../shared/tag-cell.component';
+import { TagListCellComponent } from '../../shared/tag-list-cell.component';
 import { CATEGORY_TAG_COLOR } from '../../shared/table-badges';
-import { HARVEST_ADD_LINK } from '../../app.routes';
+import { EXPENSE_ADD_LINK } from '../../app.routes';
+
+type ExpenseTableRow = ExpenseRow & {
+  readonly allocationLabels: readonly string[];
+  readonly seasonLabel: string;
+};
+
+const ALL_PLANTS_LABEL = 'Tous les plants';
 
 const DATE_FORMATTER = new Intl.DateTimeFormat('fr-FR', {
   day: '2-digit',
   month: 'short',
   year: 'numeric',
 });
-const KG_FORMATTER = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 });
 const EUR_FORMATTER = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
 
-function formatDateCell(params: ValueFormatterParams<HarvestRow, Date>): string {
+function formatDateCell(params: ValueFormatterParams<ExpenseTableRow, Date>): string {
   return params.value instanceof Date ? DATE_FORMATTER.format(params.value) : '';
 }
 
-function formatKgCell(params: ValueFormatterParams<HarvestRow, number>): string {
-  return typeof params.value === 'number' ? KG_FORMATTER.format(params.value) : '';
-}
-
-function formatEurCell(params: ValueFormatterParams<HarvestRow, number>): string {
+function formatEurCell(params: ValueFormatterParams<ExpenseTableRow, number>): string {
   return typeof params.value === 'number' ? EUR_FORMATTER.format(params.value) : '';
 }
 
-const HARVEST_COLUMNS: ColDef<HarvestRow>[] = [
-  { field: 'harvestedOn', headerName: 'Date', minWidth: 150, valueFormatter: formatDateCell },
-  {
-    field: 'cropLabel',
-    headerName: 'Culture',
-    minWidth: 140,
-    flex: 1,
-    cellRenderer: TagCellComponent,
-    cellRendererParams: { color: 'primary' },
-  },
-  {
-    field: 'varietyLabel',
-    headerName: 'Variété',
-    minWidth: 160,
-    flex: 1,
-    cellRenderer: TagCellComponent,
-    cellRendererParams: { color: 'info' },
-  },
+const EXPENSE_COLUMNS: ColDef<ExpenseTableRow>[] = [
+  { field: 'spentOn', headerName: 'Date', minWidth: 140, valueFormatter: formatDateCell },
+  { field: 'label', headerName: 'Libellé', minWidth: 170, flex: 1 },
   {
     field: 'categoryLabel',
     headerName: 'Catégorie',
-    minWidth: 120,
+    minWidth: 150,
     cellRenderer: TagCellComponent,
     cellRendererParams: { color: CATEGORY_TAG_COLOR },
   },
-  { field: 'weightKg', headerName: 'Poids (kg)', type: 'numericColumn', valueFormatter: formatKgCell },
   {
-    field: 'conventionalPricePerKg',
-    headerName: 'Prix conventionnel (€/kg)',
-    type: 'numericColumn',
-    valueFormatter: formatEurCell,
+    field: 'allocationLabels',
+    headerName: 'Affectation',
+    minWidth: 200,
+    cellRenderer: TagListCellComponent,
+    cellRendererParams: { color: 'primary', max: 2 },
   },
-  {
-    field: 'bioPricePerKg',
-    headerName: 'Prix bio (€/kg)',
-    type: 'numericColumn',
-    valueFormatter: formatEurCell,
-  },
-  { field: 'savingsEur', headerName: 'Économie', type: 'numericColumn', valueFormatter: formatEurCell },
+  { field: 'seasonLabel', headerName: 'Saison', minWidth: 100 },
+  { field: 'amountEur', headerName: 'Montant', type: 'numericColumn', valueFormatter: formatEurCell },
 ];
 
-const HARVEST_GRID_OPTIONS: GridOptions<HarvestRow> = {
+const EXPENSE_GRID_OPTIONS: GridOptions<ExpenseTableRow> = {
   rowSelection: { mode: 'singleRow', checkboxes: false, enableClickSelection: true },
   pagination: true,
   paginationPageSize: 8,
@@ -107,7 +92,7 @@ const HARVEST_GRID_OPTIONS: GridOptions<HarvestRow> = {
 
 const CATEGORY_ALL = 'all';
 
-const SORT_FIELD = { date: 'harvestedOn', weight: 'weightKg', savings: 'savingsEur' } as const;
+const SORT_FIELD = { date: 'spentOn', amount: 'amountEur' } as const;
 type SortField = (typeof SORT_FIELD)[keyof typeof SORT_FIELD];
 
 const SORT_DIR = { asc: 'asc', desc: 'desc' } as const;
@@ -118,20 +103,12 @@ type ChipId = (typeof CHIP_ID)[keyof typeof CHIP_ID];
 
 const FIELD_LABEL: Readonly<Record<SortField, string>> = {
   [SORT_FIELD.date]: 'Date',
-  [SORT_FIELD.weight]: 'Poids',
-  [SORT_FIELD.savings]: 'Économie',
+  [SORT_FIELD.amount]: 'Montant',
 };
-
-const CATEGORY_ITEMS: SegmentItem[] = [
-  { value: CATEGORY_ALL, label: 'Toutes' },
-  { value: CATEGORY_META.legume.id, label: CATEGORY_META.legume.label },
-  { value: CATEGORY_META.fruit.id, label: CATEGORY_META.fruit.label },
-];
 
 const SORT_FIELD_ITEMS: SegmentItem[] = [
   { value: SORT_FIELD.date, label: 'Date' },
-  { value: SORT_FIELD.weight, label: 'Poids' },
-  { value: SORT_FIELD.savings, label: 'Économie' },
+  { value: SORT_FIELD.amount, label: 'Montant' },
 ];
 
 const SORT_DIR_ITEMS: SegmentItem[] = [
@@ -142,26 +119,28 @@ const SORT_DIR_ITEMS: SegmentItem[] = [
 const BOTTOM_SHEET_SIDE = 'bottom';
 
 @Component({
-  selector: 'app-harvests',
+  selector: 'app-expenses',
   imports: [
     RouterLink,
     NgIcon,
     ButtonComponent,
     ChipComponent,
     SegmentComponent,
+    ...SelectImports,
     FabButtonComponent,
     FabContainerComponent,
     FabListComponent,
     TableComponent,
     EmptyComponent,
-    ...SelectImports,
   ],
   template: `
     <div class="flex flex-col gap-4">
       <div class="flex items-center justify-between gap-2">
         <div class="flex flex-col">
-          <h2 class="text-foreground text-lg font-semibold">Récoltes</h2>
-          <p class="text-muted-foreground text-sm">Économies estimées au prix moyen français.</p>
+          <h2 class="text-foreground text-lg font-semibold">Dépenses</h2>
+          <p class="text-muted-foreground text-sm">
+            Achats du potager, affectés aux plants et déduits de vos économies.
+          </p>
         </div>
         <div class="hidden items-center gap-2 sm:flex">
           @if (store.rows().length > 0) {
@@ -201,13 +180,13 @@ const BOTTOM_SHEET_SIDE = 'bottom';
 
       @if (store.rows().length === 0) {
         <app-empty
-          icon="phosphorBasket"
-          title="Aucune récolte"
-          description="Ajoutez une récolte pour la voir apparaître ici."
+          icon="phosphorReceipt"
+          title="Aucune dépense"
+          description="Ajoutez une dépense pour l'imputer sur vos économies."
         >
           <a appButton [routerLink]="addLink">
             <ng-icon name="phosphorPlus" class="size-4" />
-            Ajouter une récolte
+            Ajouter une dépense
           </a>
         </app-empty>
       } @else {
@@ -226,10 +205,10 @@ const BOTTOM_SHEET_SIDE = 'bottom';
         class="sm:hidden"
         position="bottom-right"
         triggerIcon="phosphorDotsThreeVertical"
-        triggerLabel="Actions sur les récoltes"
+        triggerLabel="Actions sur les dépenses"
       >
         <app-fab-list>
-          <a appFabButton [routerLink]="addLink" aria-label="Ajouter une récolte">
+          <a appFabButton [routerLink]="addLink" aria-label="Ajouter une dépense">
             <ng-icon name="phosphorPlus" />
           </a>
           <button appFabButton type="button" variant="secondary" (click)="openFilter()" aria-label="Filtrer">
@@ -243,36 +222,18 @@ const BOTTOM_SHEET_SIDE = 'bottom';
     }
 
     <ng-template #filterSheet>
-      <div class="flex flex-col gap-4 p-4">
+      <div class="flex flex-col gap-3 p-4">
         <app-select
-          label="Culture"
-          prefixIcon="phosphorPlant"
-          [value]="cultureFilter()"
-          (valueChange)="onCultureChange($event)"
+          label="Catégorie"
+          placeholder="Toutes les catégories"
+          [value]="categoryValue()"
+          (valueChange)="onCategoryChange($event)"
         >
-          @for (option of cultureOptions; track option.value) {
-            <app-select-item [value]="option.value">{{ option.label }}</app-select-item>
+          <app-select-item [value]="allValue">Toutes les catégories</app-select-item>
+          @for (category of categories; track category.id) {
+            <app-select-item [value]="category.id">{{ category.label }}</app-select-item>
           }
         </app-select>
-        <app-select
-          label="Variété"
-          prefixIcon="phosphorTag"
-          [value]="varietyFilter()"
-          (valueChange)="onVarietyChange($event)"
-        >
-          @for (option of varietyOptions(); track option.value) {
-            <app-select-item [value]="option.value">{{ option.label }}</app-select-item>
-          }
-        </app-select>
-        <div class="flex flex-col gap-2">
-          <label class="text-sm font-medium">Catégorie</label>
-          <app-segment
-            variant="accent"
-            [items]="categoryItems"
-            [value]="categoryValue()"
-            (valueChange)="onCategoryChange($event)"
-          />
-        </div>
       </div>
     </ng-template>
 
@@ -301,50 +262,46 @@ const BOTTOM_SHEET_SIDE = 'bottom';
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class HarvestsComponent {
-  protected readonly store = inject(HarvestStore);
+export class ExpensesComponent {
+  protected readonly store = inject(ExpenseStore);
+  readonly #garden = inject(GardenStore);
   readonly #sheet = inject(SheetService);
 
   private readonly filterSheetTemplate = viewChild.required<TemplateRef<unknown>>('filterSheet');
   private readonly sortSheetTemplate = viewChild.required<TemplateRef<unknown>>('sortSheet');
 
-  protected readonly columns = HARVEST_COLUMNS;
-  protected readonly gridOptions = HARVEST_GRID_OPTIONS;
-  protected readonly addLink = HARVEST_ADD_LINK;
-  protected readonly categoryItems = CATEGORY_ITEMS;
+  protected readonly columns = EXPENSE_COLUMNS;
+  protected readonly gridOptions = EXPENSE_GRID_OPTIONS;
+  protected readonly addLink = EXPENSE_ADD_LINK;
+  protected readonly categories = EXPENSE_CATEGORIES;
+  protected readonly allValue = CATEGORY_ALL;
   protected readonly sortFieldItems = SORT_FIELD_ITEMS;
   protected readonly sortDirItems = SORT_DIR_ITEMS;
-  protected readonly cultureOptions = CULTURE_FILTER_OPTIONS;
 
   protected readonly selectedId = signal<string | null>(null);
-  protected readonly categoryFilter = signal<CategoryId | null>(null);
-  protected readonly cultureFilter = signal<string>(CULTURE_FILTER_ALL);
-  protected readonly varietyFilter = signal<string>(VARIETY_FILTER_ALL);
+  protected readonly categoryFilter = signal<ExpenseCategoryId | null>(null);
   protected readonly sortField = signal<SortField>(SORT_FIELD.date);
   protected readonly sortDir = signal<SortDir>(SORT_DIR.desc);
 
   protected readonly categoryValue = computed(() => this.categoryFilter() ?? CATEGORY_ALL);
-  protected readonly varietyOptions = computed(() => varietyFilterOptions(this.cultureFilter()));
 
-  protected readonly displayedRows = computed(() => {
+  readonly #plantLabelById = computed<Map<string, string>>(
+    () => new Map(this.#garden.rows().map(plant => [plant.id, plant.cropLabel])),
+  );
+
+  protected readonly displayedRows = computed<ExpenseTableRow[]>(() => {
     const category = this.categoryFilter();
     const field = this.sortField();
     const direction = this.sortDir();
-    const categoryLabel = category ? CATEGORY_META[category].label : null;
-    const culture = this.cultureFilter();
-    const variety = this.varietyFilter();
 
-    const filtered = this.store
-      .rows()
-      .filter(
-        row =>
-          (categoryLabel === null || row.categoryLabel === categoryLabel) &&
-          (culture === CULTURE_FILTER_ALL || row.cropId === culture) &&
-          (variety === VARIETY_FILTER_ALL || row.varietyId === variety),
-      );
+    const filtered = category
+      ? this.store.rows().filter(row => row.categoryId === category)
+      : this.store.rows();
 
     const multiplier = direction === SORT_DIR.asc ? 1 : -1;
-    return [...filtered].sort((a, b) => this.#compareRows(a, b, field) * multiplier);
+    return [...filtered]
+      .sort((a, b) => this.#compareRows(a, b, field) * multiplier)
+      .map(row => this.#toTableRow(row));
   });
 
   protected readonly activeChips = computed<{ id: ChipId; label: string }[]>(() => {
@@ -352,7 +309,10 @@ export class HarvestsComponent {
 
     const category = this.categoryFilter();
     if (category) {
-      chips.push({ id: CHIP_ID.category, label: `Catégorie : ${CATEGORY_META[category].label}` });
+      chips.push({
+        id: CHIP_ID.category,
+        label: `Catégorie : ${EXPENSE_CATEGORY_META[category].label}`,
+      });
     }
 
     const field = this.sortField();
@@ -385,18 +345,18 @@ export class HarvestsComponent {
     });
   }
 
-  protected onCategoryChange(value: string | null): void {
-    if (value === CATEGORY_ALL || value === null) {
+  protected onCategoryChange(value: string | string[] | null): void {
+    if (typeof value !== 'string' || value === CATEGORY_ALL) {
       this.categoryFilter.set(null);
       return;
     }
-    if (value in CATEGORY_META) {
-      this.categoryFilter.set(value as CategoryId);
+    if (isExpenseCategoryId(value)) {
+      this.categoryFilter.set(value);
     }
   }
 
   protected onSortFieldChange(value: string | null): void {
-    if (value === SORT_FIELD.date || value === SORT_FIELD.weight || value === SORT_FIELD.savings) {
+    if (value === SORT_FIELD.date || value === SORT_FIELD.amount) {
       this.sortField.set(value);
     }
   }
@@ -404,20 +364,6 @@ export class HarvestsComponent {
   protected onSortDirChange(value: string | null): void {
     if (value === SORT_DIR.asc || value === SORT_DIR.desc) {
       this.sortDir.set(value);
-    }
-  }
-
-  protected onCultureChange(value: string | string[] | null): void {
-    if (typeof value !== 'string') {
-      return;
-    }
-    this.cultureFilter.set(value);
-    this.varietyFilter.set(VARIETY_FILTER_ALL);
-  }
-
-  protected onVarietyChange(value: string | string[] | null): void {
-    if (typeof value === 'string') {
-      this.varietyFilter.set(value);
     }
   }
 
@@ -430,7 +376,7 @@ export class HarvestsComponent {
     this.sortDir.set(SORT_DIR.desc);
   }
 
-  protected onRowSelected(event: RowSelectedEvent<HarvestRow>): void {
+  protected onRowSelected(event: RowSelectedEvent<ExpenseTableRow>): void {
     const row = event.data;
     if (!row) {
       return;
@@ -453,9 +399,28 @@ export class HarvestsComponent {
     this.selectedId.set(null);
   }
 
-  #compareRows(a: HarvestRow, b: HarvestRow, field: SortField): number {
+  #toTableRow(row: ExpenseRow): ExpenseTableRow {
+    return {
+      ...row,
+      allocationLabels: this.#allocationLabels(row),
+      seasonLabel: SEASON_META[row.season].label,
+    };
+  }
+
+  #allocationLabels(row: ExpenseRow): readonly string[] {
+    if (row.plantIds.length === 0) {
+      return [ALL_PLANTS_LABEL];
+    }
+    const labels = this.#plantLabelById();
+    const resolved = row.plantIds
+      .map(id => labels.get(id))
+      .filter((label): label is string => label !== undefined);
+    return [...new Set(resolved)];
+  }
+
+  #compareRows(a: ExpenseRow, b: ExpenseRow, field: SortField): number {
     if (field === SORT_FIELD.date) {
-      return a.harvestedOn.getTime() - b.harvestedOn.getTime();
+      return a.spentOn.getTime() - b.spentOn.getTime();
     }
     return a[field] - b[field];
   }

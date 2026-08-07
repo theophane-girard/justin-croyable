@@ -1,6 +1,14 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
+import {
+  NavigationCancel,
+  NavigationEnd,
+  NavigationError,
+  NavigationStart,
+  Router,
+  RouterLink,
+  RouterOutlet,
+} from '@angular/router';
 import { filter, map } from 'rxjs';
 
 import {
@@ -8,6 +16,7 @@ import {
   LayoutImports,
   SegmentComponent,
   type SegmentItem,
+  SkeletonComponent,
   ThemeService,
 } from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
@@ -21,13 +30,24 @@ type NavItem = { readonly path: string; readonly link: string; readonly label: s
 const NAV_ITEMS: readonly NavItem[] = [
   { path: APP_PATHS.dashboard, link: '/', label: 'Tableau de bord', icon: 'phosphorSquaresFour' },
   { path: APP_PATHS.harvests, link: `/${APP_PATHS.harvests}`, label: 'Récoltes', icon: 'phosphorListBullets' },
+  { path: APP_PATHS.expenses, link: `/${APP_PATHS.expenses}`, label: 'Dépenses', icon: 'phosphorReceipt' },
+  { path: APP_PATHS.garden, link: `/${APP_PATHS.garden}`, label: 'Mon jardin', icon: 'phosphorPottedPlant' },
+  { path: APP_PATHS.prices, link: `/${APP_PATHS.prices}`, label: 'Prix moyens', icon: 'phosphorCoins' },
 ];
 
 const THEME_VALUE = { light: 'light', dark: 'dark' } as const;
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, ...LayoutImports, NgIcon, SegmentComponent, BadgeComponent],
+  imports: [
+    RouterOutlet,
+    RouterLink,
+    ...LayoutImports,
+    NgIcon,
+    SegmentComponent,
+    BadgeComponent,
+    SkeletonComponent,
+  ],
   template: `
     <div class="bg-background text-foreground h-dvh overflow-hidden">
       <app-layout direction="horizontal" class="h-full">
@@ -76,10 +96,17 @@ const THEME_VALUE = { light: 'light', dark: 'dark' } as const;
             </div>
             <div class="ml-auto flex items-center gap-2">
               @if (priceModeBio()) {
-                <app-badge type="secondary" class="gap-1">
-                  <ng-icon name="phosphorLeaf" />
-                  Prix bio (référence)
-                </app-badge>
+                @if (priceSourceLive()) {
+                  <app-badge type="secondary" class="gap-1">
+                    <ng-icon name="phosphorCloudArrowDown" />
+                    Prix RNM bio en direct
+                  </app-badge>
+                } @else {
+                  <app-badge type="secondary" class="gap-1">
+                    <ng-icon name="phosphorLeaf" />
+                    Prix bio (référence)
+                  </app-badge>
+                }
               } @else if (priceSourceLive()) {
                 <app-badge type="secondary" class="gap-1">
                   <ng-icon name="phosphorCloudArrowDown" />
@@ -94,8 +121,21 @@ const THEME_VALUE = { light: 'light', dark: 'dark' } as const;
             </div>
           </app-header>
 
-          <app-content class="min-h-0 overflow-auto p-4">
+          <app-content class="relative min-h-0 overflow-auto p-4">
             <router-outlet />
+            @if (navigating()) {
+              <div class="bg-background absolute inset-0 z-10 flex flex-col gap-4 p-4">
+                <app-skeleton class="h-7 w-56" />
+                <app-skeleton class="h-4 w-80 max-w-full" />
+                <div class="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                  <app-skeleton class="h-24" />
+                  <app-skeleton class="h-24" />
+                  <app-skeleton class="h-24" />
+                  <app-skeleton class="h-24" />
+                </div>
+                <app-skeleton class="h-80" />
+              </div>
+            }
           </app-content>
 
           <app-footer class="text-muted-foreground flex items-center px-4 text-xs">
@@ -113,6 +153,20 @@ export class AppComponent {
   readonly #router = inject(Router);
 
   protected readonly sidebarCollapsed = signal(false);
+
+  protected readonly navigating = toSignal(
+    this.#router.events.pipe(
+      filter(
+        (event): event is NavigationStart | NavigationEnd | NavigationCancel | NavigationError =>
+          event instanceof NavigationStart ||
+          event instanceof NavigationEnd ||
+          event instanceof NavigationCancel ||
+          event instanceof NavigationError,
+      ),
+      map(event => event instanceof NavigationStart),
+    ),
+    { initialValue: false },
+  );
 
   protected readonly priceSourceLive = computed(() => this.#store.priceSource() === 'live');
   protected readonly priceModeBio = computed(() => this.#store.priceMode() === PRICE_MODE.bio);
