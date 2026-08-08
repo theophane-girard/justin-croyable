@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, input, ViewEncapsulation } from '@angular/core';
+import {
+  afterNextRender,
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  input,
+  signal,
+  ViewEncapsulation,
+} from '@angular/core';
 
 import type { ClassValue } from 'clsx';
 
@@ -11,7 +19,7 @@ import { progressVariants } from './progress.variants';
   template: `
     <div
       data-slot="progress-indicator"
-      class="bg-primary size-full flex-1 transition-all"
+      class="bg-primary size-full flex-1 transition-transform duration-700 ease-out"
       [style.transform]="indicatorTransform()"
     ></div>
   `,
@@ -31,6 +39,12 @@ export class ProgressComponent {
   readonly value = input(0);
   readonly class = input<ClassValue>('');
 
+  private readonly hasEnteredView = signal(false);
+
+  constructor() {
+    afterNextRender(() => this.hasEnteredView.set(true));
+  }
+
   protected readonly clampedValue = computed(() => {
     const v = this.value();
     if (v > 100) return 100;
@@ -38,7 +52,9 @@ export class ProgressComponent {
     return v;
   });
 
-  protected readonly indicatorTransform = computed(() => `translateX(-${100 - this.clampedValue()}%)`);
+  protected readonly renderedValue = computed(() => (this.hasEnteredView() ? this.clampedValue() : 0));
+
+  protected readonly indicatorTransform = computed(() => `translateX(-${100 - this.renderedValue()}%)`);
 
   protected readonly classes = computed(() => mergeClasses(progressVariants(), this.class()));
 }

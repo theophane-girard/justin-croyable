@@ -86,6 +86,7 @@ export class TableComponent<TRow = unknown> {
         foregroundColor: 'var(--foreground)',
         borderColor: 'var(--border)',
         chromeBackgroundColor: 'var(--muted)',
+        oddRowBackgroundColor: 'var(--muted)',
         headerTextColor: 'var(--muted-foreground)',
         rowHoverColor: 'var(--accent)',
         selectedRowBackgroundColor: 'var(--accent)',
