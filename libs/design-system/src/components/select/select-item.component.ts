@@ -47,6 +47,7 @@ interface SelectHost {
     role: 'option',
     tabindex: '-1',
     '[class]': 'classes()',
+    '[hidden]': 'isHidden()',
     '[attr.value]': 'value()',
     '[attr.data-disabled]': 'disabled() ? "" : null',
     '[attr.data-selected]': 'isSelected() ? "" : null',
@@ -73,6 +74,7 @@ export class SelectItemComponent {
 
   readonly mode = signal<SelectItemModeVariants>('normal');
   readonly size = signal<SelectSizeVariants>('default');
+  readonly isHidden = signal(false);
 
   protected readonly classes = computed(() =>
     mergeClasses(selectItemVariants({ mode: this.mode(), size: this.size() }), this.class()),
@@ -88,6 +90,13 @@ export class SelectItemComponent {
 
   setSelectHost(selectHost: SelectHost) {
     this.select.set(selectHost);
+  }
+
+  matchesSearch(searchTerm: string): boolean {
+    if (!searchTerm) {
+      return true;
+    }
+    return this.label().toLowerCase().includes(searchTerm);
   }
 
   onMouseEnter() {

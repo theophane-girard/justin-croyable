@@ -16,6 +16,9 @@ type SelectArgs = {
   label: string;
   hint: string;
   required: boolean;
+  withSearch: boolean;
+  searchPlaceholder: string;
+  emptyText: string;
 };
 
 const meta: Meta<SelectArgs> = {
@@ -26,7 +29,7 @@ const meta: Meta<SelectArgs> = {
     docs: {
       description: {
         component:
-          "Liste déroulante bâtie sur le CDK Overlay, pilotable au clavier (flèches, Entrée, Échap, Début/Fin). En mode `multiple`, les valeurs choisies s'affichent en badges et `maxLabelCount` limite le nombre de libellés visibles avant compactage. `prefixIcon` affiche une icône (ng-icon) en préfixe du déclencheur. Sur mobile (< sm), la liste s'ouvre en bottom sheet ancré en bas — avec en-tête rappelant le champ, une poignée (glisser vers le haut pour agrandir, vers le bas pour fermer) et des animations d'ouverture/fermeture — au lieu du popover ancré.",
+          "Liste déroulante bâtie sur le CDK Overlay, pilotable au clavier (flèches, Entrée, Échap, Début/Fin). En mode `multiple`, les valeurs choisies s'affichent en badges et `maxLabelCount` limite le nombre de libellés visibles avant compactage. `prefixIcon` affiche une icône (ng-icon) en préfixe du déclencheur. `withSearch` ajoute un champ de recherche en tête de liste (inspiré de la combobox) pour filtrer les options par libellé, avec message `emptyText` quand aucune ne correspond. Sur mobile (< sm), la liste s'ouvre en bottom sheet ancré en bas — avec en-tête rappelant le champ, une poignée (glisser vers le haut pour agrandir, vers le bas pour fermer) et des animations d'ouverture/fermeture — au lieu du popover ancré.",
       },
     },
   },
@@ -41,6 +44,12 @@ const meta: Meta<SelectArgs> = {
     label: { control: 'text', description: 'Libellé visible, lié au déclencheur.' },
     hint: { control: 'text', description: 'Texte d’aide sous le contrôle.' },
     required: { control: 'boolean', description: 'Ajoute l’astérisque et aria-required.' },
+    withSearch: {
+      control: 'boolean',
+      description: 'Ajoute un champ de recherche en haut de la liste pour filtrer les options.',
+    },
+    searchPlaceholder: { control: 'text', description: 'Placeholder du champ de recherche.' },
+    emptyText: { control: 'text', description: 'Message affiché quand aucune option ne correspond.' },
   },
   args: {
     placeholder: 'Sélectionner un rôle…',
@@ -53,6 +62,9 @@ const meta: Meta<SelectArgs> = {
     label: '',
     hint: '',
     required: false,
+    withSearch: false,
+    searchPlaceholder: 'Rechercher…',
+    emptyText: 'Aucun résultat.',
   },
   render: args => ({
     props: args,
@@ -68,6 +80,9 @@ const meta: Meta<SelectArgs> = {
           [label]="label"
           [hint]="hint"
           [required]="required"
+          [withSearch]="withSearch"
+          [searchPlaceholder]="searchPlaceholder"
+          [emptyText]="emptyText"
           [(value)]="value"
         >
           <app-select-item value="admin">Administrateur</app-select-item>
@@ -128,6 +143,52 @@ export const Multiple: Story = {
 };
 
 export const Disabled: Story = { args: { disabled: true, value: 'user' } };
+
+export const WithSearch: Story = {
+  args: {
+    label: 'Rôle',
+    withSearch: true,
+    searchPlaceholder: 'Rechercher un rôle…',
+    placeholder: 'Sélectionner un rôle…',
+  },
+  play: async ({ canvasElement }) => {
+    const declencheur = canvasElement.querySelector<HTMLElement>('[role="combobox"]')!;
+    await userEvent.click(declencheur);
+
+    const liste = await waitFor(() => {
+      const trouvee = document.querySelector<HTMLElement>('[role="listbox"]');
+      expect(trouvee).toBeTruthy();
+      return trouvee!;
+    });
+
+    const recherche = within(liste).getByRole('searchbox');
+    await userEvent.type(recherche, 'édit');
+
+    await waitFor(() => {
+      expect(within(liste).getByText('Éditeur')).toBeVisible();
+      expect(within(liste).queryByText('Administrateur')).not.toBeVisible();
+    });
+
+    await userEvent.click(within(liste).getByText('Éditeur'));
+
+    await waitFor(() => {
+      expect(declencheur.textContent).toContain('Éditeur');
+      expect(document.querySelector('[role="listbox"]')).toBeNull();
+    });
+  },
+};
+
+export const MultipleWithSearch: Story = {
+  args: {
+    label: 'Rôles',
+    multiple: true,
+    withSearch: true,
+    maxLabelCount: 3,
+    value: ['admin'],
+    searchPlaceholder: 'Rechercher un rôle…',
+    placeholder: 'Rôles…',
+  },
+};
 
 export const Sizes: Story = {
   parameters: { controls: { disable: true } },
