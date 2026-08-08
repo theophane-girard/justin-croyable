@@ -1,6 +1,7 @@
 import { httpResource } from '@angular/common/http';
 import { computed, Injectable, type Signal } from '@angular/core';
 
+import { MEGA_SUPPLEMENT } from './mega-supplement.data';
 import {
   LANG,
   type Lang,
@@ -160,21 +161,37 @@ function mapForm(
   return { id: form.id, names: megaNames(speciesNames, variant), types, stats };
 }
 
-function mapSpecies(species: readonly GraphQlSpecies[]): Pokemon[] {
-  return species.flatMap(entry => {
+function buildDex(species: readonly GraphQlSpecies[]): Pokemon[] {
+  const namesBySpecies = new Map<number, readonly PokemonName[]>();
+  const base = species.flatMap(entry => {
     const speciesNames = mapNames(entry.pokemonspeciesnames);
     if (speciesNames.length === 0) {
       return [];
     }
+    namesBySpecies.set(entry.id, speciesNames);
     return entry.pokemons
       .map(form => mapForm(form, speciesNames))
       .filter((pokemon): pokemon is Pokemon => pokemon !== undefined);
   });
+
+  const known = new Set(base.map(pokemon => pokemon.id));
+  const supplement = MEGA_SUPPLEMENT.flatMap((item): Pokemon[] => {
+    if (known.has(item.id)) {
+      return [];
+    }
+    const speciesNames = namesBySpecies.get(item.speciesId);
+    if (!speciesNames) {
+      return [];
+    }
+    return [{ id: item.id, names: megaNames(speciesNames, item.variant), types: [], stats: item.stats }];
+  });
+
+  return [...base, ...supplement];
 }
 
 function parseResponse(value: unknown): readonly Pokemon[] {
   const species = (value as GraphQlResponse).data?.pokemonspecies;
-  return species ? mapSpecies(species) : [];
+  return species ? buildDex(species) : [];
 }
 
 @Injectable({ providedIn: 'root' })
