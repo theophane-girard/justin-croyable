@@ -42,7 +42,7 @@ export class ProgressComponent {
   private readonly hasEnteredView = signal(false);
 
   constructor() {
-    afterNextRender(() => this.hasEnteredView.set(true));
+    afterNextRender(() => requestAnimationFrame(() => this.hasEnteredView.set(true)));
   }
 
   protected readonly clampedValue = computed(() => {
