@@ -21,6 +21,12 @@ import { ButtonComponent, type ButtonVariant } from '../button';
 import { CalendarComponent } from '../calendar';
 import type { DatePickerSizeVariants } from './date-picker.variants';
 import { PopoverComponent, PopoverDirective } from '../popover';
+import { SheetHandleComponent } from '../sheet-handle';
+import {
+  MOBILE_SHEET_CONTENT_CLASSES,
+  MOBILE_SHEET_ENTER_CLASSES,
+  ViewportService,
+} from '../../core/services/viewport.service';
 import { mergeClasses } from '../../utils/merge-classes';
 
 /**
@@ -45,7 +51,14 @@ const HEIGHT_BY_SIZE: Record<DatePickerSizeVariants, string> = {
 
 @Component({
   selector: 'app-date-picker, [app-date-picker]',
-  imports: [NgIcon, ButtonComponent, CalendarComponent, PopoverComponent, PopoverDirective],
+  imports: [
+    NgIcon,
+    ButtonComponent,
+    CalendarComponent,
+    PopoverComponent,
+    PopoverDirective,
+    SheetHandleComponent,
+  ],
   template: `
     <button
       appButton
@@ -55,6 +68,7 @@ const HEIGHT_BY_SIZE: Record<DatePickerSizeVariants, string> = {
       [buttonDisabled]="disabled()"
       [class]="buttonClasses()"
       appPopover
+      [mobileSheet]="true"
       #popoverDirective="appPopover"
       [content]="calendarTemplate"
       trigger="click"
@@ -70,16 +84,31 @@ const HEIGHT_BY_SIZE: Record<DatePickerSizeVariants, string> = {
     </button>
 
     <ng-template #calendarTemplate>
-      <app-popover [class]="popoverClasses()">
-        <app-calendar
-          #calendar
-          class="border-0"
-          [value]="value()"
-          [minDate]="minDate()"
-          [maxDate]="maxDate()"
-          [disabled]="disabled()"
-          (dateChange)="onDateChange($event)"
-        />
+      <app-popover #popoverCmp [class]="popoverClasses()">
+        @if (isMobile()) {
+          <div class="bg-popover sticky top-0 z-10">
+            <app-sheet-handle
+              [sheetElement]="popoverCmp.elementRef.nativeElement"
+              (dismissed)="dismissFromHandle()"
+            />
+            @if (sheetHeader()) {
+              <div class="text-foreground border-b px-3 py-3 text-sm font-medium">
+                {{ sheetHeader() }}
+              </div>
+            }
+          </div>
+        }
+        <div [class]="calendarWrapperClasses()">
+          <app-calendar
+            #calendar
+            class="border-0"
+            [value]="value()"
+            [minDate]="minDate()"
+            [maxDate]="maxDate()"
+            [disabled]="disabled()"
+            (dateChange)="onDateChange($event)"
+          />
+        </div>
       </app-popover>
     </ng-template>
   `,
@@ -94,6 +123,10 @@ const HEIGHT_BY_SIZE: Record<DatePickerSizeVariants, string> = {
 })
 export class DatePickerComponent implements FormValueControl<Date | null> {
   private readonly datePipe = inject(DatePipe);
+  private readonly viewport = inject(ViewportService);
+
+  protected readonly isMobile = this.viewport.isMobile;
+  protected readonly sheetHeader = computed(() => this.placeholder());
 
   readonly calendarTemplate = viewChild.required<TemplateRef<unknown>>('calendarTemplate');
   readonly popoverDirective = viewChild.required<PopoverDirective>('popoverDirective');
@@ -132,7 +165,15 @@ export class DatePickerComponent implements FormValueControl<Date | null> {
     return mergeClasses(!hasValue && 'text-muted-foreground');
   });
 
-  protected readonly popoverClasses = computed(() => mergeClasses('w-auto p-0'));
+  protected readonly popoverClasses = computed(() =>
+    this.isMobile()
+      ? mergeClasses(MOBILE_SHEET_CONTENT_CLASSES, MOBILE_SHEET_ENTER_CLASSES, 'p-0')
+      : mergeClasses('w-auto p-0'),
+  );
+
+  protected readonly calendarWrapperClasses = computed(() =>
+    this.isMobile() ? 'flex justify-center pb-3' : '',
+  );
 
   protected readonly displayText = computed(() => {
     const date = this.value();
@@ -150,6 +191,10 @@ export class DatePickerComponent implements FormValueControl<Date | null> {
     this.dateChange.emit(singleDate);
 
     this.popoverDirective().hide();
+  }
+
+  protected dismissFromHandle(): void {
+    this.popoverDirective().hide(false);
   }
 
   protected onPopoverVisibilityChange(visible: boolean): void {

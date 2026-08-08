@@ -24,7 +24,7 @@ const meta: Meta<DatePickerArgs> = {
     docs: {
       description: {
         component:
-          'Déclencheur bouton + calendrier dans un popover. `type` reprend les variantes du bouton, `format` contrôle le rendu de la date sélectionnée.',
+          'Déclencheur bouton + calendrier dans un popover. `type` reprend les variantes du bouton, `format` contrôle le rendu de la date sélectionnée. Sur mobile (< sm), le calendrier s\'ouvre en bottom sheet ancré en bas — avec en-tête rappelant le champ, une poignée (glisser vers le haut pour agrandir, vers le bas pour fermer) et des animations d\'ouverture/fermeture — au lieu du popover ancré.',
       },
     },
   },
