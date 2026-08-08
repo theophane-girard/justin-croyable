@@ -6,8 +6,6 @@ import {
   ButtonComponent,
   EmptyComponent,
   ProgressComponent,
-  TabComponent,
-  TabGroupComponent,
 } from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
 
@@ -16,7 +14,6 @@ import { APP_PATHS } from '../../app.routes';
 import {
   EVOLUTION_STAGE_LABEL,
   LANG,
-  LANG_LABEL,
   MAX_BASE_STAT,
   type Pokemon,
   pokemonImageUrl,
@@ -27,14 +24,14 @@ import {
 } from '../../core/pokemon.model';
 import { typeBarClass, typeLabels, typeTileClass } from '../../core/pokemon-type';
 
-interface NameRow {
-  readonly label: string;
-  readonly value: string;
-}
+const TAG_STAGE = 'border-transparent bg-sky-500/15 text-sky-700 dark:text-sky-300';
+const TAG_LEGENDARY = 'border-transparent bg-amber-500/20 text-amber-700 dark:text-amber-300';
+const TAG_ORDINARY = 'border-transparent bg-slate-500/15 text-slate-700 dark:text-slate-300';
+const TAG_TOTAL = 'border-transparent bg-violet-500/15 text-violet-700 dark:text-violet-300';
 
-interface InfoRow {
+interface InfoTag {
   readonly label: string;
-  readonly value: string;
+  readonly class: string;
 }
 
 interface StatRow {
@@ -52,8 +49,7 @@ interface DetailView {
   readonly headerClass: string;
   readonly barClass: string;
   readonly types: readonly string[];
-  readonly names: readonly NameRow[];
-  readonly info: readonly InfoRow[];
+  readonly info: readonly InfoTag[];
   readonly stats: readonly StatRow[];
   readonly total: number;
 }
@@ -68,11 +64,12 @@ function toDetail(pokemon: Pokemon): DetailView {
     headerClass: typeTileClass(pokemon.types[0]),
     barClass: typeBarClass(pokemon.types[0]),
     types: typeLabels(pokemon.types),
-    names: pokemon.names.map(entry => ({ label: LANG_LABEL[entry.lang], value: entry.value })),
     info: [
-      { label: 'Stade', value: EVOLUTION_STAGE_LABEL[pokemon.stage] },
-      { label: 'Catégorie', value: pokemon.legendary ? 'Légendaire' : 'Ordinaire' },
-      { label: 'Total', value: `${pokemonTotal(pokemon)}` },
+      { label: `Stade : ${EVOLUTION_STAGE_LABEL[pokemon.stage]}`, class: TAG_STAGE },
+      pokemon.legendary
+        ? { label: 'Légendaire', class: TAG_LEGENDARY }
+        : { label: 'Ordinaire', class: TAG_ORDINARY },
+      { label: `Total ${pokemonTotal(pokemon)}`, class: TAG_TOTAL },
     ],
     stats: STAT_ORDER.map(stat => ({
       key: stat,
@@ -86,16 +83,7 @@ function toDetail(pokemon: Pokemon): DetailView {
 
 @Component({
   selector: 'app-pokemon-detail',
-  imports: [
-    RouterLink,
-    NgIcon,
-    BadgeComponent,
-    ButtonComponent,
-    EmptyComponent,
-    ProgressComponent,
-    TabGroupComponent,
-    TabComponent,
-  ],
+  imports: [RouterLink, NgIcon, BadgeComponent, ButtonComponent, EmptyComponent, ProgressComponent],
   template: `
     <div class="mx-auto flex w-full max-w-3xl flex-col gap-4">
       <a appButton type="button" variant="ghost" size="sm" class="w-fit" [routerLink]="pokedexLink">
@@ -131,71 +119,51 @@ function toDetail(pokemon: Pokemon): DetailView {
             />
           </div>
 
-          <div class="bg-card p-4 sm:p-6">
-            <app-tab-group>
-              <app-tab label="À propos">
-                <div class="flex flex-col gap-5 pt-4">
-                  <section class="flex flex-col gap-2">
-                    <h3 class="text-foreground text-sm font-semibold">Noms</h3>
-                    <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                      @for (row of view.names; track row.label) {
-                        <div class="border-border flex flex-col rounded-lg border p-2">
-                          <span class="text-muted-foreground text-xs">{{ row.label }}</span>
-                          <span class="text-sm font-medium">{{ row.value }}</span>
-                        </div>
-                      }
-                    </div>
-                  </section>
+          <div class="bg-card flex flex-col gap-5 p-4 sm:p-6">
+            <section class="flex flex-col gap-2">
+              <h3 class="text-foreground text-sm font-semibold">Informations</h3>
+              <div class="flex flex-wrap gap-2">
+                @for (tag of view.info; track tag.label) {
+                  <app-badge type="secondary" [class]="tag.class">{{ tag.label }}</app-badge>
+                }
+              </div>
+            </section>
 
-                  <section class="flex flex-col gap-2">
-                    <h3 class="text-foreground text-sm font-semibold">Informations</h3>
-                    <div class="grid grid-cols-3 gap-2">
-                      @for (row of view.info; track row.label) {
-                        <div class="border-border flex flex-col rounded-lg border p-2">
-                          <span class="text-muted-foreground text-xs">{{ row.label }}</span>
-                          <span class="text-sm font-medium">{{ row.value }}</span>
-                        </div>
-                      }
-                    </div>
-                  </section>
-
-                  @if (isSelected()) {
-                    <app-badge type="secondary" class="w-fit gap-1">
-                      <ng-icon name="phosphorCheck" class="size-3" />
-                      Ajouté au comparateur
-                    </app-badge>
-                  } @else {
-                    <button
-                      appButton
-                      type="button"
-                      class="w-fit"
-                      [buttonDisabled]="store.isFull()"
-                      (click)="add(view.id)"
-                    >
-                      <ng-icon name="phosphorPlus" class="size-4" />
-                      Ajouter au comparateur
-                    </button>
-                  }
-                </div>
-              </app-tab>
-
-              <app-tab label="Statistiques">
-                <div class="flex flex-col gap-2 pt-4">
-                  <div class="text-muted-foreground flex items-center justify-end text-sm">
-                    Total {{ view.total }}
+            <section class="flex flex-col gap-2">
+              <div class="flex items-center justify-between">
+                <h3 class="text-foreground text-sm font-semibold">Statistiques de base</h3>
+                <span class="text-muted-foreground text-sm">Total {{ view.total }}</span>
+              </div>
+              <div class="flex flex-col gap-2">
+                @for (row of view.stats; track row.key) {
+                  <div class="flex items-center gap-3">
+                    <span class="text-muted-foreground w-28 shrink-0 text-sm">{{ row.label }}</span>
+                    <app-progress class="h-2.5 flex-1" [class]="view.barClass" [value]="row.percent" />
+                    <span class="w-10 shrink-0 text-right text-sm font-medium tabular-nums">
+                      {{ row.value }}
+                    </span>
                   </div>
-                  @for (row of view.stats; track row.key) {
-                    <div class="flex items-center gap-3">
-                      <span class="text-muted-foreground w-28 shrink-0 text-sm">{{ row.label }}</span>
-                      <app-progress class="h-2.5 flex-1" [class]="view.barClass" [value]="row.percent" />
-                      <span class="w-10 shrink-0 text-right text-sm font-medium tabular-nums">
-                        {{ row.value }}
-                      </span>
-                    </div>
-                  }
-                </div>
-              </app-tab>
-            </app-tab-group>
+                }
+              </div>
+            </section>
+
+            @if (isSelected()) {
+              <app-badge type="secondary" class="w-fit gap-1">
+                <ng-icon name="phosphorCheck" class="size-3" />
+                Ajouté au comparateur
+              </app-badge>
+            } @else {
+              <button
+                appButton
+                type="button"
+                class="w-fit"
+                [buttonDisabled]="store.isFull()"
+                (click)="add(view.id)"
+              >
+                <ng-icon name="phosphorPlus" class="size-4" />
+                Ajouter au comparateur
+              </button>
+            }
           </div>
         </div>
       }

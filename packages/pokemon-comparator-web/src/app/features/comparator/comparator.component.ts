@@ -211,7 +211,7 @@ const DISPLAY_MODE_ITEMS: readonly SegmentItem[] = [
         [excludedIds]="store.selectedIdSet()"
         [disabledPicking]="store.isFull()"
         [disabledHint]="'Maximum ' + store.maxSelection + ' Pokémon — retirez-en un pour en ajouter.'"
-        scrollClass="max-h-[calc(100dvh-9rem)] overflow-y-auto pb-4"
+        viewportClass="h-[calc(100dvh-9rem)]"
         (select)="onPick($event)"
       />
     </ng-template>

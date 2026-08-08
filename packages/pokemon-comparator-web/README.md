@@ -7,17 +7,21 @@ base de plusieurs Pokémon.
 
 - **Navigation par sidebar** (composants DS `layout`/`sidebar`) : deux pages —
   **Comparateur** et **Pokédex**.
-- **Page Pokédex** : grille de cartes colorées par type (sprite via le composant
-  `avatar`, badges de type, numéro) avec recherche. Un **FAB** (composant DS
-  `fab-button`) ouvre un panneau de **filtres** (type, stade d'évolution,
-  légendaires) et de **tri** (par n°, type, total ou n'importe quelle
-  statistique, ordre croissant/décroissant).
+- **Grille Pokédex partagée** (`PokedexGridComponent`) : cartes colorées par
+  type (sprite avec **skeleton de chargement**, badges de type, numéro),
+  **virtual scroll** (CDK) pour afficher tout le Pokédex efficacement, et un
+  **speed dial** (composant DS `fab`) à deux boutons :
+  - **Filtrer** : type (multi), stade d'évolution, légendaires ;
+  - **Trier** : par n°, type, total ou n'importe quelle statistique, ordre
+    croissant/décroissant.
+  Cette grille est utilisée par la page Pokédex **et** par la recherche du
+  comparateur (mêmes filtres/tri disponibles).
 - **Page de détail** (`/pokedex/:id`) : en-tête coloré par type avec l'artwork,
-  puis des onglets (composant DS `tabs`) « À propos » (noms dans les 4 langues,
-  stade, catégorie, total) et « Statistiques » (barres), et un bouton
-  « Ajouter au comparateur ».
-- **Ajout depuis le Comparateur** : un bouton ouvre le même Pokédex en bottom
-  sheet **pleine page** (composant DS `sheet`, grille scrollable).
+  puis les **informations** en tags colorés (une couleur réservée par type
+  d'info : stade, catégorie/légendaire, total) et les **statistiques de base**
+  juste en dessous, avec un bouton « Ajouter au comparateur ».
+- **Ajout depuis le Comparateur** : un bouton ouvre le Pokédex en bottom sheet
+  **pleine page** (composant DS `sheet`).
 - **Recherche multilingue** : le champ filtre sur les noms dans toutes les
   langues (français, anglais, allemand, japonais), insensible aux accents et aux
   tirets/espaces. Exemple : saisir `snor` remonte **Ronflex** (Snorlax en
