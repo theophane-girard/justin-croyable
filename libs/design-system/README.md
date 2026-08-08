@@ -151,6 +151,60 @@ popover · select · skeleton · switch · tabs · tooltip
 Les groupes composables exportent un tableau d'imports prêt à l'emploi : `SelectImports`,
 `CommandImports`, `TooltipImports`, `LayoutImports`, `BreadcrumbImports`.
 
+## Filtres réactifs dans l'URL : `injectQueryFilters()`
+
+Synchronise les filtres d'une page (tableau, liste de cards…) avec les query params de l'URL.
+L'URL est la **source de vérité unique** : la lecture initiale, l'application des filtres et la
+réaction aux navigations (précédent / suivant, lien partagé) passent toutes par le même flux
+réactif — aucun code d'initialisation dédié. Les valeurs par défaut ne sont pas écrites dans
+l'URL (URL propre), et les écritures fusionnent les params existants (`queryParamsHandling:
+'merge'`) sans polluer l'historique (`replaceUrl` par défaut).
+
+À appeler dans un contexte d'injection (initialiseur de champ ou constructeur). Chaque filtre est
+décrit par un **codec** typé ; codecs fournis : `stringFilter`, `numberFilter`, `booleanFilter`,
+`enumFilter`, `arrayFilter` (multi-select).
+
+```typescript
+import {
+  arrayFilter,
+  enumFilter,
+  injectQueryFilters,
+  stringFilter,
+} from '@justin-croyable/design-system';
+
+const SORT = { name: 'name', date: 'date' } as const;
+type Sort = (typeof SORT)[keyof typeof SORT];
+
+export class CatalogComponent {
+  protected readonly filters = injectQueryFilters({
+    search: stringFilter(),
+    sort: enumFilter([SORT.name, SORT.date], SORT.name),
+    tags: arrayFilter(),
+  });
+
+  // Réactif : dérivé de l'URL, se ré-applique tout seul à l'init et sur navigation.
+  protected readonly rows = computed(() =>
+    filterAndSort(this.store.rows(), this.filters.value()),
+  );
+}
+```
+
+```html
+<!-- Lecture : signal par filtre. Écriture : set / patch / reset. -->
+<app-input
+  [value]="filters.controls.search()"
+  (valueChange)="filters.set('search', $event)"
+/>
+<button appButton variant="ghost" (click)="filters.reset()">Réinitialiser</button>
+```
+
+- `filters.value()` — signal de l'objet agrégé des filtres courants.
+- `filters.controls.<clé>()` — signal en lecture par filtre (idéal pour `[value]` et `computed`).
+- `filters.set(clé, valeur)` / `filters.patch({ … })` — applique un ou plusieurs filtres (un seul
+  `navigate`). `filters.reset()` — retire tous les params.
+- Options : `prefix` (préfixe les params pour plusieurs jeux de filtres sur une même page),
+  `replaceUrl` (passer à `false` pour empiler les filtres dans l'historique).
+
 ## Configuration : `provideJustinCroyableDS()`
 
 Point d'entrée unique, composable par fonctionnalités façon `provideRouter()` :
