@@ -44,10 +44,9 @@ import {
 interface SelectedView {
   readonly id: number;
   readonly name: string;
-  readonly total: number;
+  readonly totalLabel: string;
   readonly imageUrl: string;
-  readonly fallback: string;
-  readonly avatarClass: string;
+  readonly mediaClass: string;
 }
 
 interface StatRow {
@@ -74,13 +73,13 @@ interface PokedexTile {
   readonly types: readonly string[];
 }
 
-const RING_CLASSES = [
-  'size-6 ring-2 ring-chart-1',
-  'size-6 ring-2 ring-chart-2',
-  'size-6 ring-2 ring-chart-3',
-  'size-6 ring-2 ring-chart-4',
-  'size-6 ring-2 ring-chart-5',
-  'size-6 ring-2 ring-chart-6',
+const MEDIA_BORDER_CLASSES = [
+  '[&_[data-slot=chip-media]]:border-2 [&_[data-slot=chip-media]]:border-chart-1',
+  '[&_[data-slot=chip-media]]:border-2 [&_[data-slot=chip-media]]:border-chart-2',
+  '[&_[data-slot=chip-media]]:border-2 [&_[data-slot=chip-media]]:border-chart-3',
+  '[&_[data-slot=chip-media]]:border-2 [&_[data-slot=chip-media]]:border-chart-4',
+  '[&_[data-slot=chip-media]]:border-2 [&_[data-slot=chip-media]]:border-chart-5',
+  '[&_[data-slot=chip-media]]:border-2 [&_[data-slot=chip-media]]:border-chart-6',
 ] as const;
 
 const BAR_CLASSES = [
@@ -221,20 +220,14 @@ function toTile(pokemon: Pokemon): PokedexTile {
               <div class="flex flex-wrap items-center gap-2">
                 @for (item of selection(); track item.id) {
                   <app-chip
-                    class="gap-2 overflow-visible py-1 pr-1 pl-1"
+                    [class]="item.mediaClass"
+                    [imgUrl]="item.imageUrl"
+                    [alt]="item.name"
+                    [hint]="item.totalLabel"
                     [removeLabel]="'Retirer ' + item.name"
                     (removed)="remove(item.id)"
                   >
-                    <span class="inline-flex items-center gap-2">
-                      <app-avatar
-                        [class]="item.avatarClass"
-                        [src]="item.imageUrl"
-                        [alt]="item.name"
-                        [fallback]="item.fallback"
-                      />
-                      <span class="text-sm font-medium">{{ item.name }}</span>
-                      <span class="text-muted-foreground text-sm tabular-nums">{{ item.total }}</span>
-                    </span>
+                    {{ item.name }}
                   </app-chip>
                 }
                 <button appButton type="button" variant="ghost" size="sm" (click)="clear()">
@@ -386,17 +379,13 @@ export class ComparatorComponent {
   });
 
   protected readonly selection = computed<readonly SelectedView[]>(() =>
-    this.store.selected().map((pokemon, index) => {
-      const name = pokemonName(pokemon, LANG.fr);
-      return {
-        id: pokemon.id,
-        name,
-        total: pokemonTotal(pokemon),
-        imageUrl: pokemonImageUrl(pokemon.id),
-        fallback: name.charAt(0),
-        avatarClass: RING_CLASSES[index % RING_CLASSES.length],
-      };
-    }),
+    this.store.selected().map((pokemon, index) => ({
+      id: pokemon.id,
+      name: pokemonName(pokemon, LANG.fr),
+      totalLabel: `${pokemonTotal(pokemon)}`,
+      imageUrl: pokemonImageUrl(pokemon.id),
+      mediaClass: MEDIA_BORDER_CLASSES[index % MEDIA_BORDER_CLASSES.length],
+    })),
   );
 
   protected readonly statGroups = computed<readonly StatGroup[]>(() => {
