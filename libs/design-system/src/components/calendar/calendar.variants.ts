@@ -54,7 +54,7 @@ export const calendarDayVariants = cva(
   {
     variants: {
       fluid: {
-        true: 'h-11 w-full',
+        true: 'aspect-square w-full',
         false: 'h-8 w-8',
       },
     },

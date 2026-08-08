@@ -108,6 +108,7 @@ export class CalendarGridComponent {
         rangeEnd: day.isRangeEnd ?? false,
         inRange: day.isInRange ?? false,
       }),
+      this.fluid() ? 'text-base' : '',
     );
   }
 
