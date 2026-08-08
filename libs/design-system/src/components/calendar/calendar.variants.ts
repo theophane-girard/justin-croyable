@@ -1,10 +1,30 @@
 import { cva } from 'class-variance-authority';
 
-export const calendarVariants = cva('bg-background p-3 w-fit rounded-lg border');
+export const calendarVariants = cva('bg-background p-3 rounded-lg border', {
+  variants: {
+    fluid: {
+      true: 'w-full',
+      false: 'w-fit',
+    },
+  },
+  defaultVariants: {
+    fluid: false,
+  },
+});
 
 export const calendarMonthVariants = cva('flex flex-col w-fit gap-4');
 
-export const calendarNavVariants = cva('flex items-center justify-between gap-2 w-fit mb-4');
+export const calendarNavVariants = cva('flex items-center justify-between gap-2 mb-4', {
+  variants: {
+    fluid: {
+      true: 'w-full',
+      false: 'w-fit',
+    },
+  },
+  defaultVariants: {
+    fluid: false,
+  },
+});
 
 export const calendarNavButtonVariants = cva(
   'inline-flex cursor-pointer items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground size-7 bg-transparent p-0 opacity-50 hover:opacity-100',
@@ -12,11 +32,37 @@ export const calendarNavButtonVariants = cva(
 
 export const calendarWeekdaysVariants = cva('flex');
 
-export const calendarWeekdayVariants = cva('text-muted-foreground font-normal text-center text-[0.8rem] w-8');
+export const calendarWeekdayVariants = cva(
+  'text-muted-foreground font-normal text-center text-[0.8rem]',
+  {
+    variants: {
+      fluid: {
+        true: 'w-full',
+        false: 'w-8',
+      },
+    },
+    defaultVariants: {
+      fluid: false,
+    },
+  },
+);
 
 export const calendarWeekVariants = cva('flex w-full mt-2');
 
-export const calendarDayVariants = cva('p-0 relative focus-within:relative focus-within:z-20 flex mt-1 size-8 text-sm');
+export const calendarDayVariants = cva(
+  'p-0 relative focus-within:relative focus-within:z-20 flex mt-1 text-sm',
+  {
+    variants: {
+      fluid: {
+        true: 'h-11 w-full',
+        false: 'h-8 w-8',
+      },
+    },
+    defaultVariants: {
+      fluid: false,
+    },
+  },
+);
 
 export const calendarDayButtonVariants = cva(
   // `cursor-pointer` est dans la base et la variante `disabled` repasse en

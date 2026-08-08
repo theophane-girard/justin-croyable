@@ -98,17 +98,16 @@ const HEIGHT_BY_SIZE: Record<DatePickerSizeVariants, string> = {
             }
           </div>
         }
-        <div [class]="calendarWrapperClasses()">
-          <app-calendar
-            #calendar
-            class="border-0"
-            [value]="value()"
-            [minDate]="minDate()"
-            [maxDate]="maxDate()"
-            [disabled]="disabled()"
-            (dateChange)="onDateChange($event)"
-          />
-        </div>
+        <app-calendar
+          #calendar
+          class="border-0"
+          [fluid]="isMobile()"
+          [value]="value()"
+          [minDate]="minDate()"
+          [maxDate]="maxDate()"
+          [disabled]="disabled()"
+          (dateChange)="onDateChange($event)"
+        />
       </app-popover>
     </ng-template>
   `,
@@ -169,10 +168,6 @@ export class DatePickerComponent implements FormValueControl<Date | null> {
     this.isMobile()
       ? mergeClasses(MOBILE_SHEET_CONTENT_CLASSES, MOBILE_SHEET_ENTER_CLASSES, 'p-0')
       : mergeClasses('w-auto p-0'),
-  );
-
-  protected readonly calendarWrapperClasses = computed(() =>
-    this.isMobile() ? 'flex justify-center pb-3' : '',
   );
 
   protected readonly displayText = computed(() => {

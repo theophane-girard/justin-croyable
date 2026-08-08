@@ -39,6 +39,7 @@ import { mergeClasses, noopFn } from '../../utils/merge-classes';
         [minDate]="minDate()"
         [maxDate]="maxDate()"
         [disabled]="disabled()"
+        [fluid]="fluid()"
         (monthChange)="onMonthChange($event)"
         (yearChange)="onYearChange($event)"
         (previousMonth)="previousMonth()"
@@ -48,6 +49,7 @@ import { mergeClasses, noopFn } from '../../utils/merge-classes';
       <app-calendar-grid
         [calendarDays]="calendarDays()"
         [disabled]="disabled()"
+        [fluid]="fluid()"
         (dateSelect)="onDateSelect($event)"
         (previousMonth)="onGridPreviousMonth($event)"
         (nextMonth)="onGridNextMonth($event)"
@@ -87,6 +89,7 @@ export class CalendarComponent implements ControlValueAccessor {
   readonly minDate = input<Date | null>(null);
   readonly maxDate = input<Date | null>(null);
   readonly disabled = model<boolean>(false);
+  readonly fluid = input<boolean>(false);
 
   // Public outputs
   readonly dateChange = outputFromObservable(
@@ -125,7 +128,9 @@ export class CalendarComponent implements ControlValueAccessor {
   protected readonly currentMonthValue = linkedSignal(() => this.currentDate().getMonth().toString());
   protected readonly currentYearValue = linkedSignal(() => this.currentDate().getFullYear().toString());
 
-  protected readonly classes = computed(() => mergeClasses(calendarVariants(), this.class()));
+  protected readonly classes = computed(() =>
+    mergeClasses(calendarVariants({ fluid: this.fluid() }), this.class()),
+  );
 
   protected readonly calendarDays = computed(() => {
     const currentDate = this.currentDate();
