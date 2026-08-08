@@ -19,7 +19,7 @@ import { progressVariants } from './progress.variants';
   template: `
     <div
       data-slot="progress-indicator"
-      class="bg-primary size-full flex-1 transition-transform duration-700 ease-out"
+      class="bg-primary size-full flex-1 rounded-full transition-transform duration-700 ease-out"
       [style.transform]="indicatorTransform()"
     ></div>
   `,
