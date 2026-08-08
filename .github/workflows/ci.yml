@@ -61,9 +61,11 @@ jobs:
           if AFFECTED=$(npx nx show projects --affected --json 2>/dev/null); then
             echo "storybook=$(echo "$AFFECTED" | grep -q 'storybook-web' && echo true || echo false)" >> "$GITHUB_OUTPUT"
             echo "potager=$(echo "$AFFECTED" | grep -q 'potager-web' && echo true || echo false)" >> "$GITHUB_OUTPUT"
+            echo "pokemon=$(echo "$AFFECTED" | grep -q 'pokemon-comparator-web' && echo true || echo false)" >> "$GITHUB_OUTPUT"
           else
             echo "storybook=true" >> "$GITHUB_OUTPUT"
             echo "potager=true" >> "$GITHUB_OUTPUT"
+            echo "pokemon=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Typecheck et lint
@@ -130,6 +132,10 @@ jobs:
         if: steps.affected.outputs.potager == 'true'
         run: npx nx build @justin-croyable/potager-web
 
+      - name: Build de l'app pokemon-comparator
+        if: steps.affected.outputs.pokemon == 'true'
+        run: npx nx build @justin-croyable/pokemon-comparator-web
+
       - name: Firebase est-il configuré ?
         id: firebase
         env:
@@ -162,6 +168,16 @@ jobs:
           target: potager
           channelId: live
 
+      - name: Déploiement de l'app pokemon-comparator sur le canal live
+        if: steps.firebase.outputs.ready == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master' && steps.affected.outputs.pokemon == 'true'
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          projectId: ${{ env.FIREBASE_PROJECT_ID }}
+          target: pokemon
+          channelId: live
+
       - name: Prévisualisation du Storybook
         if: steps.firebase.outputs.ready == 'true' && github.event_name == 'pull_request' && steps.affected.outputs.storybook == 'true'
         uses: FirebaseExtended/action-hosting-deploy@v0
@@ -180,4 +196,14 @@ jobs:
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           projectId: ${{ env.FIREBASE_PROJECT_ID }}
           target: potager
+          expires: 7d
+
+      - name: Prévisualisation de l'app pokemon-comparator
+        if: steps.firebase.outputs.ready == 'true' && github.event_name == 'pull_request' && steps.affected.outputs.pokemon == 'true'
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          projectId: ${{ env.FIREBASE_PROJECT_ID }}
+          target: pokemon
           expires: 7d
