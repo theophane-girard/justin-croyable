@@ -1,21 +1,14 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import {
-  NavigationCancel,
-  NavigationEnd,
-  NavigationError,
-  NavigationStart,
-  Router,
-  RouterLink,
-  RouterOutlet,
-} from '@angular/router';
-import { filter, map } from 'rxjs';
+import { RouterLink, RouterOutlet } from '@angular/router';
 
 import {
+  GridPageSkeletonComponent,
+  injectCurrentPath,
+  injectRouterNavigating,
+  isActivePath,
   LayoutImports,
   SegmentComponent,
   type SegmentItem,
-  SkeletonComponent,
   ThemeService,
 } from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
@@ -48,7 +41,14 @@ const NAV_ITEMS: readonly NavItem[] = [
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, ...LayoutImports, NgIcon, SegmentComponent, SkeletonComponent],
+  imports: [
+    RouterOutlet,
+    RouterLink,
+    ...LayoutImports,
+    NgIcon,
+    SegmentComponent,
+    GridPageSkeletonComponent,
+  ],
   template: `
     <div class="bg-background text-foreground h-dvh overflow-hidden">
       <app-layout direction="horizontal" class="h-full">
@@ -108,15 +108,7 @@ const NAV_ITEMS: readonly NavItem[] = [
           <app-content class="relative min-h-0 overflow-auto p-4 sm:p-6">
             <router-outlet />
             @if (navigating()) {
-              <div class="bg-background absolute inset-0 z-10 flex flex-col gap-4 p-4 sm:p-6">
-                <app-skeleton class="h-7 w-56" />
-                <app-skeleton class="h-4 w-80 max-w-full" />
-                <div class="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-                  @for (tile of skeletonTiles; track tile) {
-                    <app-skeleton class="h-24" />
-                  }
-                </div>
-              </div>
+              <app-grid-page-skeleton class="bg-background absolute inset-0 z-10 p-4 sm:p-6" />
             }
           </app-content>
         </app-layout>
@@ -127,52 +119,19 @@ const NAV_ITEMS: readonly NavItem[] = [
 })
 export class AppComponent {
   protected readonly theme = inject(ThemeService);
-  readonly #router = inject(Router);
 
   protected readonly themeItems = THEME_ITEMS;
   protected readonly sidebarCollapsed = signal(false);
-  protected readonly skeletonTiles = [0, 1, 2, 3, 4, 5, 6, 7];
 
-  protected readonly navigating = toSignal(
-    this.#router.events.pipe(
-      filter(
-        (event): event is NavigationStart | NavigationEnd | NavigationCancel | NavigationError =>
-          event instanceof NavigationStart ||
-          event instanceof NavigationEnd ||
-          event instanceof NavigationCancel ||
-          event instanceof NavigationError,
-      ),
-      map(event => event instanceof NavigationStart),
-    ),
-    { initialValue: false },
-  );
-
-  protected readonly currentPath = toSignal(
-    this.#router.events.pipe(
-      filter((event): event is NavigationEnd => event instanceof NavigationEnd),
-      map(event => this.#normalizePath(event.urlAfterRedirects)),
-    ),
-    { initialValue: this.#normalizePath(this.#router.url) },
-  );
+  protected readonly navigating = injectRouterNavigating();
+  protected readonly currentPath = injectCurrentPath();
 
   protected readonly navLinks = computed(() => {
     const current = this.currentPath();
-    return NAV_ITEMS.map(item => ({ ...item, active: this.#isActive(item.path, current) }));
+    return NAV_ITEMS.map(item => ({ ...item, active: isActivePath(item.path, current) }));
   });
 
   protected onThemeChange(value: string): void {
     this.theme.set(value === THEME_VALUE.dark ? THEME_VALUE.dark : THEME_VALUE.light);
-  }
-
-  #isActive(path: string, active: string): boolean {
-    if (path === '') {
-      return active === '';
-    }
-    return active === path || active.startsWith(`${path}/`);
-  }
-
-  #normalizePath(url: string): string {
-    const path = url.split('?')[0]?.split('#')[0] ?? url;
-    return path.replace(/^\/+/, '');
   }
 }
