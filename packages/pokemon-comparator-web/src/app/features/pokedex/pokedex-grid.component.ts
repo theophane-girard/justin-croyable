@@ -70,6 +70,7 @@ const STAGE_ITEMS: ToggleGroupItem[] = [
 const LEGENDARY_ITEMS: ToggleGroupItem[] = [
   { value: ALL, label: 'Tous' },
   { value: 'legendary', label: 'Légendaires' },
+  { value: 'ordinary', label: 'Non légendaires' },
 ];
 
 const DIRECTION_ITEMS: ToggleGroupItem[] = [
@@ -333,13 +334,17 @@ export class PokedexGridComponent {
     const excluded = this.excludedIds();
     const types = new Set(this.#selectedTypes());
     const stage = this.#stageFilter();
-    const legendaryOnly = this.#legendaryFilter() === 'legendary';
+    const legendary = this.#legendaryFilter();
 
     const filtered = this.pokemons()
       .filter(pokemon => !excluded.has(pokemon.id))
       .filter(pokemon => types.size === 0 || pokemon.types.some(type => types.has(type)))
       .filter(pokemon => stage === ALL || pokemon.stage === Number(stage))
-      .filter(pokemon => !legendaryOnly || pokemon.legendary);
+      .filter(
+        pokemon =>
+          legendary === ALL ||
+          (legendary === 'legendary' ? pokemon.legendary : !pokemon.legendary),
+      );
 
     const query = this.#query();
     if (query.trim()) {
