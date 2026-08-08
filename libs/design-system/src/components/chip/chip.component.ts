@@ -25,7 +25,7 @@ import { chipVariants, type ChipShape, type ChipVariant } from './chip.variants'
         [src]="imgUrl()"
         [alt]="alt()"
         data-slot="chip-media"
-        class="-ml-1 size-5 shrink-0 rounded-full object-cover"
+        class="-ml-2 size-5 shrink-0 rounded-full object-cover"
       />
     } @else if (icon()) {
       <ng-icon [name]="icon()!" data-slot="chip-icon" class="-ml-0.5 size-4 shrink-0" aria-hidden="true" />
