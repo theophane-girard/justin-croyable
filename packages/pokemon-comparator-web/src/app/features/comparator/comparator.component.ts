@@ -1,46 +1,47 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  type TemplateRef,
+  ViewContainerRef,
+  viewChild,
+} from '@angular/core';
 
 import {
   ButtonComponent,
   CardComponent,
   ChartComponent,
   ChipComponent,
-  type CommandOption,
-  CommandImports,
   EmptyComponent,
   ProgressComponent,
   SegmentComponent,
   type SegmentItem,
+  SheetService,
+  SpinnerComponent,
   ThemePaletteService,
 } from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
 import type { EChartsCoreOption } from 'echarts/core';
 
 import { ComparatorStore, DISPLAY_MODE } from '../../core/comparator-store';
-import { POKEMONS } from '../../core/pokemon.data';
+import { PokedexGridComponent } from '../pokedex/pokedex-grid.component';
 import {
   LANG,
   MAX_BASE_STAT,
-  type Pokemon,
+  pokemonImageUrl,
   pokemonName,
   pokemonTotal,
   STAT_META,
   STAT_ORDER,
 } from '../../core/pokemon.model';
 
-interface SearchOption {
-  readonly id: number;
-  readonly label: string;
-  readonly alias: string;
-  readonly hint: string;
-}
-
 interface SelectedView {
   readonly id: number;
   readonly name: string;
-  readonly total: number;
-  readonly dotClass: string;
+  readonly totalLabel: string;
+  readonly imageUrl: string;
+  readonly mediaClass: string;
 }
 
 interface StatRow {
@@ -57,13 +58,13 @@ interface StatGroup {
   readonly rows: readonly StatRow[];
 }
 
-const DOT_CLASSES = [
-  'bg-chart-1',
-  'bg-chart-2',
-  'bg-chart-3',
-  'bg-chart-4',
-  'bg-chart-5',
-  'bg-chart-6',
+const MEDIA_BORDER_CLASSES = [
+  '[&_[data-slot=chip-media]]:border-2 [&_[data-slot=chip-media]]:border-chart-1',
+  '[&_[data-slot=chip-media]]:border-2 [&_[data-slot=chip-media]]:border-chart-2',
+  '[&_[data-slot=chip-media]]:border-2 [&_[data-slot=chip-media]]:border-chart-3',
+  '[&_[data-slot=chip-media]]:border-2 [&_[data-slot=chip-media]]:border-chart-4',
+  '[&_[data-slot=chip-media]]:border-2 [&_[data-slot=chip-media]]:border-chart-5',
+  '[&_[data-slot=chip-media]]:border-2 [&_[data-slot=chip-media]]:border-chart-6',
 ] as const;
 
 const BAR_CLASSES = [
@@ -80,35 +81,10 @@ const DISPLAY_MODE_ITEMS: readonly SegmentItem[] = [
   { value: DISPLAY_MODE.radar, label: 'Radar', icon: 'phosphorPolygon' },
 ];
 
-function normalize(value: string): string {
-  return value
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
-}
-
-function buildAlias(pokemon: Pokemon): string {
-  const raw = pokemon.names.map(name => name.value);
-  const normalized = raw.map(normalize);
-  return [...raw, ...normalized].join(' ');
-}
-
-const ALL_OPTIONS: readonly SearchOption[] = POKEMONS.map(pokemon => ({
-  id: pokemon.id,
-  label: pokemonName(pokemon, LANG.fr),
-  alias: buildAlias(pokemon),
-  hint: pokemon.names
-    .filter(name => name.lang !== LANG.fr)
-    .map(name => name.value)
-    .join(' · '),
-}));
-
 @Component({
   selector: 'app-comparator',
   imports: [
-    FormsModule,
     NgIcon,
-    ...CommandImports,
     ButtonComponent,
     CardComponent,
     ChartComponent,
@@ -116,135 +92,152 @@ const ALL_OPTIONS: readonly SearchOption[] = POKEMONS.map(pokemon => ({
     EmptyComponent,
     ProgressComponent,
     SegmentComponent,
+    SpinnerComponent,
+    PokedexGridComponent,
   ],
   template: `
     <div class="mx-auto flex w-full max-w-5xl flex-col gap-6">
       <header class="flex flex-col gap-1">
         <div class="flex items-center gap-2">
           <ng-icon name="phosphorScales" class="text-primary size-7 shrink-0" />
-          <h1 class="text-2xl font-semibold tracking-tight">Pokémon Comparator</h1>
+          <h1 class="text-2xl font-semibold tracking-tight">Comparateur</h1>
         </div>
         <p class="text-muted-foreground text-sm">
-          Comparez les statistiques de base de plusieurs Pokémon. La recherche filtre sur les noms
-          dans toutes les langues (français, anglais, allemand, japonais).
+          Comparez les statistiques de base de plusieurs Pokémon. Parcourez le Pokédex et
+          recherchez par nom dans toutes les langues (français, anglais, allemand, japonais).
         </p>
       </header>
 
-      <app-card title="Choisir des Pokémon">
-        <div class="flex flex-col gap-4">
-          <app-command class="w-full" (commandSelected)="onSelect($event)">
-            <app-command-input
-              placeholder="Rechercher un Pokémon… (ex. « snor » → Ronflex)"
-              [ngModel]="searchQuery()"
-              (ngModelChange)="onSearchChange($event)"
-            />
-            <app-command-list>
-              <app-command-empty>Aucun Pokémon trouvé.</app-command-empty>
-              @for (option of searchOptions(); track option.id) {
-                <app-command-option
-                  [value]="option.id"
-                  [label]="option.label"
-                  [command]="option.alias"
-                  [shortcut]="option.hint"
-                />
-              }
-            </app-command-list>
-          </app-command>
-
-          @if (selection().length > 0) {
-            <div class="flex flex-wrap items-center gap-2">
-              @for (item of selection(); track item.id) {
-                <app-chip [removeLabel]="'Retirer ' + item.name" (removed)="remove(item.id)">
-                  <span class="inline-flex items-center gap-2">
-                    <span class="size-2.5 shrink-0 rounded-full" [class]="item.dotClass"></span>
-                    <span class="font-medium">{{ item.name }}</span>
-                    <span class="text-muted-foreground tabular-nums">{{ item.total }}</span>
-                  </span>
-                </app-chip>
-              }
-              <button appButton type="button" variant="ghost" size="sm" (click)="clear()">
-                <ng-icon name="phosphorTrash" class="size-4" />
-                Tout effacer
-              </button>
-            </div>
-          }
+      @if (store.isLoading()) {
+        <div class="flex flex-col items-center justify-center gap-3 py-16">
+          <app-spinner class="text-primary size-8" />
+          <p class="text-muted-foreground text-sm">Chargement du Pokédex…</p>
         </div>
-      </app-card>
+      } @else if (store.hasError()) {
+        <div class="flex flex-col items-center gap-4">
+          <app-empty
+            icon="phosphorWarningCircle"
+            title="Impossible de charger les Pokémon"
+            description="La récupération des données depuis l'API PokéAPI a échoué. Vérifiez votre connexion."
+          />
+          <button appButton type="button" variant="outline" (click)="reload()">
+            <ng-icon name="phosphorArrowClockwise" class="size-4" />
+            Réessayer
+          </button>
+        </div>
+      } @else {
+        <app-card title="Choisir des Pokémon">
+          <div class="flex flex-col gap-4">
+            <button appButton type="button" variant="outline" full (click)="openPokedex()">
+              <ng-icon name="phosphorMagnifyingGlass" class="size-4" />
+              Parcourir le Pokédex
+            </button>
 
-      @if (selection().length > 0) {
-        <app-card>
-          <div class="flex flex-col gap-5">
-            <div class="flex flex-wrap items-center justify-between gap-3">
-              <h2 class="text-lg font-semibold">Statistiques de base</h2>
-              <app-segment
-                variant="accent"
-                [items]="displayModeItems"
-                [value]="displayMode()"
-                (valueChange)="onDisplayModeChange($event)"
-              />
-            </div>
-
-            @if (displayMode() === displayModeBars) {
-              <div class="flex flex-col gap-6">
-                @for (group of statGroups(); track group.key) {
-                  <section class="flex flex-col gap-2">
-                    <h3 class="text-foreground text-sm font-semibold">{{ group.label }}</h3>
-                    <div class="flex flex-col gap-2">
-                      @for (row of group.rows; track row.id) {
-                        <div class="flex items-center gap-3">
-                          <span class="text-muted-foreground w-28 shrink-0 truncate text-sm">
-                            {{ row.name }}
-                          </span>
-                          <app-progress class="h-2.5 flex-1" [class]="row.barClass" [value]="row.percent" />
-                          <span class="w-10 shrink-0 text-right text-sm font-medium tabular-nums">
-                            {{ row.value }}
-                          </span>
-                        </div>
-                      }
-                    </div>
-                  </section>
+            @if (selection().length > 0) {
+              <div class="flex flex-wrap items-center gap-2">
+                @for (item of selection(); track item.id) {
+                  <app-chip
+                    [class]="item.mediaClass"
+                    [imgUrl]="item.imageUrl"
+                    [alt]="item.name"
+                    [hint]="item.totalLabel"
+                    [removeLabel]="'Retirer ' + item.name"
+                    (removed)="remove(item.id)"
+                  >
+                    {{ item.name }}
+                  </app-chip>
                 }
+                <button appButton type="button" variant="ghost" size="sm" (click)="clear()">
+                  <ng-icon name="phosphorTrash" class="size-4" />
+                  Tout effacer
+                </button>
               </div>
-            } @else {
-              <app-chart skeletonType="line" height="26rem" [options]="radarOptions()" />
             }
           </div>
         </app-card>
-      } @else {
-        <app-empty
-          icon="phosphorScales"
-          title="Aucun Pokémon sélectionné"
-          description="Recherchez un Pokémon ci-dessus pour commencer la comparaison."
-        />
+
+        @if (selection().length > 0) {
+          <app-card>
+            <div class="flex flex-col gap-5">
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <h2 class="text-lg font-semibold">Statistiques de base</h2>
+                <app-segment
+                  variant="accent"
+                  [items]="displayModeItems"
+                  [value]="displayMode()"
+                  (valueChange)="onDisplayModeChange($event)"
+                />
+              </div>
+
+              @if (displayMode() === displayModeBars) {
+                <div class="flex flex-col gap-6">
+                  @for (group of statGroups(); track group.key) {
+                    <section class="flex flex-col gap-2">
+                      <h3 class="text-foreground text-sm font-semibold">{{ group.label }}</h3>
+                      <div class="flex flex-col gap-2">
+                        @for (row of group.rows; track row.id) {
+                          <div class="flex items-center gap-3">
+                            <span class="text-muted-foreground w-28 shrink-0 truncate text-sm">
+                              {{ row.name }}
+                            </span>
+                            <app-progress class="h-2.5 flex-1" [class]="row.barClass" [value]="row.percent" />
+                            <span class="w-10 shrink-0 text-right text-sm font-medium tabular-nums">
+                              {{ row.value }}
+                            </span>
+                          </div>
+                        }
+                      </div>
+                    </section>
+                  }
+                </div>
+              } @else {
+                <app-chart skeletonType="line" height="26rem" [options]="radarOptions()" />
+              }
+            </div>
+          </app-card>
+        } @else {
+          <app-empty
+            icon="phosphorScales"
+            title="Aucun Pokémon sélectionné"
+            description="Ouvrez le Pokédex pour ajouter des Pokémon à comparer."
+          />
+        }
       }
     </div>
+
+    <ng-template #pokedexSheet>
+      <app-pokedex-grid
+        [pokemons]="store.pokemons()"
+        [excludedIds]="store.selectedIdSet()"
+        [disabledPicking]="store.isFull()"
+        [disabledHint]="'Maximum ' + store.maxSelection + ' Pokémon — retirez-en un pour en ajouter.'"
+        viewportClass="h-[calc(100dvh-9rem)]"
+        (select)="onPick($event)"
+      />
+    </ng-template>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ComparatorComponent {
   protected readonly store = inject(ComparatorStore);
   readonly #palette = inject(ThemePaletteService);
+  readonly #sheet = inject(SheetService);
+  readonly #viewContainerRef = inject(ViewContainerRef);
+
+  private readonly pokedexTemplate = viewChild.required<TemplateRef<unknown>>('pokedexSheet');
 
   protected readonly displayModeItems = DISPLAY_MODE_ITEMS;
   protected readonly displayModeBars = DISPLAY_MODE.bars;
 
   protected readonly displayMode = this.store.displayMode;
 
-  readonly #searchQuery = signal('');
-
-  protected readonly searchQuery = this.#searchQuery.asReadonly();
-
-  protected readonly searchOptions = computed<readonly SearchOption[]>(() => {
-    const selectedIds = this.store.selectedIdSet();
-    return ALL_OPTIONS.filter(option => !selectedIds.has(option.id));
-  });
-
   protected readonly selection = computed<readonly SelectedView[]>(() =>
     this.store.selected().map((pokemon, index) => ({
       id: pokemon.id,
       name: pokemonName(pokemon, LANG.fr),
-      total: pokemonTotal(pokemon),
-      dotClass: DOT_CLASSES[index % DOT_CLASSES.length],
+      totalLabel: `${pokemonTotal(pokemon)}`,
+      imageUrl: pokemonImageUrl(pokemon.id),
+      mediaClass: MEDIA_BORDER_CLASSES[index % MEDIA_BORDER_CLASSES.length],
     })),
   );
 
@@ -297,17 +290,21 @@ export class ComparatorComponent {
     };
   });
 
-  protected onSearchChange(value: string): void {
-    this.#searchQuery.set(value);
+  protected openPokedex(): void {
+    this.#sheet.create({
+      content: this.pokedexTemplate(),
+      side: 'bottom',
+      title: 'Pokédex',
+      height: '100dvh',
+      hideFooter: true,
+      maskClosable: true,
+      viewContainerRef: this.#viewContainerRef,
+      customClasses: 'p-4',
+    });
   }
 
-  protected onSelect(option: CommandOption): void {
-    const id = Number(option.value);
-    if (Number.isNaN(id)) {
-      return;
-    }
+  protected onPick(id: number): void {
     this.store.add(id);
-    this.#searchQuery.set('');
   }
 
   protected remove(id: number): void {
@@ -320,5 +317,9 @@ export class ComparatorComponent {
 
   protected onDisplayModeChange(value: string): void {
     this.store.setDisplayMode(value === DISPLAY_MODE.radar ? DISPLAY_MODE.radar : DISPLAY_MODE.bars);
+  }
+
+  protected reload(): void {
+    this.store.reload();
   }
 }

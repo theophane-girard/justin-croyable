@@ -5,9 +5,27 @@ base de plusieurs Pokémon.
 
 ## Fonctionnalités
 
-- **Recherche multilingue** : le champ de recherche filtre sur les noms dans
-  toutes les langues (français, anglais, allemand, japonais) et est insensible
-  aux accents. Exemple : saisir `snor` remonte **Ronflex** (Snorlax en anglais).
+- **Navigation par sidebar** (composants DS `layout`/`sidebar`) : deux pages —
+  **Comparateur** et **Pokédex**.
+- **Grille Pokédex partagée** (`PokedexGridComponent`) : cartes colorées par
+  type (sprite avec **skeleton de chargement**, badges de type, numéro),
+  **virtual scroll** (CDK) pour afficher tout le Pokédex efficacement, et un
+  **speed dial** (composant DS `fab`) à deux boutons :
+  - **Filtrer** : type (multi), stade d'évolution, légendaires ;
+  - **Trier** : par n°, type, total ou n'importe quelle statistique, ordre
+    croissant/décroissant.
+  Cette grille est utilisée par la page Pokédex **et** par la recherche du
+  comparateur (mêmes filtres/tri disponibles).
+- **Page de détail** (`/pokedex/:id`) : en-tête coloré par type avec l'artwork,
+  puis les **informations** en tags colorés (une couleur réservée par type
+  d'info : stade, catégorie/légendaire, total) et les **statistiques de base**
+  juste en dessous, avec un bouton « Ajouter au comparateur ».
+- **Ajout depuis le Comparateur** : un bouton ouvre le Pokédex en bottom sheet
+  **pleine page** (composant DS `sheet`).
+- **Recherche multilingue** : le champ filtre sur les noms dans toutes les
+  langues (français, anglais, allemand, japonais), insensible aux accents et aux
+  tirets/espaces. Exemple : saisir `snor` remonte **Ronflex** (Snorlax en
+  anglais) ; `méga dracaufeu` remonte les méga-évolutions de Dracaufeu.
 - **Visualisation en barres** : les statistiques (PV, Attaque, Défense, Attaque
   Spéciale, Défense Spéciale, Vitesse) sont affichées avec des barres de
   progression, une par Pokémon, empilées les unes en dessous des autres.
@@ -20,8 +38,13 @@ L'app s'appuie exclusivement sur les composants de `@justin-croyable/design-syst
 
 ## Données
 
-Le jeu de données Pokémon (noms multilingues, types, statistiques de base) est
-embarqué statiquement dans `src/app/core/pokemon.data.ts`.
+Les données Pokémon (noms multilingues, types, statistiques de base) sont
+récupérées en direct depuis l'**API GraphQL de PokéAPI**
+(`https://graphql.pokeapi.co/v1beta2`) en une seule requête au démarrage, via
+`PokemonApiService` (`src/app/core/pokemon-api.service.ts`) qui s'appuie sur
+`httpResource`. Les noms sont demandés en français, anglais, allemand et rōmaji
+(japonais) pour alimenter la recherche multilingue. L'app gère les états de
+chargement et d'erreur (avec bouton « Réessayer »).
 
 ## Commandes
 
