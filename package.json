@@ -8,7 +8,10 @@
     "deploy:storybook-web": "nx build-storybook @justin-croyable/storybook-web && firebase deploy --only hosting:storybook",
     "deploy:storybook-web:preview": "nx build-storybook @justin-croyable/storybook-web && firebase hosting:channel:deploy preview --only storybook --expires 7d",
     "deploy:potager-web": "nx build @justin-croyable/potager-web && firebase deploy --only hosting:potager",
-    "deploy:potager-web:preview": "nx build @justin-croyable/potager-web && firebase hosting:channel:deploy preview --only potager --expires 7d"
+    "deploy:potager-web:preview": "nx build @justin-croyable/potager-web && firebase hosting:channel:deploy preview --only potager --expires 7d",
+    "build:pokemon-comparator-web": "nx build @justin-croyable/pokemon-comparator-web",
+    "deploy:pokemon-comparator-web": "nx build @justin-croyable/pokemon-comparator-web && firebase deploy --only hosting:pokemon",
+    "deploy:pokemon-comparator-web:preview": "nx build @justin-croyable/pokemon-comparator-web && firebase hosting:channel:deploy preview --only pokemon --expires 7d"
   },
   "private": true,
   "devDependencies": {

@@ -17,6 +17,9 @@
     },
     {
       "path": "./packages/potager-web"
+    },
+    {
+      "path": "./packages/pokemon-comparator-web"
     }
   ]
 }

@@ -1,0 +1,19 @@
+import { type ApplicationConfig, provideZonelessChangeDetection } from '@angular/core';
+import { provideRouter, withComponentInputBinding, withInMemoryScrolling } from '@angular/router';
+
+import { provideJustinCroyableDS, withCharts, withIcons } from '@justin-croyable/design-system';
+
+import { APP_ICONS } from './app.icons';
+import { APP_ROUTES } from './app.routes';
+
+export const appConfig: ApplicationConfig = {
+  providers: [
+    provideZonelessChangeDetection(),
+    provideRouter(
+      APP_ROUTES,
+      withComponentInputBinding(),
+      withInMemoryScrolling({ scrollPositionRestoration: 'enabled' }),
+    ),
+    provideJustinCroyableDS(withIcons(APP_ICONS), withCharts()),
+  ],
+};

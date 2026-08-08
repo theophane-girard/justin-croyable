@@ -1,0 +1,23 @@
+/*
+ * CSS global de l'application Pokémon Comparator, compilé par Tailwind v4 via
+ * @tailwindcss/postcss (voir .postcssrc.json) dans le pipeline @angular/build.
+ *
+ * L'app fournit Tailwind et le plugin d'animations, puis importe le preset du
+ * DS et sa palette « fuchsia » (palette par défaut, six teintes distinctes pour
+ * comparer jusqu'à six Pokémon).
+ */
+
+@layer ng-icon, theme, base, components, utilities;
+
+@import 'tailwindcss';
+@plugin 'tailwindcss-animate';
+
+@import '../../../libs/design-system/src/theme/theme.css';
+@import '../../../libs/design-system/src/theme/palettes/fuchsia.css';
+
+@source '../../../libs/design-system/src/components';
+@source './app';
+
+body {
+  @apply bg-background text-foreground;
+}
