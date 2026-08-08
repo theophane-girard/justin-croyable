@@ -1,6 +1,6 @@
-import { computed, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, type Signal, signal } from '@angular/core';
 
-import { POKEMONS } from './pokemon.data';
+import { PokemonApiService } from './pokemon-api.service';
 import { type Pokemon } from './pokemon.model';
 
 export const DISPLAY_MODE = {
@@ -15,16 +15,24 @@ const DEFAULT_SELECTION: readonly number[] = [6, 9, 3];
 
 @Injectable({ providedIn: 'root' })
 export class ComparatorStore {
-  readonly #pokemonById = new Map<number, Pokemon>(POKEMONS.map(pokemon => [pokemon.id, pokemon]));
+  readonly #api = inject(PokemonApiService);
 
   readonly #selectedIds = signal<readonly number[]>(DEFAULT_SELECTION);
   readonly #displayMode = signal<DisplayMode>(DISPLAY_MODE.bars);
 
+  readonly #pokemonById = computed(
+    () => new Map<number, Pokemon>(this.#api.pokemons().map(pokemon => [pokemon.id, pokemon])),
+  );
+
   readonly maxSelection = MAX_SELECTION;
+
+  readonly pokemons: Signal<readonly Pokemon[]> = this.#api.pokemons;
+  readonly isLoading: Signal<boolean> = this.#api.isLoading;
+  readonly hasError = this.#api.hasError;
 
   readonly selected = computed<readonly Pokemon[]>(() =>
     this.#selectedIds()
-      .map(id => this.#pokemonById.get(id))
+      .map(id => this.#pokemonById().get(id))
       .filter((pokemon): pokemon is Pokemon => pokemon !== undefined),
   );
 
@@ -55,5 +63,9 @@ export class ComparatorStore {
 
   setDisplayMode(mode: DisplayMode): void {
     this.#displayMode.set(mode);
+  }
+
+  reload(): void {
+    this.#api.reload();
   }
 }

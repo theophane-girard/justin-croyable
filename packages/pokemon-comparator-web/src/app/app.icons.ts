@@ -1,4 +1,5 @@
 import {
+  phosphorArrowClockwise,
   phosphorChartBar,
   phosphorMagnifyingGlass,
   phosphorMoon,
@@ -6,10 +7,12 @@ import {
   phosphorScales,
   phosphorSun,
   phosphorTrash,
+  phosphorWarningCircle,
   phosphorX,
 } from '@ng-icons/phosphor-icons/regular';
 
 export const APP_ICONS = {
+  phosphorArrowClockwise,
   phosphorChartBar,
   phosphorMagnifyingGlass,
   phosphorMoon,
@@ -17,5 +20,6 @@ export const APP_ICONS = {
   phosphorScales,
   phosphorSun,
   phosphorTrash,
+  phosphorWarningCircle,
   phosphorX,
 } as const;

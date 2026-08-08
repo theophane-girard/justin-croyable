@@ -20,8 +20,13 @@ L'app s'appuie exclusivement sur les composants de `@justin-croyable/design-syst
 
 ## Données
 
-Le jeu de données Pokémon (noms multilingues, types, statistiques de base) est
-embarqué statiquement dans `src/app/core/pokemon.data.ts`.
+Les données Pokémon (noms multilingues, types, statistiques de base) sont
+récupérées en direct depuis l'**API GraphQL de PokéAPI**
+(`https://graphql.pokeapi.co/v1beta2`) en une seule requête au démarrage, via
+`PokemonApiService` (`src/app/core/pokemon-api.service.ts`) qui s'appuie sur
+`httpResource`. Les noms sont demandés en français, anglais, allemand et rōmaji
+(japonais) pour alimenter la recherche multilingue. L'app gère les états de
+chargement et d'erreur (avec bouton « Réessayer »).
 
 ## Commandes
 

@@ -12,13 +12,13 @@ import {
   ProgressComponent,
   SegmentComponent,
   type SegmentItem,
+  SpinnerComponent,
   ThemePaletteService,
 } from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
 import type { EChartsCoreOption } from 'echarts/core';
 
 import { ComparatorStore, DISPLAY_MODE } from '../../core/comparator-store';
-import { POKEMONS } from '../../core/pokemon.data';
 import {
   LANG,
   MAX_BASE_STAT,
@@ -93,15 +93,17 @@ function buildAlias(pokemon: Pokemon): string {
   return [...raw, ...normalized].join(' ');
 }
 
-const ALL_OPTIONS: readonly SearchOption[] = POKEMONS.map(pokemon => ({
-  id: pokemon.id,
-  label: pokemonName(pokemon, LANG.fr),
-  alias: buildAlias(pokemon),
-  hint: pokemon.names
-    .filter(name => name.lang !== LANG.fr)
-    .map(name => name.value)
-    .join(' · '),
-}));
+function toSearchOption(pokemon: Pokemon): SearchOption {
+  return {
+    id: pokemon.id,
+    label: pokemonName(pokemon, LANG.fr),
+    alias: buildAlias(pokemon),
+    hint: pokemon.names
+      .filter(name => name.lang !== LANG.fr)
+      .map(name => name.value)
+      .join(' · '),
+  };
+}
 
 @Component({
   selector: 'app-comparator',
@@ -116,6 +118,7 @@ const ALL_OPTIONS: readonly SearchOption[] = POKEMONS.map(pokemon => ({
     EmptyComponent,
     ProgressComponent,
     SegmentComponent,
+    SpinnerComponent,
   ],
   template: `
     <div class="mx-auto flex w-full max-w-5xl flex-col gap-6">
@@ -130,7 +133,25 @@ const ALL_OPTIONS: readonly SearchOption[] = POKEMONS.map(pokemon => ({
         </p>
       </header>
 
-      <app-card title="Choisir des Pokémon">
+      @if (store.isLoading()) {
+        <div class="flex flex-col items-center justify-center gap-3 py-16">
+          <app-spinner class="text-primary size-8" />
+          <p class="text-muted-foreground text-sm">Chargement du Pokédex…</p>
+        </div>
+      } @else if (store.hasError()) {
+        <div class="flex flex-col items-center gap-4">
+          <app-empty
+            icon="phosphorWarningCircle"
+            title="Impossible de charger les Pokémon"
+            description="La récupération des données depuis l'API PokéAPI a échoué. Vérifiez votre connexion."
+          />
+          <button appButton type="button" variant="outline" (click)="reload()">
+            <ng-icon name="phosphorArrowClockwise" class="size-4" />
+            Réessayer
+          </button>
+        </div>
+      } @else {
+        <app-card title="Choisir des Pokémon">
         <div class="flex flex-col gap-4">
           <app-command class="w-full" (commandSelected)="onSelect($event)">
             <app-command-input
@@ -210,12 +231,13 @@ const ALL_OPTIONS: readonly SearchOption[] = POKEMONS.map(pokemon => ({
             }
           </div>
         </app-card>
-      } @else {
-        <app-empty
-          icon="phosphorScales"
-          title="Aucun Pokémon sélectionné"
-          description="Recherchez un Pokémon ci-dessus pour commencer la comparaison."
-        />
+        } @else {
+          <app-empty
+            icon="phosphorScales"
+            title="Aucun Pokémon sélectionné"
+            description="Recherchez un Pokémon ci-dessus pour commencer la comparaison."
+          />
+        }
       }
     </div>
   `,
@@ -236,7 +258,10 @@ export class ComparatorComponent {
 
   protected readonly searchOptions = computed<readonly SearchOption[]>(() => {
     const selectedIds = this.store.selectedIdSet();
-    return ALL_OPTIONS.filter(option => !selectedIds.has(option.id));
+    return this.store
+      .pokemons()
+      .filter(pokemon => !selectedIds.has(pokemon.id))
+      .map(toSearchOption);
   });
 
   protected readonly selection = computed<readonly SelectedView[]>(() =>
@@ -320,5 +345,9 @@ export class ComparatorComponent {
 
   protected onDisplayModeChange(value: string): void {
     this.store.setDisplayMode(value === DISPLAY_MODE.radar ? DISPLAY_MODE.radar : DISPLAY_MODE.bars);
+  }
+
+  protected reload(): void {
+    this.store.reload();
   }
 }
