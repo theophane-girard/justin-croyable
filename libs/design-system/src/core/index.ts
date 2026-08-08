@@ -2,6 +2,7 @@ export * from './directives/string-template-outlet/string-template-outlet.direct
 export * from './directives/id.directive';
 export * from './directives/count-up.directive';
 export * from './router/router-navigation';
+export * from './skeleton';
 export * from './provider/providezard';
 export * from './provider/event-manager-plugins/zard-debounce-event-manager-plugin';
 export * from './provider/event-manager-plugins/zard-event-manager-plugin';

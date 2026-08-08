@@ -3,13 +3,12 @@ import { RouterLink, RouterOutlet } from '@angular/router';
 
 import {
   BadgeComponent,
-  DashboardPageSkeletonComponent,
   injectCurrentPath,
-  injectRouterNavigating,
   isActivePath,
   LayoutImports,
   SegmentComponent,
   type SegmentItem,
+  SkeletonOutletComponent,
   ThemeService,
 } from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
@@ -39,7 +38,7 @@ const THEME_VALUE = { light: 'light', dark: 'dark' } as const;
     NgIcon,
     SegmentComponent,
     BadgeComponent,
-    DashboardPageSkeletonComponent,
+    SkeletonOutletComponent,
   ],
   template: `
     <div class="bg-background text-foreground h-dvh overflow-hidden">
@@ -114,11 +113,10 @@ const THEME_VALUE = { light: 'light', dark: 'dark' } as const;
             </div>
           </app-header>
 
-          <app-content class="relative min-h-0 overflow-auto p-4">
-            <router-outlet />
-            @if (navigating()) {
-              <app-dashboard-page-skeleton class="bg-background absolute inset-0 z-10 p-4" />
-            }
+          <app-content class="min-h-0 overflow-auto p-4">
+            <app-skeleton-outlet class="min-h-full">
+              <router-outlet />
+            </app-skeleton-outlet>
           </app-content>
 
           <app-footer class="text-muted-foreground flex items-center px-4 text-xs">
@@ -136,7 +134,6 @@ export class AppComponent {
 
   protected readonly sidebarCollapsed = signal(false);
 
-  protected readonly navigating = injectRouterNavigating();
   protected readonly currentPath = injectCurrentPath();
 
   protected readonly priceSourceLive = computed(() => this.#store.priceSource() === 'live');

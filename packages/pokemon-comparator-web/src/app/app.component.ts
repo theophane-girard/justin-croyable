@@ -2,13 +2,12 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { RouterLink, RouterOutlet } from '@angular/router';
 
 import {
-  GridPageSkeletonComponent,
   injectCurrentPath,
-  injectRouterNavigating,
   isActivePath,
   LayoutImports,
   SegmentComponent,
   type SegmentItem,
+  SkeletonOutletComponent,
   ThemeService,
 } from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
@@ -47,7 +46,7 @@ const NAV_ITEMS: readonly NavItem[] = [
     ...LayoutImports,
     NgIcon,
     SegmentComponent,
-    GridPageSkeletonComponent,
+    SkeletonOutletComponent,
   ],
   template: `
     <div class="bg-background text-foreground h-dvh overflow-hidden">
@@ -105,11 +104,10 @@ const NAV_ITEMS: readonly NavItem[] = [
             </div>
           </app-header>
 
-          <app-content class="relative min-h-0 overflow-auto p-4 sm:p-6">
-            <router-outlet />
-            @if (navigating()) {
-              <app-grid-page-skeleton class="bg-background absolute inset-0 z-10 p-4 sm:p-6" />
-            }
+          <app-content class="min-h-0 overflow-auto p-4 sm:p-6">
+            <app-skeleton-outlet class="min-h-full">
+              <router-outlet />
+            </app-skeleton-outlet>
           </app-content>
         </app-layout>
       </app-layout>
@@ -123,7 +121,6 @@ export class AppComponent {
   protected readonly themeItems = THEME_ITEMS;
   protected readonly sidebarCollapsed = signal(false);
 
-  protected readonly navigating = injectRouterNavigating();
   protected readonly currentPath = injectCurrentPath();
 
   protected readonly navLinks = computed(() => {
