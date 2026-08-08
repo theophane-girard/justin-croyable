@@ -5,9 +5,13 @@ base de plusieurs Pokémon.
 
 ## Fonctionnalités
 
-- **Recherche multilingue** : le champ de recherche filtre sur les noms dans
-  toutes les langues (français, anglais, allemand, japonais) et est insensible
-  aux accents. Exemple : saisir `snor` remonte **Ronflex** (Snorlax en anglais).
+- **Pokédex en bottom sheet** : un bouton ouvre une feuille (composant DS `sheet`,
+  `side: 'bottom'`) présentant une grille de cartes colorées par type (sprite via
+  le composant `avatar`, badges de type, numéro), avec un champ de recherche.
+- **Recherche multilingue** : le champ filtre sur les noms dans toutes les
+  langues (français, anglais, allemand, japonais), insensible aux accents et aux
+  tirets/espaces. Exemple : saisir `snor` remonte **Ronflex** (Snorlax en
+  anglais) ; `méga dracaufeu` remonte les méga-évolutions de Dracaufeu.
 - **Visualisation en barres** : les statistiques (PV, Attaque, Défense, Attaque
   Spéciale, Défense Spéciale, Vitesse) sont affichées avec des barres de
   progression, une par Pokémon, empilées les unes en dessous des autres.

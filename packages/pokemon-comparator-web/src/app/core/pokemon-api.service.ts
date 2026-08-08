@@ -163,12 +163,17 @@ function mapForm(
 
 function buildDex(species: readonly GraphQlSpecies[]): Pokemon[] {
   const namesBySpecies = new Map<number, readonly PokemonName[]>();
+  const typesBySpecies = new Map<number, readonly string[]>();
   const base = species.flatMap(entry => {
     const speciesNames = mapNames(entry.pokemonspeciesnames);
     if (speciesNames.length === 0) {
       return [];
     }
     namesBySpecies.set(entry.id, speciesNames);
+    const defaultForm = entry.pokemons.find(form => form.is_default);
+    if (defaultForm) {
+      typesBySpecies.set(entry.id, defaultForm.pokemontypes.map(item => item.type.name));
+    }
     return entry.pokemons
       .map(form => mapForm(form, speciesNames))
       .filter((pokemon): pokemon is Pokemon => pokemon !== undefined);
@@ -183,7 +188,8 @@ function buildDex(species: readonly GraphQlSpecies[]): Pokemon[] {
     if (!speciesNames) {
       return [];
     }
-    return [{ id: item.id, names: megaNames(speciesNames, item.variant), types: [], stats: item.stats }];
+    const types = typesBySpecies.get(item.speciesId) ?? [];
+    return [{ id: item.id, names: megaNames(speciesNames, item.variant), types, stats: item.stats }];
   });
 
   return [...base, ...supplement];
