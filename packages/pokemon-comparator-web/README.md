@@ -8,11 +8,16 @@ base de plusieurs Pokémon.
 - **Navigation par sidebar** (composants DS `layout`/`sidebar`) : deux pages —
   **Comparateur** et **Pokédex**.
 - **Page Pokédex** : grille de cartes colorées par type (sprite via le composant
-  `avatar`, badges de type, numéro) avec recherche ; un clic sur un Pokémon ouvre
-  sa **page de détail** (`/pokedex/:id` : image, noms dans les 4 langues, types,
-  statistiques de base et bouton « Comparer »).
+  `avatar`, badges de type, numéro) avec recherche. Un **FAB** (composant DS
+  `fab-button`) ouvre un panneau de **filtres** (type, stade d'évolution,
+  légendaires) et de **tri** (par n°, type, total ou n'importe quelle
+  statistique, ordre croissant/décroissant).
+- **Page de détail** (`/pokedex/:id`) : en-tête coloré par type avec l'artwork,
+  puis des onglets (composant DS `tabs`) « À propos » (noms dans les 4 langues,
+  stade, catégorie, total) et « Statistiques » (barres), et un bouton
+  « Ajouter au comparateur ».
 - **Ajout depuis le Comparateur** : un bouton ouvre le même Pokédex en bottom
-  sheet (composant DS `sheet`, `side: 'bottom'`, grille scrollable).
+  sheet **pleine page** (composant DS `sheet`, grille scrollable).
 - **Recherche multilingue** : le champ filtre sur les noms dans toutes les
   langues (français, anglais, allemand, japonais), insensible aux accents et aux
   tirets/espaces. Exemple : saisir `snor` remonte **Ronflex** (Snorlax en

@@ -211,7 +211,7 @@ const DISPLAY_MODE_ITEMS: readonly SegmentItem[] = [
         [excludedIds]="store.selectedIdSet()"
         [disabledPicking]="store.isFull()"
         [disabledHint]="'Maximum ' + store.maxSelection + ' Pokémon — retirez-en un pour en ajouter.'"
-        scrollClass="max-h-[60dvh] overflow-y-auto pb-4"
+        scrollClass="max-h-[calc(100dvh-9rem)] overflow-y-auto pb-4"
         (select)="onPick($event)"
       />
     </ng-template>
@@ -295,6 +295,7 @@ export class ComparatorComponent {
       content: this.pokedexTemplate(),
       side: 'bottom',
       title: 'Pokédex',
+      height: '100dvh',
       hideFooter: true,
       maskClosable: true,
       viewContainerRef: this.#viewContainerRef,

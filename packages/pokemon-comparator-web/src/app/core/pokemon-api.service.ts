@@ -3,6 +3,8 @@ import { computed, Injectable, type Signal } from '@angular/core';
 
 import { MEGA_SUPPLEMENT } from './mega-supplement.data';
 import {
+  EVOLUTION_STAGE,
+  type EvolutionStage,
   LANG,
   type Lang,
   type Pokemon,
@@ -19,6 +21,9 @@ query PokemonComparatorDex {
   pokemonspecies(order_by: { id: asc }, where: { pokemons: { is_default: { _eq: true } } }) {
     id
     name
+    is_legendary
+    is_mythical
+    evolves_from_species_id
     pokemonspeciesnames(where: { language: { name: { _in: ["fr", "en", "de", "roomaji"] } } }) {
       name
       language {
@@ -72,6 +77,9 @@ interface GraphQlPokemon {
 interface GraphQlSpecies {
   readonly id: number;
   readonly name: string;
+  readonly is_legendary: boolean;
+  readonly is_mythical: boolean;
+  readonly evolves_from_species_id: number | null;
   readonly pokemonspeciesnames: readonly GraphQlName[];
   readonly pokemons: readonly GraphQlPokemon[];
 }
@@ -142,28 +150,60 @@ function megaNames(speciesNames: readonly PokemonName[], variant: string): Pokem
   }));
 }
 
+interface SpeciesMeta {
+  readonly stage: EvolutionStage;
+  readonly legendary: boolean;
+  readonly types: readonly string[];
+}
+
 function mapForm(
   form: GraphQlPokemon,
   speciesNames: readonly PokemonName[],
+  meta: SpeciesMeta,
 ): Pokemon | undefined {
   const stats = mapStats(form.pokemonstats);
   if (!stats) {
     return undefined;
   }
   const types = form.pokemontypes.map(item => item.type.name);
+  const shared = { types, stats, stage: meta.stage, legendary: meta.legendary };
   if (form.is_default) {
-    return { id: form.id, names: speciesNames, types, stats };
+    return { id: form.id, names: speciesNames, ...shared };
   }
   const variant = megaVariant(form.name);
   if (variant === undefined) {
     return undefined;
   }
-  return { id: form.id, names: megaNames(speciesNames, variant), types, stats };
+  return { id: form.id, names: megaNames(speciesNames, variant), ...shared };
+}
+
+function buildStageResolver(
+  species: readonly GraphQlSpecies[],
+): (id: number) => EvolutionStage {
+  const parentBySpecies = new Map<number, number | null>(
+    species.map(entry => [entry.id, entry.evolves_from_species_id]),
+  );
+  const cache = new Map<number, EvolutionStage>();
+  const resolve = (id: number, guard: number): EvolutionStage => {
+    const cached = cache.get(id);
+    if (cached !== undefined) {
+      return cached;
+    }
+    const parent = parentBySpecies.get(id);
+    let stage: EvolutionStage = EVOLUTION_STAGE.base;
+    if (parent != null && guard > 0) {
+      stage = Math.min(resolve(parent, guard - 1) + 1, EVOLUTION_STAGE.final) as EvolutionStage;
+    }
+    cache.set(id, stage);
+    return stage;
+  };
+  return (id: number) => resolve(id, 5);
 }
 
 function buildDex(species: readonly GraphQlSpecies[]): Pokemon[] {
   const namesBySpecies = new Map<number, readonly PokemonName[]>();
-  const typesBySpecies = new Map<number, readonly string[]>();
+  const metaBySpecies = new Map<number, SpeciesMeta>();
+  const stageOf = buildStageResolver(species);
   const base = species.flatMap(entry => {
     const speciesNames = mapNames(entry.pokemonspeciesnames);
     if (speciesNames.length === 0) {
@@ -171,11 +211,14 @@ function buildDex(species: readonly GraphQlSpecies[]): Pokemon[] {
     }
     namesBySpecies.set(entry.id, speciesNames);
     const defaultForm = entry.pokemons.find(form => form.is_default);
-    if (defaultForm) {
-      typesBySpecies.set(entry.id, defaultForm.pokemontypes.map(item => item.type.name));
-    }
+    const meta: SpeciesMeta = {
+      stage: stageOf(entry.id),
+      legendary: entry.is_legendary || entry.is_mythical,
+      types: defaultForm ? defaultForm.pokemontypes.map(item => item.type.name) : [],
+    };
+    metaBySpecies.set(entry.id, meta);
     return entry.pokemons
-      .map(form => mapForm(form, speciesNames))
+      .map(form => mapForm(form, speciesNames, meta))
       .filter((pokemon): pokemon is Pokemon => pokemon !== undefined);
   });
 
@@ -185,11 +228,20 @@ function buildDex(species: readonly GraphQlSpecies[]): Pokemon[] {
       return [];
     }
     const speciesNames = namesBySpecies.get(item.speciesId);
-    if (!speciesNames) {
+    const meta = metaBySpecies.get(item.speciesId);
+    if (!speciesNames || !meta) {
       return [];
     }
-    const types = typesBySpecies.get(item.speciesId) ?? [];
-    return [{ id: item.id, names: megaNames(speciesNames, item.variant), types, stats: item.stats }];
+    return [
+      {
+        id: item.id,
+        names: megaNames(speciesNames, item.variant),
+        types: meta.types,
+        stats: item.stats,
+        stage: meta.stage,
+        legendary: meta.legendary,
+      },
+    ];
   });
 
   return [...base, ...supplement];
