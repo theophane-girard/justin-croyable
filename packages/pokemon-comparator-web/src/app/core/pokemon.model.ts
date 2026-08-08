@@ -55,7 +55,7 @@ export interface Pokemon {
   readonly stats: Readonly<Record<Stat, number>>;
 }
 
-export const MAX_BASE_STAT = 200;
+export const MAX_BASE_STAT = 255;
 
 export function pokemonName(pokemon: Pokemon, lang: Lang): string {
   const match = pokemon.names.find(name => name.lang === lang);

@@ -24,7 +24,13 @@ query PokemonComparatorDex {
         name
       }
     }
-    pokemons(where: { is_default: { _eq: true } }, limit: 1) {
+    pokemons(
+      where: { _or: [{ is_default: { _eq: true } }, { name: { _ilike: "%-mega%" } }] }
+      order_by: { id: asc }
+    ) {
+      id
+      name
+      is_default
       pokemonstats {
         base_stat
         stat {
@@ -55,6 +61,9 @@ interface GraphQlType {
 }
 
 interface GraphQlPokemon {
+  readonly id: number;
+  readonly name: string;
+  readonly is_default: boolean;
   readonly pokemonstats: readonly GraphQlStat[];
   readonly pokemontypes: readonly GraphQlType[];
 }
@@ -108,25 +117,59 @@ function mapStats(raw: readonly GraphQlStat[]): Record<Stat, number> | undefined
   return Object.fromEntries(entries) as Record<Stat, number>;
 }
 
+const MEGA_PREFIX_BY_LANG: Record<Lang, string> = {
+  [LANG.fr]: 'Méga-',
+  [LANG.en]: 'Mega ',
+  [LANG.de]: 'Mega-',
+  [LANG.ja]: 'Mega ',
+};
+
+function megaVariant(slug: string): string | undefined {
+  const marker = '-mega';
+  const index = slug.indexOf(marker);
+  if (index < 0) {
+    return undefined;
+  }
+  return slug.slice(index + marker.length).replace(/^-/, '');
+}
+
+function megaNames(speciesNames: readonly PokemonName[], variant: string): PokemonName[] {
+  const suffix = variant ? ` ${variant.toUpperCase()}` : '';
+  return speciesNames.map(name => ({
+    lang: name.lang,
+    value: `${MEGA_PREFIX_BY_LANG[name.lang]}${name.value}${suffix}`,
+  }));
+}
+
+function mapForm(
+  form: GraphQlPokemon,
+  speciesNames: readonly PokemonName[],
+): Pokemon | undefined {
+  const stats = mapStats(form.pokemonstats);
+  if (!stats) {
+    return undefined;
+  }
+  const types = form.pokemontypes.map(item => item.type.name);
+  if (form.is_default) {
+    return { id: form.id, names: speciesNames, types, stats };
+  }
+  const variant = megaVariant(form.name);
+  if (variant === undefined) {
+    return undefined;
+  }
+  return { id: form.id, names: megaNames(speciesNames, variant), types, stats };
+}
+
 function mapSpecies(species: readonly GraphQlSpecies[]): Pokemon[] {
-  return species
-    .map((entry): Pokemon | undefined => {
-      const pokemon = entry.pokemons[0];
-      if (!pokemon) {
-        return undefined;
-      }
-      const stats = mapStats(pokemon.pokemonstats);
-      if (!stats) {
-        return undefined;
-      }
-      const names = mapNames(entry.pokemonspeciesnames);
-      if (names.length === 0) {
-        return undefined;
-      }
-      const types = pokemon.pokemontypes.map(item => item.type.name);
-      return { id: entry.id, names, types, stats };
-    })
-    .filter((pokemon): pokemon is Pokemon => pokemon !== undefined);
+  return species.flatMap(entry => {
+    const speciesNames = mapNames(entry.pokemonspeciesnames);
+    if (speciesNames.length === 0) {
+      return [];
+    }
+    return entry.pokemons
+      .map(form => mapForm(form, speciesNames))
+      .filter((pokemon): pokemon is Pokemon => pokemon !== undefined);
+  });
 }
 
 function parseResponse(value: unknown): readonly Pokemon[] {

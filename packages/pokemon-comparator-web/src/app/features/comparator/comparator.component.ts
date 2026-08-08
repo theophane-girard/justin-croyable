@@ -89,8 +89,9 @@ function normalize(value: string): string {
 
 function buildAlias(pokemon: Pokemon): string {
   const raw = pokemon.names.map(name => name.value);
-  const normalized = raw.map(normalize);
-  return [...raw, ...normalized].join(' ');
+  const spaced = raw.map(value => value.replace(/-/g, ' '));
+  const variants = [...raw, ...spaced];
+  return [...variants, ...variants.map(normalize)].join(' ');
 }
 
 function toSearchOption(pokemon: Pokemon): SearchOption {
