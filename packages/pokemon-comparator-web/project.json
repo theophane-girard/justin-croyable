@@ -1,0 +1,46 @@
+{
+  "name": "@justin-croyable/pokemon-comparator-web",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "packages/pokemon-comparator-web/src",
+  "targets": {
+    "build": {
+      "executor": "@angular/build:application",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/pokemon-comparator-web",
+        "index": "packages/pokemon-comparator-web/index.html",
+        "browser": "packages/pokemon-comparator-web/src/main.ts",
+        "tsConfig": "packages/pokemon-comparator-web/tsconfig.build.json",
+        "styles": ["packages/pokemon-comparator-web/src/styles.css"]
+      },
+      "configurations": {
+        "production": {
+          "outputHashing": "all"
+        },
+        "development": {
+          "optimization": false,
+          "extractLicenses": false,
+          "sourceMap": true
+        }
+      },
+      "defaultConfiguration": "production"
+    },
+    "serve": {
+      "executor": "@angular/build:dev-server",
+      "options": {
+        "buildTarget": "@justin-croyable/pokemon-comparator-web:build",
+        "port": 4301
+      },
+      "configurations": {
+        "development": {
+          "buildTarget": "@justin-croyable/pokemon-comparator-web:build:development"
+        },
+        "production": {
+          "buildTarget": "@justin-croyable/pokemon-comparator-web:build:production"
+        }
+      },
+      "defaultConfiguration": "development"
+    }
+  }
+}

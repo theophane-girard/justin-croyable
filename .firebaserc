@@ -6,7 +6,8 @@
     "justin-croyable-story": {
       "hosting": {
         "storybook": ["justin-croyable-story"],
-        "potager": ["justin-croyable-potager"]
+        "potager": ["justin-croyable-potager"],
+        "pokemon": ["justin-croyable-pokemon"]
       }
     }
   }
