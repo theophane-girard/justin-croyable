@@ -2,6 +2,7 @@ import { httpResource } from '@angular/common/http';
 import { computed, Injectable, type Signal } from '@angular/core';
 
 import { MEGA_SUPPLEMENT } from './mega-supplement.data';
+import { type Ability, ABILITIES_QUERY, parseAbilities } from './pokemon-ability';
 import {
   EVOLUTION_STAGE,
   type EvolutionStage,
@@ -48,6 +49,11 @@ query PokemonComparatorDex {
           name
         }
       }
+      pokemonabilities(order_by: { slot: asc }) {
+        ability {
+          name
+        }
+      }
     }
   }
 }`;
@@ -66,12 +72,17 @@ interface GraphQlType {
   readonly type: { readonly name: string };
 }
 
+interface GraphQlAbility {
+  readonly ability: { readonly name: string } | null;
+}
+
 interface GraphQlPokemon {
   readonly id: number;
   readonly name: string;
   readonly is_default: boolean;
   readonly pokemonstats: readonly GraphQlStat[];
   readonly pokemontypes: readonly GraphQlType[];
+  readonly pokemonabilities: readonly GraphQlAbility[];
 }
 
 interface GraphQlSpecies {
@@ -154,6 +165,13 @@ interface SpeciesMeta {
   readonly stage: EvolutionStage;
   readonly legendary: boolean;
   readonly types: readonly string[];
+  readonly abilitySlugs: readonly string[];
+}
+
+function mapAbilitySlugs(raw: readonly GraphQlAbility[]): string[] {
+  return raw
+    .map(entry => entry.ability?.name)
+    .filter((slug): slug is string => slug !== undefined && slug !== null);
 }
 
 function mapForm(
@@ -166,7 +184,8 @@ function mapForm(
     return undefined;
   }
   const types = form.pokemontypes.map(item => item.type.name);
-  const shared = { types, stats, stage: meta.stage, legendary: meta.legendary };
+  const abilitySlugs = mapAbilitySlugs(form.pokemonabilities);
+  const shared = { types, stats, stage: meta.stage, legendary: meta.legendary, abilitySlugs };
   if (form.is_default) {
     return { id: form.id, names: speciesNames, ...shared };
   }
@@ -215,6 +234,7 @@ function buildDex(species: readonly GraphQlSpecies[]): Pokemon[] {
       stage: stageOf(entry.id),
       legendary: entry.is_legendary || entry.is_mythical,
       types: defaultForm ? defaultForm.pokemontypes.map(item => item.type.name) : [],
+      abilitySlugs: defaultForm ? mapAbilitySlugs(defaultForm.pokemonabilities) : [],
     };
     metaBySpecies.set(entry.id, meta);
     return entry.pokemons
@@ -240,6 +260,7 @@ function buildDex(species: readonly GraphQlSpecies[]): Pokemon[] {
         stats: item.stats,
         stage: meta.stage,
         legendary: meta.legendary,
+        abilitySlugs: meta.abilitySlugs,
       },
     ];
   });
@@ -263,11 +284,23 @@ export class PokemonApiService {
     { parse: parseResponse, defaultValue: [] },
   );
 
+  readonly #abilitiesResource = httpResource<readonly Ability[]>(
+    () => ({
+      url: POKEAPI_GRAPHQL_URL,
+      method: 'POST',
+      body: { query: ABILITIES_QUERY },
+    }),
+    { parse: parseAbilities, defaultValue: [] },
+  );
+
   readonly pokemons: Signal<readonly Pokemon[]> = this.#resource.value;
   readonly isLoading: Signal<boolean> = this.#resource.isLoading;
   readonly hasError = computed(() => this.#resource.error() !== undefined);
 
+  readonly abilities: Signal<readonly Ability[]> = this.#abilitiesResource.value;
+
   reload(): void {
     this.#resource.reload();
+    this.#abilitiesResource.reload();
   }
 }

@@ -47,6 +47,7 @@ const DAMAGE_ITEMS: ToggleGroupItem[] = [
 ];
 
 const SORT_FIELD_ITEMS: ToggleGroupItem[] = [
+  { value: 'type', label: 'Type' },
   { value: 'power', label: 'Puissance' },
   { value: 'name', label: 'Nom' },
 ];
@@ -231,8 +232,8 @@ export class PokemonMovesComponent {
 
   readonly #selectedTypes = signal<string[]>([]);
   readonly #selectedDamage = signal<string[]>([]);
-  readonly #sortField = signal<string>('power');
-  readonly #sortDirection = signal<string>('desc');
+  readonly #sortField = signal<string>('type');
+  readonly #sortDirection = signal<string>('asc');
   readonly #resetKey = signal(0);
 
   protected readonly selectedTypes = this.#selectedTypes.asReadonly();
@@ -252,6 +253,13 @@ export class PokemonMovesComponent {
       .filter(move => damage.size === 0 || damage.has(move.damageClass));
 
     const sorted = [...filtered].sort((a, b) => {
+      if (field === 'type') {
+        const byType = typeLabel(a.type).localeCompare(typeLabel(b.type), 'fr');
+        if (byType !== 0) {
+          return ascending ? byType : -byType;
+        }
+        return (a.power ?? -1) - (b.power ?? -1);
+      }
       if (field === 'name') {
         return ascending ? a.name.localeCompare(b.name, 'fr') : b.name.localeCompare(a.name, 'fr');
       }
@@ -296,11 +304,11 @@ export class PokemonMovesComponent {
   }
 
   protected onSortFieldChange(value: string | string[]): void {
-    this.#sortField.set(asArray(value)[0] ?? 'power');
+    this.#sortField.set(asArray(value)[0] ?? 'type');
   }
 
   protected onDirectionChange(value: string | string[]): void {
-    this.#sortDirection.set(asArray(value)[0] ?? 'desc');
+    this.#sortDirection.set(asArray(value)[0] ?? 'asc');
   }
 
   protected resetFilters(): void {
@@ -310,8 +318,8 @@ export class PokemonMovesComponent {
   }
 
   protected resetSort(): void {
-    this.#sortField.set('power');
-    this.#sortDirection.set('desc');
+    this.#sortField.set('type');
+    this.#sortDirection.set('asc');
     this.#resetKey.update(key => key + 1);
   }
 }

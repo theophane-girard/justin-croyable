@@ -6,7 +6,7 @@ export interface PokemonMatch {
   readonly matchedName: string;
 }
 
-function normalize(value: string): string {
+export function normalizeText(value: string): string {
   return value
     .toLowerCase()
     .normalize('NFD')
@@ -16,7 +16,7 @@ function normalize(value: string): string {
 }
 
 function findMatch(pokemon: Pokemon, needle: string): PokemonMatch | undefined {
-  const primary = pokemon.names.find(name => normalize(name.value).includes(needle));
+  const primary = pokemon.names.find(name => normalizeText(name.value).includes(needle));
   if (!primary) {
     return undefined;
   }
@@ -30,7 +30,7 @@ export function searchPokemons(
   query: string,
   excludedIds: ReadonlySet<number>,
 ): readonly PokemonMatch[] {
-  const needle = normalize(query);
+  const needle = normalizeText(query);
   if (needle.length === 0) {
     return [];
   }

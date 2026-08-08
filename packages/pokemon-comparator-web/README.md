@@ -11,7 +11,8 @@ base de plusieurs Pokémon.
   type (sprite avec **skeleton de chargement**, badges de type, numéro),
   **virtual scroll** (CDK) pour afficher tout le Pokédex efficacement, et un
   **speed dial** (composant DS `fab`) à deux boutons :
-  - **Filtrer** : type (multi), stade d'évolution, légendaires ;
+  - **Filtrer** : type (multi), stade d'évolution, légendaires, **talent**
+    (recherche multilingue sur le libellé du talent, dans toutes les langues) ;
   - **Trier** : par n°, type, total ou n'importe quelle statistique, ordre
     croissant/décroissant.
   Cette grille est utilisée par la page Pokédex **et** par la recherche du
@@ -23,7 +24,8 @@ base de plusieurs Pokémon.
     avec la description) et **statistiques de base** ;
   - **Attaques** : liste des attaques apprenables (nom, type, catégorie
     physique/spéciale/statut, puissance) avec un **speed dial** pour filtrer
-    (type, catégorie) et trier (puissance / nom).
+    (type, catégorie) et trier (type / puissance / nom). Par défaut, les
+    attaques sont triées par type (croissant) puis par dégât (croissant).
   Les talents et attaques sont chargés à la demande par Pokémon (httpResource).
   Un clic sur un Pokémon du **comparateur** ouvre aussi sa page de détail.
 - **Ajout depuis le Comparateur** : un bouton ouvre le Pokédex en bottom sheet

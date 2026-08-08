@@ -215,6 +215,7 @@ const DISPLAY_MODE_ITEMS: readonly SegmentItem[] = [
     <ng-template #pokedexSheet>
       <app-pokedex-grid
         [pokemons]="store.pokemons()"
+        [abilities]="store.abilities()"
         [excludedIds]="store.selectedIdSet()"
         [disabledPicking]="store.isFull()"
         [disabledHint]="'Maximum ' + store.maxSelection + ' Pokémon — retirez-en un pour en ajouter.'"
