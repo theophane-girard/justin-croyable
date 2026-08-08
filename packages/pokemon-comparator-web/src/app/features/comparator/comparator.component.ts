@@ -3,21 +3,17 @@ import {
   Component,
   computed,
   inject,
-  signal,
   type TemplateRef,
   ViewContainerRef,
   viewChild,
 } from '@angular/core';
 
 import {
-  AvatarComponent,
-  BadgeComponent,
   ButtonComponent,
   CardComponent,
   ChartComponent,
   ChipComponent,
   EmptyComponent,
-  InputDirective,
   ProgressComponent,
   SegmentComponent,
   type SegmentItem,
@@ -29,11 +25,10 @@ import { NgIcon } from '@ng-icons/core';
 import type { EChartsCoreOption } from 'echarts/core';
 
 import { ComparatorStore, DISPLAY_MODE } from '../../core/comparator-store';
-import { searchPokemons } from '../../core/pokemon-search';
+import { PokedexGridComponent } from '../pokedex/pokedex-grid.component';
 import {
   LANG,
   MAX_BASE_STAT,
-  type Pokemon,
   pokemonImageUrl,
   pokemonName,
   pokemonTotal,
@@ -63,16 +58,6 @@ interface StatGroup {
   readonly rows: readonly StatRow[];
 }
 
-interface PokedexTile {
-  readonly id: number;
-  readonly name: string;
-  readonly number: string;
-  readonly imageUrl: string;
-  readonly fallback: string;
-  readonly tileClass: string;
-  readonly types: readonly string[];
-}
-
 const MEDIA_BORDER_CLASSES = [
   '[&_[data-slot=chip-media]]:border-2 [&_[data-slot=chip-media]]:border-chart-1',
   '[&_[data-slot=chip-media]]:border-2 [&_[data-slot=chip-media]]:border-chart-2',
@@ -96,94 +81,26 @@ const DISPLAY_MODE_ITEMS: readonly SegmentItem[] = [
   { value: DISPLAY_MODE.radar, label: 'Radar', icon: 'phosphorPolygon' },
 ];
 
-const POKEDEX_LIMIT = 60;
-
-const TILE_BASE =
-  'group/tile relative flex min-h-24 flex-col justify-between gap-2 overflow-hidden rounded-2xl p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50';
-
-const TILE_DEFAULT = 'bg-muted text-foreground';
-
-const TYPE_TILE = new Map<string, string>([
-  ['normal', 'bg-stone-400 text-white'],
-  ['fire', 'bg-orange-500 text-white'],
-  ['water', 'bg-sky-500 text-white'],
-  ['electric', 'bg-amber-400 text-stone-900'],
-  ['grass', 'bg-emerald-500 text-white'],
-  ['ice', 'bg-cyan-400 text-stone-900'],
-  ['fighting', 'bg-red-600 text-white'],
-  ['poison', 'bg-fuchsia-600 text-white'],
-  ['ground', 'bg-amber-600 text-white'],
-  ['flying', 'bg-indigo-400 text-white'],
-  ['psychic', 'bg-pink-500 text-white'],
-  ['bug', 'bg-lime-500 text-stone-900'],
-  ['rock', 'bg-yellow-700 text-white'],
-  ['ghost', 'bg-violet-700 text-white'],
-  ['dragon', 'bg-violet-600 text-white'],
-  ['dark', 'bg-stone-700 text-white'],
-  ['steel', 'bg-slate-500 text-white'],
-  ['fairy', 'bg-pink-400 text-stone-900'],
-]);
-
-const TYPE_LABEL = new Map<string, string>([
-  ['normal', 'Normal'],
-  ['fire', 'Feu'],
-  ['water', 'Eau'],
-  ['electric', 'Électrik'],
-  ['grass', 'Plante'],
-  ['ice', 'Glace'],
-  ['fighting', 'Combat'],
-  ['poison', 'Poison'],
-  ['ground', 'Sol'],
-  ['flying', 'Vol'],
-  ['psychic', 'Psy'],
-  ['bug', 'Insecte'],
-  ['rock', 'Roche'],
-  ['ghost', 'Spectre'],
-  ['dragon', 'Dragon'],
-  ['dark', 'Ténèbres'],
-  ['steel', 'Acier'],
-  ['fairy', 'Fée'],
-]);
-
-function toTile(pokemon: Pokemon): PokedexTile {
-  const name = pokemonName(pokemon, LANG.fr);
-  const primaryType = pokemon.types[0];
-  const color = (primaryType && TYPE_TILE.get(primaryType)) || TILE_DEFAULT;
-  return {
-    id: pokemon.id,
-    name,
-    number: pokemon.id < 10000 ? `Nº${pokemon.id}` : '',
-    imageUrl: pokemonImageUrl(pokemon.id),
-    fallback: name.charAt(0),
-    tileClass: `${TILE_BASE} ${color}`,
-    types: pokemon.types
-      .map(type => TYPE_LABEL.get(type))
-      .filter((label): label is string => label !== undefined),
-  };
-}
-
 @Component({
   selector: 'app-comparator',
   imports: [
     NgIcon,
-    AvatarComponent,
-    BadgeComponent,
     ButtonComponent,
     CardComponent,
     ChartComponent,
     ChipComponent,
     EmptyComponent,
-    InputDirective,
     ProgressComponent,
     SegmentComponent,
     SpinnerComponent,
+    PokedexGridComponent,
   ],
   template: `
     <div class="mx-auto flex w-full max-w-5xl flex-col gap-6">
       <header class="flex flex-col gap-1">
         <div class="flex items-center gap-2">
           <ng-icon name="phosphorScales" class="text-primary size-7 shrink-0" />
-          <h1 class="text-2xl font-semibold tracking-tight">Pokémon Comparator</h1>
+          <h1 class="text-2xl font-semibold tracking-tight">Comparateur</h1>
         </div>
         <p class="text-muted-foreground text-sm">
           Comparez les statistiques de base de plusieurs Pokémon. Parcourez le Pokédex et
@@ -289,65 +206,14 @@ function toTile(pokemon: Pokemon): PokedexTile {
     </div>
 
     <ng-template #pokedexSheet>
-      <div class="flex h-full flex-col gap-3">
-        <div class="border-border flex items-center gap-2 rounded-lg border px-3">
-          <ng-icon name="phosphorMagnifyingGlass" class="text-muted-foreground size-4 shrink-0" />
-          <input
-            app-input
-            borderless
-            type="text"
-            placeholder="Rechercher un Pokémon (fr, en, de, ja, « mega »…)"
-            class="flex-1"
-            [value]="searchQuery()"
-            (input)="onSearchInput($event)"
-          />
-        </div>
-
-        @if (store.isFull()) {
-          <p class="text-muted-foreground text-center text-xs">
-            Maximum {{ store.maxSelection }} Pokémon — retirez-en un pour en ajouter d'autres.
-          </p>
-        }
-
-        @if (pokedexItems().length === 0) {
-          <app-empty
-            icon="phosphorMagnifyingGlass"
-            title="Aucun résultat"
-            description="Essayez un autre nom (fr, en, de, ja) ou « mega »."
-          />
-        } @else {
-          <div class="grid grid-cols-2 gap-3 overflow-y-auto pb-4 sm:grid-cols-3 md:grid-cols-4">
-            @for (item of pokedexItems(); track item.id) {
-              <button
-                type="button"
-                [class]="item.tileClass"
-                [disabled]="store.isFull()"
-                (click)="onPick(item.id)"
-              >
-                <div class="flex items-start justify-between gap-2">
-                  <div class="flex min-w-0 flex-col">
-                    <span class="truncate text-sm font-semibold leading-tight">{{ item.name }}</span>
-                    @if (item.number) {
-                      <span class="text-xs opacity-80">{{ item.number }}</span>
-                    }
-                  </div>
-                  <app-avatar
-                    class="size-12 shrink-0"
-                    [src]="item.imageUrl"
-                    [alt]="item.name"
-                    [fallback]="item.fallback"
-                  />
-                </div>
-                <div class="flex flex-wrap gap-1">
-                  @for (type of item.types; track type) {
-                    <app-badge type="secondary">{{ type }}</app-badge>
-                  }
-                </div>
-              </button>
-            }
-          </div>
-        }
-      </div>
+      <app-pokedex-grid
+        [pokemons]="store.pokemons()"
+        [excludedIds]="store.selectedIdSet()"
+        [disabledPicking]="store.isFull()"
+        [disabledHint]="'Maximum ' + store.maxSelection + ' Pokémon — retirez-en un pour en ajouter.'"
+        scrollClass="max-h-[60dvh] overflow-y-auto pb-4"
+        (select)="onPick($event)"
+      />
     </ng-template>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -364,19 +230,6 @@ export class ComparatorComponent {
   protected readonly displayModeBars = DISPLAY_MODE.bars;
 
   protected readonly displayMode = this.store.displayMode;
-
-  readonly #searchQuery = signal('');
-
-  protected readonly searchQuery = this.#searchQuery.asReadonly();
-
-  protected readonly pokedexItems = computed<readonly PokedexTile[]>(() => {
-    const query = this.searchQuery();
-    const excluded = this.store.selectedIdSet();
-    const source = query.trim()
-      ? searchPokemons(this.store.pokemons(), query, excluded).map(match => match.pokemon)
-      : this.store.pokemons().filter(pokemon => !excluded.has(pokemon.id));
-    return source.slice(0, POKEDEX_LIMIT).map(toTile);
-  });
 
   protected readonly selection = computed<readonly SelectedView[]>(() =>
     this.store.selected().map((pokemon, index) => ({
@@ -438,21 +291,15 @@ export class ComparatorComponent {
   });
 
   protected openPokedex(): void {
-    this.#searchQuery.set('');
     this.#sheet.create({
       content: this.pokedexTemplate(),
       side: 'bottom',
       title: 'Pokédex',
-      height: '85dvh',
       hideFooter: true,
       maskClosable: true,
       viewContainerRef: this.#viewContainerRef,
       customClasses: 'p-4',
     });
-  }
-
-  protected onSearchInput(event: Event): void {
-    this.#searchQuery.set((event.target as HTMLInputElement).value);
   }
 
   protected onPick(id: number): void {

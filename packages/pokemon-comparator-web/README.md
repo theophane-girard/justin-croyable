@@ -5,9 +5,14 @@ base de plusieurs Pokémon.
 
 ## Fonctionnalités
 
-- **Pokédex en bottom sheet** : un bouton ouvre une feuille (composant DS `sheet`,
-  `side: 'bottom'`) présentant une grille de cartes colorées par type (sprite via
-  le composant `avatar`, badges de type, numéro), avec un champ de recherche.
+- **Navigation par sidebar** (composants DS `layout`/`sidebar`) : deux pages —
+  **Comparateur** et **Pokédex**.
+- **Page Pokédex** : grille de cartes colorées par type (sprite via le composant
+  `avatar`, badges de type, numéro) avec recherche ; un clic sur un Pokémon ouvre
+  sa **page de détail** (`/pokedex/:id` : image, noms dans les 4 langues, types,
+  statistiques de base et bouton « Comparer »).
+- **Ajout depuis le Comparateur** : un bouton ouvre le même Pokédex en bottom
+  sheet (composant DS `sheet`, `side: 'bottom'`, grille scrollable).
 - **Recherche multilingue** : le champ filtre sur les noms dans toutes les
   langues (français, anglais, allemand, japonais), insensible aux accents et aux
   tirets/espaces. Exemple : saisir `snor` remonte **Ronflex** (Snorlax en
