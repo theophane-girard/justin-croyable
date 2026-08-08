@@ -75,12 +75,12 @@ interface PokedexTile {
 }
 
 const RING_CLASSES = [
-  'ring-2 ring-chart-1',
-  'ring-2 ring-chart-2',
-  'ring-2 ring-chart-3',
-  'ring-2 ring-chart-4',
-  'ring-2 ring-chart-5',
-  'ring-2 ring-chart-6',
+  'size-6 ring-2 ring-chart-1',
+  'size-6 ring-2 ring-chart-2',
+  'size-6 ring-2 ring-chart-3',
+  'size-6 ring-2 ring-chart-4',
+  'size-6 ring-2 ring-chart-5',
+  'size-6 ring-2 ring-chart-6',
 ] as const;
 
 const BAR_CLASSES = [
@@ -220,17 +220,20 @@ function toTile(pokemon: Pokemon): PokedexTile {
             @if (selection().length > 0) {
               <div class="flex flex-wrap items-center gap-2">
                 @for (item of selection(); track item.id) {
-                  <app-chip [removeLabel]="'Retirer ' + item.name" (removed)="remove(item.id)">
+                  <app-chip
+                    class="gap-2 overflow-visible py-1 pr-1 pl-1"
+                    [removeLabel]="'Retirer ' + item.name"
+                    (removed)="remove(item.id)"
+                  >
                     <span class="inline-flex items-center gap-2">
                       <app-avatar
-                        size="sm"
                         [class]="item.avatarClass"
                         [src]="item.imageUrl"
                         [alt]="item.name"
                         [fallback]="item.fallback"
                       />
-                      <span class="font-medium">{{ item.name }}</span>
-                      <span class="text-muted-foreground tabular-nums">{{ item.total }}</span>
+                      <span class="text-sm font-medium">{{ item.name }}</span>
+                      <span class="text-muted-foreground text-sm tabular-nums">{{ item.total }}</span>
                     </span>
                   </app-chip>
                 }
