@@ -69,6 +69,7 @@ export interface Pokemon {
   readonly stats: Readonly<Record<Stat, number>>;
   readonly stage: EvolutionStage;
   readonly legendary: boolean;
+  readonly abilitySlugs: readonly string[];
 }
 
 export const MAX_BASE_STAT = 255;
