@@ -17,9 +17,15 @@ base de plusieurs Pokémon.
   Cette grille est utilisée par la page Pokédex **et** par la recherche du
   comparateur (mêmes filtres/tri disponibles).
 - **Page de détail** (`/pokedex/:id`) : en-tête coloré par type avec l'artwork,
-  puis les **informations** en tags colorés (une couleur réservée par type
-  d'info : stade, catégorie/légendaire, total) et les **statistiques de base**
-  juste en dessous, avec un bouton « Ajouter au comparateur ».
+  puis deux onglets (composant DS `tabs`) :
+  - **Aperçu** : informations en tags colorés (une couleur réservée par type
+    d'info : stade, catégorie/légendaire, total), **talents** (clic → popover
+    avec la description) et **statistiques de base** ;
+  - **Attaques** : liste des attaques apprenables (nom, type, catégorie
+    physique/spéciale/statut, puissance) avec un **speed dial** pour filtrer
+    (type, catégorie) et trier (puissance / nom).
+  Les talents et attaques sont chargés à la demande par Pokémon (httpResource).
+  Un clic sur un Pokémon du **comparateur** ouvre aussi sa page de détail.
 - **Ajout depuis le Comparateur** : un bouton ouvre le Pokédex en bottom sheet
   **pleine page** (composant DS `sheet`).
 - **Recherche multilingue** : le champ filtre sur les noms dans toutes les

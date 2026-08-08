@@ -7,6 +7,7 @@ import {
   ViewContainerRef,
   viewChild,
 } from '@angular/core';
+import { Router } from '@angular/router';
 
 import {
   ButtonComponent,
@@ -25,6 +26,7 @@ import { NgIcon } from '@ng-icons/core';
 import type { EChartsCoreOption } from 'echarts/core';
 
 import { ComparatorStore, DISPLAY_MODE } from '../../core/comparator-store';
+import { APP_PATHS } from '../../app.routes';
 import { PokedexGridComponent } from '../pokedex/pokedex-grid.component';
 import {
   LANG,
@@ -134,14 +136,19 @@ const DISPLAY_MODE_ITEMS: readonly SegmentItem[] = [
             </button>
 
             @if (selection().length > 0) {
+              <p class="text-muted-foreground text-xs">
+                Astuce : cliquez un Pokémon pour voir son détail.
+              </p>
               <div class="flex flex-wrap items-center gap-2">
                 @for (item of selection(); track item.id) {
                   <app-chip
+                    class="cursor-pointer transition-colors hover:bg-muted/70"
                     [class]="item.mediaClass"
                     [imgUrl]="item.imageUrl"
                     [alt]="item.name"
                     [hint]="item.totalLabel"
                     [removeLabel]="'Retirer ' + item.name"
+                    (click)="openDetail(item.id)"
                     (removed)="remove(item.id)"
                   >
                     {{ item.name }}
@@ -223,6 +230,7 @@ export class ComparatorComponent {
   readonly #palette = inject(ThemePaletteService);
   readonly #sheet = inject(SheetService);
   readonly #viewContainerRef = inject(ViewContainerRef);
+  readonly #router = inject(Router);
 
   private readonly pokedexTemplate = viewChild.required<TemplateRef<unknown>>('pokedexSheet');
 
@@ -301,6 +309,10 @@ export class ComparatorComponent {
       viewContainerRef: this.#viewContainerRef,
       customClasses: 'p-4',
     });
+  }
+
+  protected openDetail(id: number): void {
+    this.#router.navigate([`/${APP_PATHS.pokedex}`, id]);
   }
 
   protected onPick(id: number): void {
