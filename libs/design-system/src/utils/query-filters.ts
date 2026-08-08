@@ -63,10 +63,63 @@ export function arrayFilter(
   };
 }
 
+export const SORT_DIRECTION = { asc: 'asc', desc: 'desc' } as const;
+
+export type SortDirection = (typeof SORT_DIRECTION)[keyof typeof SORT_DIRECTION];
+
+export interface SortState<TField extends string = string> {
+  readonly field: TField;
+  readonly direction: SortDirection;
+}
+
+export function sortFilter<TField extends string>(
+  allowedFields: readonly TField[],
+  defaultValue: SortState<TField> | null = null,
+): QueryParamCodec<SortState<TField> | null> {
+  const allowed = new Set<string>(allowedFields);
+  const encodeState = (state: SortState<TField> | null): string | null =>
+    state === null ? null : `${state.direction === SORT_DIRECTION.desc ? '-' : ''}${state.field}`;
+  const defaultEncoded = encodeState(defaultValue);
+  const decodeField = (raw: string): SortState<TField> | null => {
+    const descending = raw.startsWith('-');
+    const field = descending ? raw.slice(1) : raw;
+    if (!allowed.has(field)) {
+      return defaultValue;
+    }
+    return {
+      field: field as TField,
+      direction: descending ? SORT_DIRECTION.desc : SORT_DIRECTION.asc,
+    };
+  };
+  return {
+    defaultValue,
+    encode: (value) => {
+      const encoded = encodeState(value);
+      return encoded === defaultEncoded ? null : encoded;
+    },
+    decode: (raw) => (raw === null || raw.length === 0 ? defaultValue : decodeField(raw)),
+  };
+}
+
 export type QueryFilterDefinitions = Record<string, QueryParamCodec<unknown>>;
 
 export type QueryFilterValues<TDefinitions extends QueryFilterDefinitions> = {
   [K in keyof TDefinitions]: TDefinitions[K] extends QueryParamCodec<infer T> ? T : never;
+};
+
+type ReservedFilterKey = 'value' | 'set' | 'patch' | 'reset';
+
+type WithoutReservedKeys<TDefinitions extends QueryFilterDefinitions> = {
+  [K in keyof TDefinitions & ReservedFilterKey]: never;
+};
+
+export type QueryFilters<TDefinitions extends QueryFilterDefinitions> = {
+  readonly [K in keyof TDefinitions]: Signal<QueryFilterValues<TDefinitions>[K]>;
+} & {
+  readonly value: Signal<QueryFilterValues<TDefinitions>>;
+  set<K extends keyof TDefinitions>(key: K, value: QueryFilterValues<TDefinitions>[K]): void;
+  patch(values: Partial<QueryFilterValues<TDefinitions>>): void;
+  reset(): void;
 };
 
 export interface QueryFiltersOptions {
@@ -74,18 +127,8 @@ export interface QueryFiltersOptions {
   readonly prefix?: string;
 }
 
-export interface QueryFilters<TDefinitions extends QueryFilterDefinitions> {
-  readonly value: Signal<QueryFilterValues<TDefinitions>>;
-  readonly controls: {
-    readonly [K in keyof TDefinitions]: Signal<QueryFilterValues<TDefinitions>[K]>;
-  };
-  set<K extends keyof TDefinitions>(key: K, value: QueryFilterValues<TDefinitions>[K]): void;
-  patch(values: Partial<QueryFilterValues<TDefinitions>>): void;
-  reset(): void;
-}
-
 export function injectQueryFilters<TDefinitions extends QueryFilterDefinitions>(
-  definitions: TDefinitions,
+  definitions: TDefinitions & WithoutReservedKeys<TDefinitions>,
   options: QueryFiltersOptions = {},
 ): QueryFilters<TDefinitions> {
   const router = inject(Router);
@@ -93,12 +136,13 @@ export function injectQueryFilters<TDefinitions extends QueryFilterDefinitions>(
   const replaceUrl = options.replaceUrl ?? true;
   const prefix = options.prefix ?? '';
 
-  const keys = Object.keys(definitions) as (keyof TDefinitions)[];
+  const codecs: TDefinitions = definitions;
+  const keys = Object.keys(codecs) as (keyof TDefinitions)[];
   const paramName = (key: keyof TDefinitions): string => `${prefix}${String(key)}`;
 
   const decodeAll = (paramMap: ParamMap): QueryFilterValues<TDefinitions> =>
     keys.reduce((values, key) => {
-      values[key] = definitions[key].decode(
+      values[key] = codecs[key].decode(
         paramMap.get(paramName(key)),
       ) as QueryFilterValues<TDefinitions>[typeof key];
       return values;
@@ -128,7 +172,7 @@ export function injectQueryFilters<TDefinitions extends QueryFilterDefinitions>(
   const toQueryParam = <K extends keyof TDefinitions>(
     key: K,
     filterValue: QueryFilterValues<TDefinitions>[K],
-  ): Params => ({ [paramName(key)]: definitions[key].encode(filterValue) });
+  ): Params => ({ [paramName(key)]: codecs[key].encode(filterValue) });
 
   const set = <K extends keyof TDefinitions>(
     key: K,
@@ -151,5 +195,5 @@ export function injectQueryFilters<TDefinitions extends QueryFilterDefinitions>(
       }, {} as Params),
     );
 
-  return { value, controls, set, patch, reset };
+  return Object.assign(controls, { value, set, patch, reset }) as QueryFilters<TDefinitions>;
 }

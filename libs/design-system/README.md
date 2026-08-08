@@ -162,24 +162,22 @@ l'URL (URL propre), et les écritures fusionnent les params existants (`queryPar
 
 À appeler dans un contexte d'injection (initialiseur de champ ou constructeur). Chaque filtre est
 décrit par un **codec** typé ; codecs fournis : `stringFilter`, `numberFilter`, `booleanFilter`,
-`enumFilter`, `arrayFilter` (multi-select).
+`enumFilter`, `arrayFilter` (multi-select) et `sortFilter` (tri).
 
 ```typescript
 import {
   arrayFilter,
   enumFilter,
   injectQueryFilters,
+  sortFilter,
   stringFilter,
 } from '@justin-croyable/design-system';
-
-const SORT = { name: 'name', date: 'date' } as const;
-type Sort = (typeof SORT)[keyof typeof SORT];
 
 export class CatalogComponent {
   protected readonly filters = injectQueryFilters({
     search: stringFilter(),
-    sort: enumFilter([SORT.name, SORT.date], SORT.name),
     tags: arrayFilter(),
+    sort: sortFilter(['name', 'date'], { field: 'name', direction: 'asc' }),
   });
 
   // Réactif : dérivé de l'URL, se ré-applique tout seul à l'init et sur navigation.
@@ -190,20 +188,47 @@ export class CatalogComponent {
 ```
 
 ```html
-<!-- Lecture : signal par filtre. Écriture : set / patch / reset. -->
+<!-- Lecture : un signal par filtre, directement sur `filters`. Écriture : set / patch / reset. -->
 <app-input
-  [value]="filters.controls.search()"
+  [value]="filters.search()"
   (valueChange)="filters.set('search', $event)"
 />
 <button appButton variant="ghost" (click)="filters.reset()">Réinitialiser</button>
 ```
 
+- `filters.<clé>()` — signal en lecture par filtre (idéal pour `[value]` et les `computed`).
 - `filters.value()` — signal de l'objet agrégé des filtres courants.
-- `filters.controls.<clé>()` — signal en lecture par filtre (idéal pour `[value]` et `computed`).
 - `filters.set(clé, valeur)` / `filters.patch({ … })` — applique un ou plusieurs filtres (un seul
   `navigate`). `filters.reset()` — retire tous les params.
 - Options : `prefix` (préfixe les params pour plusieurs jeux de filtres sur une même page),
   `replaceUrl` (passer à `false` pour empiler les filtres dans l'historique).
+
+Les clés `value`, `set`, `patch` et `reset` sont réservées : les utiliser comme nom de filtre est
+une erreur de compilation (elles cohabitent avec les signals sur le même objet).
+
+### Tri dans l'URL
+
+`sortFilter(champsAutorisés, défaut?)` encode l'état de tri de façon compacte (`?sort=date` en
+ascendant, `?sort=-date` en descendant), en validant le champ contre la liste autorisée. La valeur
+est `SortState | null` (`{ field, direction: 'asc' | 'desc' }`) :
+
+```typescript
+protected readonly filters = injectQueryFilters({
+  sort: sortFilter(['name', 'date', 'price'], { field: 'name', direction: 'asc' }),
+});
+
+protected readonly rows = computed(() => sortRows(this.store.rows(), this.filters.sort()));
+
+protected toggleSort(field: 'name' | 'date' | 'price'): void {
+  const current = this.filters.sort();
+  const direction = current?.field === field && current.direction === 'asc' ? 'desc' : 'asc';
+  this.filters.set('sort', { field, direction });
+}
+```
+
+Pour un tableau `app-table` (ag-grid), brancher le tri de la grille sur le codec : lire
+`filters.sort()` pour positionner l'état des colonnes (`applyColumnState`) et pousser
+`onSortChanged` vers `filters.set('sort', …)`.
 
 ## Configuration : `provideJustinCroyableDS()`
 

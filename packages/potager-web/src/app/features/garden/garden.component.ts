@@ -293,7 +293,7 @@ const SEASON_FILTER_ITEMS: SegmentItem[] = [
         <app-select
           label="Culture"
           prefixIcon="phosphorPlant"
-          [value]="filters.controls.culture()"
+          [value]="filters.culture()"
           (valueChange)="onCultureChange($event)"
         >
           @for (option of cultureOptions; track option.value) {
@@ -325,7 +325,7 @@ export class GardenComponent {
   });
 
   protected readonly displayedRows = computed<PlantRow[]>(() => {
-    const culture = this.filters.controls.culture();
+    const culture = this.filters.culture();
     if (culture === CULTURE_FILTER_ALL) {
       return this.store.rows();
     }
