@@ -4,9 +4,11 @@ import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router
 import { filter, map } from 'rxjs';
 
 import {
+  ButtonComponent,
   LayoutImports,
   SegmentComponent,
   type SegmentItem,
+  SidebarService,
   ThemeService,
 } from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
@@ -39,7 +41,7 @@ const NAV_ITEMS: readonly NavItem[] = [
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, ...LayoutImports, NgIcon, SegmentComponent],
+  imports: [RouterOutlet, RouterLink, ...LayoutImports, NgIcon, ButtonComponent, SegmentComponent],
   template: `
     <div class="bg-background text-foreground h-dvh overflow-hidden">
       <app-layout direction="horizontal" class="h-full">
@@ -89,6 +91,23 @@ const NAV_ITEMS: readonly NavItem[] = [
         </app-sidebar>
 
         <app-layout direction="vertical" class="min-w-0 flex-1">
+          <app-header class="px-3 md:hidden">
+            <button
+              appButton
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="Ouvrir le menu"
+              (click)="toggleSidebar()"
+            >
+              <ng-icon name="phosphorList" class="size-5" />
+            </button>
+            <div class="ml-1 flex items-center gap-2">
+              <ng-icon name="phosphorScales" class="text-primary size-5 shrink-0" />
+              <span class="text-base font-semibold">Pokémon Comparator</span>
+            </div>
+          </app-header>
+
           <app-content class="min-h-0 overflow-auto p-4 sm:p-6">
             <router-outlet />
           </app-content>
@@ -101,9 +120,14 @@ const NAV_ITEMS: readonly NavItem[] = [
 export class AppComponent {
   protected readonly theme = inject(ThemeService);
   readonly #router = inject(Router);
+  readonly #sidebar = inject(SidebarService);
 
   protected readonly themeItems = THEME_ITEMS;
   protected readonly sidebarCollapsed = signal(false);
+
+  protected toggleSidebar(): void {
+    this.#sidebar.toggleMobile();
+  }
 
   protected readonly currentPath = toSignal(
     this.#router.events.pipe(
