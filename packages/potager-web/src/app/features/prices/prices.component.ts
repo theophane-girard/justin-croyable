@@ -29,27 +29,22 @@ import {
   CATEGORY_META,
   type CategoryId,
   CROP_BY_ID,
+  type CropId,
   cropFallbackVarietyId,
   PRICE_ORIGIN,
   type PriceOrigin,
-  type PricePerKgByVariety,
   type PriceRow,
   VARIETIES,
   VARIETY_BY_ID,
   type VarietyId,
 } from '../../core/potager.model';
 import {
-  priceOrigin,
-  resolveBioPrice,
-  resolveConventionalPrice,
-} from '../../core/reference-prices';
-import {
   CULTURE_FILTER_ALL,
   CULTURE_FILTER_OPTIONS,
   VARIETY_FILTER_ALL,
   varietyFilterOptions,
 } from '../../core/catalog-filter';
-import { GovPriceService } from '../../core/gov-price.service';
+import { type CurrentPrice, PriceStore } from '../../core/price-store';
 import { TagCellComponent } from '../../shared/tag-cell.component';
 import { CATEGORY_TAG_COLOR, priceOriginTagColor } from '../../shared/table-badges';
 
@@ -159,11 +154,15 @@ const CATEGORY_ITEMS: SegmentItem[] = [
   { value: CATEGORY_META.fruit.id, label: CATEGORY_META.fruit.label },
 ];
 
-const SOURCE_LABEL: Readonly<Record<PriceOrigin, (fallbackLabel: string) => string>> = {
-  [PRICE_ORIGIN.rnm]: () => 'RNM (direct)',
-  [PRICE_ORIGIN.fallback]: fallbackLabel => `RNM · via ${fallbackLabel}`,
-  [PRICE_ORIGIN.reference]: () => 'Référence',
+const SOURCE_TEXT: Readonly<Record<string, string>> = {
+  reference: 'Référence',
+  manuel: 'Manuel',
+  rnm: 'RNM',
 };
+
+function sourceLabel(source: string): string {
+  return SOURCE_TEXT[source] ?? source;
+}
 
 @Component({
   selector: 'app-prices',
@@ -252,7 +251,7 @@ const SOURCE_LABEL: Readonly<Record<PriceOrigin, (fallbackLabel: string) => stri
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PricesComponent {
-  readonly #govPrices = inject(GovPriceService);
+  readonly #prices = inject(PriceStore);
   readonly #sheet = inject(SheetService);
 
   private readonly filterSheetTemplate = viewChild.required<TemplateRef<unknown>>('filterSheet');
@@ -269,14 +268,11 @@ export class PricesComponent {
   protected readonly categoryValue = computed(() => this.categoryFilter() ?? CATEGORY_ALL);
   protected readonly varietyOptions = computed(() => varietyFilterOptions(this.cultureFilter()));
 
-  protected readonly rows = computed<PriceRow[]>(() => {
-    const live = this.#govPrices.livePrices();
-    const liveBio = this.#govPrices.liveBioPrices();
-    const rnmDate = this.#govPrices.priceDate();
-    return VARIETIES.map(variety =>
-      this.#toRow(variety.id as VarietyId, live, liveBio, rnmDate),
-    ).sort((a, b) => a.cropLabel.localeCompare(b.cropLabel, 'fr'));
-  });
+  protected readonly rows = computed<PriceRow[]>(() =>
+    VARIETIES.map(variety => this.#toRow(variety.id as VarietyId)).sort((a, b) =>
+      a.cropLabel.localeCompare(b.cropLabel, 'fr'),
+    ),
+  );
 
   protected readonly displayedRows = computed<PriceRow[]>(() => {
     const category = this.categoryFilter();
@@ -325,21 +321,14 @@ export class PricesComponent {
     }
   }
 
-  #toRow(
-    varietyId: VarietyId,
-    live: PricePerKgByVariety | null,
-    liveBio: PricePerKgByVariety | null,
-    rnmDate: Date | null,
-  ): PriceRow {
+  #toRow(varietyId: VarietyId): PriceRow {
     const variety = VARIETY_BY_ID[varietyId];
     const crop = CROP_BY_ID[variety.cropId];
-    const conventionalPricePerKg = resolveConventionalPrice(varietyId, live);
-    const bioPricePerKg = resolveBioPrice(varietyId, liveBio);
-    const conventionalOrigin = priceOrigin(varietyId, live);
-    const bioOrigin = priceOrigin(varietyId, liveBio);
-    const fallbackLabel = VARIETY_BY_ID[cropFallbackVarietyId(variety.cropId)].label;
-    const isLive =
-      conventionalOrigin !== PRICE_ORIGIN.reference || bioOrigin !== PRICE_ORIGIN.reference;
+    const current = this.#prices.currentFor(varietyId);
+    const conventionalPricePerKg = current?.price.conventionalPricePerKg ?? 0;
+    const bioPricePerKg = current?.price.bioPricePerKg ?? 0;
+    const origin = this.#origin(current);
+    const label = this.#label(current, variety.cropId);
     return {
       varietyId,
       varietyLabel: variety.label,
@@ -347,14 +336,35 @@ export class PricesComponent {
       cropLabel: crop.label,
       categoryLabel: CATEGORY_META[crop.category].label,
       conventionalPricePerKg,
-      conventionalOrigin,
-      conventionalSourceLabel: SOURCE_LABEL[conventionalOrigin](fallbackLabel),
+      conventionalOrigin: origin,
+      conventionalSourceLabel: label,
       bioPricePerKg,
-      bioOrigin,
-      bioSourceLabel: SOURCE_LABEL[bioOrigin](fallbackLabel),
+      bioOrigin: origin,
+      bioSourceLabel: label,
       bioPremiumPct: this.#premium(conventionalPricePerKg, bioPricePerKg),
-      priceDate: isLive ? rnmDate : null,
+      priceDate: current ? new Date(current.price.effectiveFrom) : null,
     };
+  }
+
+  #origin(current: CurrentPrice | null): PriceOrigin {
+    if (!current) {
+      return PRICE_ORIGIN.reference;
+    }
+    if (current.viaFallback) {
+      return PRICE_ORIGIN.fallback;
+    }
+    return current.price.source === 'reference' ? PRICE_ORIGIN.reference : PRICE_ORIGIN.rnm;
+  }
+
+  #label(current: CurrentPrice | null, cropId: CropId): string {
+    if (!current) {
+      return '—';
+    }
+    if (current.viaFallback) {
+      const fallbackLabel = VARIETY_BY_ID[cropFallbackVarietyId(cropId)].label;
+      return `${sourceLabel(current.price.source)} · via ${fallbackLabel}`;
+    }
+    return sourceLabel(current.price.source);
   }
 
   #premium(conventional: number, bio: number): number {

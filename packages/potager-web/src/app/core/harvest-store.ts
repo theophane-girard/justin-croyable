@@ -1,28 +1,26 @@
-import { isPlatformBrowser } from '@angular/common';
-import { computed, effect, inject, Injectable, PLATFORM_ID, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
+import { type Harvest } from '@justin-croyable/api-contract';
 
 import {
   CROP_BY_ID,
   CATEGORY_META,
   type CropId,
   type HarvestDraft,
-  type HarvestEntry,
   type HarvestRow,
   isVarietyId,
   matchesSeason,
   matchesYear,
-  type PricePerKgByVariety,
   PRICE_MODE,
   type PriceMode,
-  type PriceSource,
   seasonForDate,
   VARIETY_BY_ID,
+  type VarietyId,
   YEAR_ALL,
   type YearFilter,
 } from './potager.model';
-import { GovPriceService } from './gov-price.service';
+import { ApiEntityStore } from './api-entity-store';
+import { PriceStore } from './price-store';
 import { SeasonStore } from './season-store';
-import { resolveBioPrice, resolveConventionalPrice } from './reference-prices';
 
 export const MONTHS_FR = [
   'Jan',
@@ -39,75 +37,30 @@ export const MONTHS_FR = [
   'Déc',
 ] as const;
 
-const STORAGE_KEY = 'potager.harvests.v3';
 const MONTHS_IN_YEAR = 12;
 
 type NamedValue = { readonly label: string; readonly value: number };
 
-const SEED_ENTRIES: readonly HarvestEntry[] = [
-  { id: 'seed-1', varietyId: 'fraise', weightKg: 2.4, harvestedOn: '2026-05-18' },
-  { id: 'seed-2', varietyId: 'tomate-coeur-de-boeuf', weightKg: 6.1, harvestedOn: '2026-07-22' },
-  { id: 'seed-3', varietyId: 'courgette', weightKg: 8.3, harvestedOn: '2026-07-05' },
-  { id: 'seed-4', varietyId: 'salade', weightKg: 3.2, harvestedOn: '2026-06-12' },
-  { id: 'seed-5', varietyId: 'haricot-vert', weightKg: 2.9, harvestedOn: '2026-08-01' },
-  { id: 'seed-6', varietyId: 'framboise', weightKg: 1.1, harvestedOn: '2026-06-28' },
-  { id: 'seed-7', varietyId: 'pomme-de-terre', weightKg: 11.5, harvestedOn: '2026-08-03' },
-  { id: 'seed-8', varietyId: 'radis', weightKg: 1.6, harvestedOn: '2026-04-20' },
-  { id: 'seed-9', varietyId: 'tomate-cerise', weightKg: 4.7, harvestedOn: '2026-08-02' },
-  { id: 'seed-10', varietyId: 'courge', weightKg: 5.4, harvestedOn: '2026-09-15' },
-  { id: 'seed-23', varietyId: 'tomate-noire-de-crimee', weightKg: 3.5, harvestedOn: '2026-08-14' },
-  { id: 'seed-24', varietyId: 'tomate-grappe', weightKg: 5.9, harvestedOn: '2026-07-30' },
-  { id: 'seed-11', varietyId: 'tomate-coeur-de-boeuf', weightKg: 5.2, harvestedOn: '2025-07-18' },
-  { id: 'seed-12', varietyId: 'fraise', weightKg: 1.9, harvestedOn: '2025-05-24' },
-  { id: 'seed-13', varietyId: 'courgette', weightKg: 6.8, harvestedOn: '2025-08-09' },
-  { id: 'seed-14', varietyId: 'poireau', weightKg: 3.1, harvestedOn: '2025-11-12' },
-  { id: 'seed-15', varietyId: 'salade', weightKg: 2.6, harvestedOn: '2025-06-15' },
-  { id: 'seed-16', varietyId: 'haricot-vert', weightKg: 3.4, harvestedOn: '2025-07-28' },
-  { id: 'seed-17', varietyId: 'pomme-de-terre', weightKg: 9.7, harvestedOn: '2025-08-20' },
-  { id: 'seed-18', varietyId: 'radis', weightKg: 1.3, harvestedOn: '2025-04-22' },
-  { id: 'seed-19', varietyId: 'courge', weightKg: 4.9, harvestedOn: '2025-09-18' },
-  { id: 'seed-20', varietyId: 'tomate-cerise', weightKg: 3.8, harvestedOn: '2025-08-05' },
-  { id: 'seed-21', varietyId: 'framboise', weightKg: 0.9, harvestedOn: '2025-06-30' },
-  { id: 'seed-22', varietyId: 'carotte', weightKg: 4.2, harvestedOn: '2025-10-08' },
-];
-
 @Injectable({ providedIn: 'root' })
-export class HarvestStore {
-  readonly #govPrices = inject(GovPriceService);
+export class HarvestStore extends ApiEntityStore<Harvest> {
+  readonly #prices = inject(PriceStore);
   readonly #seasonStore = inject(SeasonStore);
   readonly #season = this.#seasonStore.season;
-  readonly #platformId = inject(PLATFORM_ID);
-
-  readonly #entries = signal<readonly HarvestEntry[]>(this.#restore());
 
   readonly #priceMode = signal<PriceMode>(PRICE_MODE.conventional);
   readonly priceMode = this.#priceMode.asReadonly();
 
-  readonly entries = this.#entries.asReadonly();
-
-  readonly priceSource = computed<PriceSource>(() =>
-    this.#priceMode() === PRICE_MODE.bio
-      ? this.#govPrices.bioPriceSource()
-      : this.#govPrices.priceSource(),
-  );
-
-  readonly #livePrices = computed<PricePerKgByVariety | null>(() => this.#govPrices.livePrices());
-  readonly #liveBioPrices = computed<PricePerKgByVariety | null>(() =>
-    this.#govPrices.liveBioPrices(),
-  );
-
   readonly rows = computed<HarvestRow[]>(() => {
-    const live = this.#livePrices();
-    const liveBio = this.#liveBioPrices();
     const mode = this.#priceMode();
-    return this.#entries()
-      .map(entry => this.#toRow(entry, live, liveBio, mode))
+    return this.entries()
+      .filter(entry => isVarietyId(entry.varietyId))
+      .map(entry => this.#toRow(entry, mode))
       .sort((a, b) => b.harvestedOn.getTime() - a.harvestedOn.getTime());
   });
 
   readonly availableYears = computed<number[]>(() =>
     Array.from(
-      new Set(this.#entries().map(entry => new Date(entry.harvestedOn).getFullYear())),
+      new Set(this.entries().map(entry => new Date(entry.harvestedOn).getFullYear())),
     ).sort((a, b) => b - a),
   );
 
@@ -131,7 +84,7 @@ export class HarvestStore {
     );
   });
 
-  readonly entryCount = computed(() => this.#entries().length);
+  readonly entryCount = computed(() => this.entries().length);
 
   readonly totalWeightKg = computed(() =>
     this.#roundToCents(this.#periodRows().reduce((total, row) => total + row.weightKg, 0)),
@@ -142,7 +95,12 @@ export class HarvestStore {
   );
 
   readonly cropCount = computed(
-    () => new Set(this.#entries().map(entry => VARIETY_BY_ID[entry.varietyId].cropId)).size,
+    () =>
+      new Set(
+        this.entries()
+          .filter(entry => isVarietyId(entry.varietyId))
+          .map(entry => VARIETY_BY_ID[entry.varietyId as VarietyId].cropId),
+      ).size,
   );
 
   readonly periodWeightByCropId = computed<Partial<Record<CropId, number>>>(() =>
@@ -179,46 +137,39 @@ export class HarvestStore {
     ),
   );
 
-  constructor() {
-    effect(() => this.#persist(this.#entries()));
-  }
-
   add(draft: HarvestDraft): void {
-    const entry: HarvestEntry = {
-      id: this.#createId(),
-      varietyId: draft.varietyId,
-      weightKg: draft.weightKg,
-      harvestedOn: this.#toIsoDate(draft.harvestedOn),
-      conventionalPricePerKg: resolveConventionalPrice(draft.varietyId, this.#livePrices()),
-      bioPricePerKg: resolveBioPrice(draft.varietyId, this.#liveBioPrices()),
-    };
-    this.#entries.update(entries => [...entries, entry]);
+    void this.createEntry(() =>
+      this.api.createHarvest({
+        varietyId: draft.varietyId,
+        weightKg: draft.weightKg,
+        harvestedOn: draft.harvestedOn.toISOString(),
+      }),
+    );
   }
 
   remove(id: string): void {
-    this.#entries.update(entries => entries.filter(entry => entry.id !== id));
+    void this.removeEntry(id, () => this.api.removeHarvest(id));
   }
 
   setPriceMode(mode: PriceMode): void {
     this.#priceMode.set(mode);
   }
 
-  #toRow(
-    entry: HarvestEntry,
-    live: PricePerKgByVariety | null,
-    liveBio: PricePerKgByVariety | null,
-    mode: PriceMode,
-  ): HarvestRow {
-    const variety = VARIETY_BY_ID[entry.varietyId];
+  protected fetchAll() {
+    return this.api.listHarvests();
+  }
+
+  #toRow(entry: Harvest, mode: PriceMode): HarvestRow {
+    const varietyId = entry.varietyId as VarietyId;
+    const variety = VARIETY_BY_ID[varietyId];
     const crop = CROP_BY_ID[variety.cropId];
-    const conventionalPricePerKg =
-      entry.conventionalPricePerKg ?? resolveConventionalPrice(entry.varietyId, live);
-    const bioPricePerKg = entry.bioPricePerKg ?? resolveBioPrice(entry.varietyId, liveBio);
-    const pricePerKg = mode === PRICE_MODE.bio ? bioPricePerKg : conventionalPricePerKg;
     const harvestedOn = new Date(entry.harvestedOn);
+    const conventionalPricePerKg = this.#prices.conventionalPriceFor(varietyId, harvestedOn);
+    const bioPricePerKg = this.#prices.bioPriceFor(varietyId, harvestedOn);
+    const pricePerKg = mode === PRICE_MODE.bio ? bioPricePerKg : conventionalPricePerKg;
     return {
       id: entry.id,
-      varietyId: entry.varietyId,
+      varietyId,
       varietyLabel: variety.label,
       cropId: variety.cropId,
       cropLabel: crop.label,
@@ -260,65 +211,6 @@ export class HarvestStore {
       label,
       value: this.#roundToCents(value),
     }));
-  }
-
-  #restore(): readonly HarvestEntry[] {
-    if (!isPlatformBrowser(this.#platformId)) {
-      return SEED_ENTRIES;
-    }
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      return SEED_ENTRIES;
-    }
-    const parsed = this.#parseStored(raw);
-    return parsed ?? SEED_ENTRIES;
-  }
-
-  #parseStored(raw: string): readonly HarvestEntry[] | null {
-    try {
-      const value: unknown = JSON.parse(raw);
-      if (!Array.isArray(value)) {
-        return null;
-      }
-      return value.filter((item): item is HarvestEntry => this.#isValidEntry(item));
-    } catch {
-      return null;
-    }
-  }
-
-  #isValidEntry(item: unknown): item is HarvestEntry {
-    if (typeof item !== 'object' || item === null) {
-      return false;
-    }
-    const candidate = item as Record<string, unknown>;
-    return (
-      typeof candidate['id'] === 'string' &&
-      typeof candidate['varietyId'] === 'string' &&
-      isVarietyId(candidate['varietyId']) &&
-      typeof candidate['weightKg'] === 'number' &&
-      typeof candidate['harvestedOn'] === 'string' &&
-      this.#isOptionalNumber(candidate['conventionalPricePerKg']) &&
-      this.#isOptionalNumber(candidate['bioPricePerKg'])
-    );
-  }
-
-  #isOptionalNumber(value: unknown): boolean {
-    return value === undefined || typeof value === 'number';
-  }
-
-  #persist(entries: readonly HarvestEntry[]): void {
-    if (!isPlatformBrowser(this.#platformId)) {
-      return;
-    }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
-  }
-
-  #createId(): string {
-    return crypto.randomUUID();
-  }
-
-  #toIsoDate(date: Date): string {
-    return date.toISOString().slice(0, 10);
   }
 
   #roundToCents(value: number): number {

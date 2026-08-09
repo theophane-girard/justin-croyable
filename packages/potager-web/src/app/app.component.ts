@@ -111,26 +111,14 @@ const THEME_VALUE = { light: 'light', dark: 'dark' } as const;
               </div>
               <div class="ml-auto flex items-center gap-2">
                 @if (priceModeBio()) {
-                  @if (priceSourceLive()) {
-                    <app-badge type="secondary" class="gap-1">
-                      <ng-icon name="phosphorCloudArrowDown" />
-                      Prix RNM bio en direct
-                    </app-badge>
-                  } @else {
-                    <app-badge type="secondary" class="gap-1">
-                      <ng-icon name="phosphorLeaf" />
-                      Prix bio (référence)
-                    </app-badge>
-                  }
-                } @else if (priceSourceLive()) {
                   <app-badge type="secondary" class="gap-1">
-                    <ng-icon name="phosphorCloudArrowDown" />
-                    Prix RNM en direct
+                    <ng-icon name="phosphorLeaf" />
+                    Prix bio
                   </app-badge>
                 } @else {
                   <app-badge type="outline" class="gap-1">
-                    <ng-icon name="phosphorInfo" />
-                    Prix de référence
+                    <ng-icon name="phosphorBasket" />
+                    Prix conventionnel
                   </app-badge>
                 }
                 <app-auth-menu />
@@ -168,7 +156,6 @@ export class AppComponent {
     () => AUTH_GATE_ENABLED && this.#auth.ready() && !this.#auth.isAuthenticated(),
   );
 
-  protected readonly priceSourceLive = computed(() => this.#store.priceSource() === 'live');
   protected readonly priceModeBio = computed(() => this.#store.priceMode() === PRICE_MODE.bio);
 
   protected readonly navLinks = computed(() => {
