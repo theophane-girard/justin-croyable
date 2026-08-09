@@ -4,7 +4,6 @@ import {
   computed,
   inject,
   input,
-  output,
   signal,
   type TemplateRef,
   ViewContainerRef,
@@ -16,24 +15,23 @@ import {
   SelectImports,
   SheetService,
   SliderComponent,
-  SwitchComponent,
 } from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
 
 import { type Stat, STAT_META, STAT_ORDER } from '../../core/pokemon.model';
 import {
   DEFAULT_ENHANCE_CONFIG,
-  type EnhanceConfig,
   EV_STEP,
   evsTotal,
   MAX_EV_PER_STAT,
-  MAX_EV_TOTAL,
   maxEvForStat,
   NATURES,
   natureById,
   natureEffectLabel,
   NEUTRAL_NATURE_ID,
+  USABLE_EV_TOTAL,
 } from '../../core/pokemon-stats';
+import { injectEnhanceUrl } from './enhance-url';
 
 interface NatureOption {
   readonly id: string;
@@ -43,7 +41,7 @@ interface NatureOption {
 
 @Component({
   selector: 'app-stat-enhancer',
-  imports: [NgIcon, ButtonComponent, SwitchComponent, SliderComponent, ...SelectImports],
+  imports: [NgIcon, ButtonComponent, SliderComponent, ...SelectImports],
   template: `
     <button appButton type="button" variant="outline" size="sm" [full]="full()" (click)="open()">
       <ng-icon name="phosphorMagicWand" class="size-4" />
@@ -52,16 +50,10 @@ interface NatureOption {
 
     <ng-template #enhanceSheet>
       <div class="flex flex-col gap-6">
-        <section class="flex items-center justify-between gap-4">
-          <div class="flex flex-col">
-            <span class="text-sm font-semibold">Simuler les stats au niveau 100</span>
-            <span class="text-muted-foreground text-xs">IV parfaits (31), EV et nature appliqués.</span>
-          </div>
-          <app-switch
-            [checked]="draftLevel100()"
-            (checkedChange)="draftLevel100.set($event)"
-          />
-        </section>
+        <p class="text-muted-foreground text-sm">
+          À la validation, les statistiques sont calculées au niveau 100 avec des IV parfaits (31),
+          selon la nature et les EV choisis ci-dessous.
+        </p>
 
         <section class="flex flex-col gap-2">
           <h3 class="text-sm font-semibold">Nature</h3>
@@ -70,7 +62,6 @@ interface NatureOption {
             placeholder="Choisir une nature"
             [value]="draftNature()"
             [displayLabel]="draftNatureEffect()"
-            [disabled]="!draftLevel100()"
             (selectionChange)="onNatureChange($event)"
           >
             @for (nature of natureOptions; track nature.id) {
@@ -84,11 +75,8 @@ interface NatureOption {
         <section class="flex flex-col gap-3">
           <div class="flex items-center justify-between">
             <h3 class="text-sm font-semibold">EV</h3>
-            <span
-              class="text-xs tabular-nums"
-              [class]="draftEvsTotal() > maxEvTotal ? 'text-destructive' : 'text-muted-foreground'"
-            >
-              Total {{ draftEvsTotal() }} / {{ maxEvTotal }}
+            <span class="text-muted-foreground text-xs tabular-nums">
+              Total {{ draftEvsTotal() }} / {{ usableEvTotal }}
             </span>
           </div>
 
@@ -105,7 +93,7 @@ interface NatureOption {
                   variant="outline"
                   size="sm"
                   [attr.aria-label]="'EV minimum ' + statMeta[stat].label"
-                  [buttonDisabled]="!draftLevel100() || draftEvs()[stat] === 0"
+                  [buttonDisabled]="draftEvs()[stat] === 0"
                   (click)="setEv(stat, 0)"
                 >
                   <ng-icon name="phosphorCaretLineLeft" class="size-4" />
@@ -116,7 +104,6 @@ interface NatureOption {
                   [max]="maxEvPerStat"
                   [step]="evStep"
                   [value]="evValues()[stat]"
-                  [disabled]="!draftLevel100()"
                   (slideIndexChange)="onEvChange(stat, $event)"
                 />
                 <button
@@ -125,7 +112,7 @@ interface NatureOption {
                   variant="outline"
                   size="sm"
                   [attr.aria-label]="'EV maximum ' + statMeta[stat].label"
-                  [buttonDisabled]="!draftLevel100() || evMax()[stat] === draftEvs()[stat]"
+                  [buttonDisabled]="evMax()[stat] === draftEvs()[stat]"
                   (click)="setEv(stat, evMax()[stat])"
                 >
                   <ng-icon name="phosphorCaretLineRight" class="size-4" />
@@ -142,8 +129,7 @@ interface NatureOption {
 export class StatEnhancerComponent {
   readonly full = input<boolean>(false);
 
-  readonly apply = output<EnhanceConfig>();
-
+  readonly #enhance = injectEnhanceUrl();
   readonly #sheet = inject(SheetService);
   readonly #viewContainerRef = inject(ViewContainerRef);
 
@@ -152,7 +138,7 @@ export class StatEnhancerComponent {
   protected readonly statOrder = STAT_ORDER;
   protected readonly statMeta = STAT_META;
   protected readonly maxEvPerStat = MAX_EV_PER_STAT;
-  protected readonly maxEvTotal = MAX_EV_TOTAL;
+  protected readonly usableEvTotal = USABLE_EV_TOTAL;
   protected readonly evStep = EV_STEP;
   protected readonly natureOptions: readonly NatureOption[] = NATURES.map(nature => ({
     id: nature.id,
@@ -160,9 +146,6 @@ export class StatEnhancerComponent {
     effect: natureEffectLabel(nature),
   }));
 
-  readonly #appliedConfig = signal<EnhanceConfig>(DEFAULT_ENHANCE_CONFIG);
-
-  protected readonly draftLevel100 = signal<boolean>(DEFAULT_ENHANCE_CONFIG.level100);
   protected readonly draftNature = signal<string>(DEFAULT_ENHANCE_CONFIG.nature);
   protected readonly draftEvs = signal<Readonly<Record<Stat, number>>>(DEFAULT_ENHANCE_CONFIG.evs);
 
@@ -186,8 +169,7 @@ export class StatEnhancerComponent {
   });
 
   protected open(): void {
-    const config = this.#appliedConfig();
-    this.draftLevel100.set(config.level100);
+    const config = this.#enhance.config();
     this.draftNature.set(config.nature);
     this.draftEvs.set(config.evs);
     this.#sheet.create({
@@ -220,12 +202,10 @@ export class StatEnhancerComponent {
   }
 
   #applyDraft(): void {
-    const config: EnhanceConfig = {
-      level100: this.draftLevel100(),
+    this.#enhance.patch({
+      level100: true,
       nature: this.draftNature(),
       evs: this.draftEvs(),
-    };
-    this.#appliedConfig.set(config);
-    this.apply.emit(config);
+    });
   }
 }

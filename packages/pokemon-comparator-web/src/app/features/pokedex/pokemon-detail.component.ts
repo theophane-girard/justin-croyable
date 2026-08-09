@@ -36,13 +36,13 @@ import {
 } from '../../core/pokemon.model';
 import {
   applyEnhancedStats,
-  DEFAULT_ENHANCE_CONFIG,
   type EnhanceConfig,
   enhancedStatScaleMax,
   statsTotal,
 } from '../../core/pokemon-stats';
 import { typeBarClass, typeLabels, typeTileClass } from '../../core/pokemon-type';
 import { StatEnhancerComponent } from '../enhance/stat-enhancer.component';
+import { injectEnhanceUrl } from '../enhance/enhance-url';
 import { PokemonMovesComponent } from './pokemon-moves.component';
 
 const TAG_STAGE = 'border-transparent bg-sky-500/15 text-sky-700 dark:text-sky-300';
@@ -219,7 +219,7 @@ function toDetail(pokemon: Pokemon, config: EnhanceConfig): DetailView {
                       <h3 class="text-foreground text-sm font-semibold">{{ statsHeading() }}</h3>
                       <div class="flex items-center gap-3">
                         <span class="text-muted-foreground text-sm">Total {{ view.total }}</span>
-                        <app-stat-enhancer (apply)="onEnhance($event)" />
+                        <app-stat-enhancer />
                       </div>
                     </div>
                     <div class="flex flex-col gap-2">
@@ -292,7 +292,7 @@ export class PokemonDetailComponent {
 
   protected readonly pokedexLink = `/${APP_PATHS.pokedex}`;
   protected readonly selectedAbility = signal<PokemonAbility | undefined>(undefined);
-  protected readonly enhanceConfig = signal<EnhanceConfig>(DEFAULT_ENHANCE_CONFIG);
+  protected readonly enhanceConfig = injectEnhanceUrl().config;
 
   protected readonly statsHeading = computed(() =>
     this.enhanceConfig().level100 ? 'Statistiques (niveau 100)' : 'Statistiques de base',
@@ -328,9 +328,5 @@ export class PokemonDetailComponent {
 
   protected add(id: number): void {
     this.store.add(id);
-  }
-
-  protected onEnhance(config: EnhanceConfig): void {
-    this.enhanceConfig.set(config);
   }
 }

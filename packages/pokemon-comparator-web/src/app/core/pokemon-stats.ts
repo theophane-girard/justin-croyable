@@ -37,6 +37,8 @@ export const NATURES: readonly Nature[] = [
   { id: 'quirky', label: 'Bizarre', increased: null, decreased: null },
 ];
 
+export const NATURE_IDS: readonly string[] = NATURES.map(nature => nature.id);
+
 const NATURE_BY_ID = new Map<string, Nature>(NATURES.map(nature => [nature.id, nature]));
 
 export function natureById(id: string): Nature {
@@ -61,6 +63,7 @@ export interface EnhanceConfig {
 export const MAX_EV_PER_STAT = 252;
 export const MAX_EV_TOTAL = 510;
 export const EV_STEP = 4;
+export const USABLE_EV_TOTAL = Math.floor(MAX_EV_TOTAL / EV_STEP) * EV_STEP;
 
 const ZERO_EVS: Readonly<Record<Stat, number>> = STAT_ORDER.reduce(
   (evs, stat) => ({ ...evs, [stat]: 0 }),

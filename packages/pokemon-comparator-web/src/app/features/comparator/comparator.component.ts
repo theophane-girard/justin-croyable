@@ -3,7 +3,6 @@ import {
   Component,
   computed,
   inject,
-  signal,
   type TemplateRef,
   ViewContainerRef,
   viewChild,
@@ -30,6 +29,7 @@ import { ComparatorStore, DISPLAY_MODE } from '../../core/comparator-store';
 import { APP_PATHS } from '../../app.routes';
 import { PokedexGridComponent } from '../pokedex/pokedex-grid.component';
 import { StatEnhancerComponent } from '../enhance/stat-enhancer.component';
+import { injectEnhanceUrl } from '../enhance/enhance-url';
 import {
   LANG,
   pokemonImageUrl,
@@ -38,13 +38,7 @@ import {
   STAT_META,
   STAT_ORDER,
 } from '../../core/pokemon.model';
-import {
-  applyEnhancedStats,
-  DEFAULT_ENHANCE_CONFIG,
-  type EnhanceConfig,
-  enhancedStatScaleMax,
-  statsTotal,
-} from '../../core/pokemon-stats';
+import { applyEnhancedStats, enhancedStatScaleMax, statsTotal } from '../../core/pokemon-stats';
 
 interface SelectedView {
   readonly id: number;
@@ -175,7 +169,7 @@ const DISPLAY_MODE_ITEMS: readonly SegmentItem[] = [
               <div class="flex flex-wrap items-center justify-between gap-3">
                 <h2 class="text-lg font-semibold">{{ statsHeading() }}</h2>
                 <div class="flex flex-wrap items-center gap-2">
-                  <app-stat-enhancer (apply)="onEnhance($event)" />
+                  <app-stat-enhancer />
                   <app-segment
                     variant="accent"
                     [items]="displayModeItems"
@@ -249,7 +243,7 @@ export class ComparatorComponent {
 
   protected readonly displayMode = this.store.displayMode;
 
-  protected readonly enhanceConfig = signal<EnhanceConfig>(DEFAULT_ENHANCE_CONFIG);
+  protected readonly enhanceConfig = injectEnhanceUrl().config;
 
   protected readonly statsHeading = computed(() =>
     this.enhanceConfig().level100 ? 'Statistiques (niveau 100)' : 'Statistiques de base',
@@ -360,10 +354,6 @@ export class ComparatorComponent {
 
   protected onDisplayModeChange(value: string): void {
     this.store.setDisplayMode(value === DISPLAY_MODE.radar ? DISPLAY_MODE.radar : DISPLAY_MODE.bars);
-  }
-
-  protected onEnhance(config: EnhanceConfig): void {
-    this.enhanceConfig.set(config);
   }
 
   protected reload(): void {
