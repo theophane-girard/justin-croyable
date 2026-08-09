@@ -239,6 +239,17 @@ function toTile(pokemon: Pokemon): PokedexTile {
         >
           <ng-icon name="phosphorArrowsDownUp" class="size-5" />
         </button>
+        @if (activeFilterCount() > 0) {
+          <button
+            appFabButton
+            type="button"
+            variant="secondary"
+            aria-label="Effacer tous les filtres"
+            (click)="resetFilters()"
+          >
+            <ng-icon name="phosphorTrash" class="size-5" />
+          </button>
+        }
       </app-fab-list>
     </app-fab>
 
