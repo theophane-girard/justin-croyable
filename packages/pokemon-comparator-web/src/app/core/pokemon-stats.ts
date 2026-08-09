@@ -130,3 +130,8 @@ export function statsTotal(stats: Readonly<Record<Stat, number>>): number {
 export function evsTotal(evs: Readonly<Record<Stat, number>>): number {
   return STAT_ORDER.reduce((total, stat) => total + evs[stat], 0);
 }
+
+export function maxEvForStat(currentStatEv: number, totalEvs: number): number {
+  const remaining = MAX_EV_TOTAL - (totalEvs - currentStatEv);
+  return Math.floor(Math.min(MAX_EV_PER_STAT, remaining) / EV_STEP) * EV_STEP;
+}

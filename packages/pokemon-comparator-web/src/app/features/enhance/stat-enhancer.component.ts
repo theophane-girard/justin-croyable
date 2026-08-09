@@ -28,6 +28,7 @@ import {
   evsTotal,
   MAX_EV_PER_STAT,
   MAX_EV_TOTAL,
+  maxEvForStat,
   NATURES,
   natureById,
   natureEffectLabel,
@@ -104,7 +105,7 @@ interface NatureOption {
                   variant="outline"
                   size="sm"
                   [attr.aria-label]="'EV minimum ' + statMeta[stat].label"
-                  [buttonDisabled]="!draftLevel100()"
+                  [buttonDisabled]="!draftLevel100() || draftEvs()[stat] === 0"
                   (click)="setEv(stat, 0)"
                 >
                   <ng-icon name="phosphorCaretLineLeft" class="size-4" />
@@ -124,8 +125,8 @@ interface NatureOption {
                   variant="outline"
                   size="sm"
                   [attr.aria-label]="'EV maximum ' + statMeta[stat].label"
-                  [buttonDisabled]="!draftLevel100()"
-                  (click)="setEv(stat, maxEvPerStat)"
+                  [buttonDisabled]="!draftLevel100() || evMax()[stat] === draftEvs()[stat]"
+                  (click)="setEv(stat, evMax()[stat])"
                 >
                   <ng-icon name="phosphorCaretLineRight" class="size-4" />
                 </button>
@@ -176,6 +177,13 @@ export class StatEnhancerComponent {
       number[]
     >;
   });
+  protected readonly evMax = computed<Record<Stat, number>>(() => {
+    const evs = this.draftEvs();
+    const total = evsTotal(evs);
+    return Object.fromEntries(
+      STAT_ORDER.map(stat => [stat, maxEvForStat(evs[stat], total)]),
+    ) as Record<Stat, number>;
+  });
 
   protected open(): void {
     const config = this.#appliedConfig();
@@ -205,8 +213,10 @@ export class StatEnhancerComponent {
   }
 
   protected setEv(stat: Stat, value: number): void {
-    const bounded = Math.max(0, Math.min(value, MAX_EV_PER_STAT));
-    this.draftEvs.set({ ...this.draftEvs(), [stat]: bounded });
+    const evs = this.draftEvs();
+    const max = maxEvForStat(evs[stat], evsTotal(evs));
+    const bounded = Math.max(0, Math.min(value, max));
+    this.draftEvs.set({ ...evs, [stat]: bounded });
   }
 
   #applyDraft(): void {
