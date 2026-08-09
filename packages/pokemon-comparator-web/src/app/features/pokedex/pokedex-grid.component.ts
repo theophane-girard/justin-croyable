@@ -212,12 +212,31 @@ function toTile(pokemon: Pokemon): PokedexTile {
       }
     </div>
 
-    <app-fab triggerIcon="phosphorSliders" triggerLabel="Filtrer et trier">
+    <app-fab
+      triggerIcon="phosphorSliders"
+      triggerLabel="Filtrer et trier"
+      badgeType="default"
+      [badge]="activeCount()"
+    >
       <app-fab-list>
-        <button appFabButton type="button" aria-label="Filtrer" (click)="openFilters()">
+        <button
+          appFabButton
+          type="button"
+          aria-label="Filtrer"
+          badgeType="default"
+          [badge]="activeFilterCount()"
+          (click)="openFilters()"
+        >
           <ng-icon name="phosphorFunnel" class="size-5" />
         </button>
-        <button appFabButton type="button" aria-label="Trier" (click)="openSort()">
+        <button
+          appFabButton
+          type="button"
+          aria-label="Trier"
+          badgeType="default"
+          [badge]="activeSortCount()"
+          (click)="openSort()"
+        >
           <ng-icon name="phosphorArrowsDownUp" class="size-5" />
         </button>
       </app-fab-list>
@@ -423,6 +442,22 @@ export class PokedexGridComponent {
     this.syncUrl() ? this.#url.abilities() : this.#selectedAbilities(),
   );
   protected readonly resetKeys = computed(() => [this.#resetKey()]);
+
+  protected readonly activeFilterCount = computed(
+    () =>
+      this.selectedTypes().length +
+      this.#effectiveAbilities().length +
+      (this.stageFilter() !== ALL ? 1 : 0) +
+      (this.legendaryFilter() !== ALL ? 1 : 0),
+  );
+
+  protected readonly activeSortCount = computed(() =>
+    this.sortField() !== DEFAULT_SORT_FIELD || this.sortDirection() !== DEFAULT_SORT_DIRECTION
+      ? 1
+      : 0,
+  );
+
+  protected readonly activeCount = computed(() => this.activeFilterCount() + this.activeSortCount());
 
   readonly #availableAbilities = computed<readonly Ability[]>(() => {
     const present = new Set(this.pokemons().flatMap(pokemon => pokemon.abilitySlugs));
