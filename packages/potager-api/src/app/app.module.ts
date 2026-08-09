@@ -10,6 +10,7 @@ import { ExpenseModule } from '../expenses/expense.module';
 import { FirebaseModule } from '../firebase/firebase.module';
 import { HarvestModule } from '../harvests/harvest.module';
 import { PlantModule } from '../plants/plant.module';
+import { VarietyPriceModule } from '../variety-prices/variety-price.module';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -34,6 +35,7 @@ const RATE_LIMIT_MAX_REQUESTS = 100;
     HarvestModule,
     PlantModule,
     ExpenseModule,
+    VarietyPriceModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

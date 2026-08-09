@@ -26,6 +26,13 @@
           "cwd": "packages/potager-api"
         }
       },
+      "db-seed": {
+        "executor": "nx:run-commands",
+        "options": {
+          "command": "tsx src/db/seed.ts",
+          "cwd": "packages/potager-api"
+        }
+      },
       "build": {
         "executor": "nx:run-commands",
         "options": {

@@ -19,8 +19,6 @@ function toHarvest(record: HarvestRecord): Harvest {
     varietyId: record.varietyId,
     weightKg: record.weightKg,
     harvestedOn: record.harvestedOn.toISOString(),
-    conventionalPricePerKg: record.conventionalPricePerKg,
-    bioPricePerKg: record.bioPricePerKg,
     createdAt: record.createdAt.toISOString(),
   };
 }
@@ -42,8 +40,6 @@ export class HarvestService {
         varietyId: payload.varietyId,
         weightKg: payload.weightKg,
         harvestedOn: new Date(payload.harvestedOn),
-        conventionalPricePerKg: payload.conventionalPricePerKg ?? null,
-        bioPricePerKg: payload.bioPricePerKg ?? null,
       })
       .returning();
     return toHarvest(created);
@@ -58,10 +54,6 @@ export class HarvestService {
         ...(payload.harvestedOn !== undefined
           ? { harvestedOn: new Date(payload.harvestedOn) }
           : {}),
-        ...(payload.conventionalPricePerKg !== undefined
-          ? { conventionalPricePerKg: payload.conventionalPricePerKg }
-          : {}),
-        ...(payload.bioPricePerKg !== undefined ? { bioPricePerKg: payload.bioPricePerKg } : {}),
         updatedAt: new Date(),
       })
       .where(and(eq(harvests.id, id), eq(harvests.userId, userId)))

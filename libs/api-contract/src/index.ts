@@ -3,6 +3,7 @@ export {
   harvestContract,
   plantContract,
   expenseContract,
+  varietyPriceContract,
 } from './contract';
 export { userContract } from './user/user.contract';
 export {
@@ -38,3 +39,11 @@ export {
   type CreateExpensePayload,
   type UpdateExpensePayload,
 } from './expense/expense.schema';
+export {
+  varietyPriceSchema,
+  createVarietyPriceSchema,
+  updateVarietyPriceSchema,
+  type VarietyPrice,
+  type CreateVarietyPricePayload,
+  type UpdateVarietyPricePayload,
+} from './variety-price/variety-price.schema';

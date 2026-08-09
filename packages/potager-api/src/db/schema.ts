@@ -42,8 +42,17 @@ export const harvests = pgTable('harvests', {
   varietyId: text('variety_id').notNull(),
   weightKg: doublePrecision('weight_kg').notNull(),
   harvestedOn: timestamp('harvested_on', { withTimezone: true }).notNull(),
-  conventionalPricePerKg: doublePrecision('conventional_price_per_kg'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const varietyPrices = pgTable('variety_prices', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  varietyId: text('variety_id').notNull(),
+  conventionalPricePerKg: doublePrecision('conventional_price_per_kg').notNull(),
   bioPricePerKg: doublePrecision('bio_price_per_kg'),
+  effectiveFrom: timestamp('effective_from', { withTimezone: true }).notNull(),
+  source: text('source').notNull().default('reference'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -63,3 +72,4 @@ export const expenses = pgTable('expenses', {
 export type PlantRecord = typeof plants.$inferSelect;
 export type HarvestRecord = typeof harvests.$inferSelect;
 export type ExpenseRecord = typeof expenses.$inferSelect;
+export type VarietyPriceRecord = typeof varietyPrices.$inferSelect;

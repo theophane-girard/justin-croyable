@@ -6,6 +6,11 @@ import { createExpenseSchema, expenseSchema, updateExpenseSchema } from './expen
 import { createHarvestSchema, harvestSchema, updateHarvestSchema } from './harvest/harvest.schema';
 import { createPlantSchema, plantSchema, updatePlantSchema } from './plant/plant.schema';
 import { userContract } from './user/user.contract';
+import {
+  createVarietyPriceSchema,
+  updateVarietyPriceSchema,
+  varietyPriceSchema,
+} from './variety-price/variety-price.schema';
 
 const contract = initContract();
 
@@ -90,9 +95,37 @@ export const expenseContract = contract.router({
   },
 });
 
+export const varietyPriceContract = contract.router({
+  list: {
+    method: 'GET',
+    path: '/variety-prices',
+    responses: { 200: z.array(varietyPriceSchema), 401: errorSchema },
+  },
+  create: {
+    method: 'POST',
+    path: '/variety-prices',
+    body: createVarietyPriceSchema,
+    responses: { 201: varietyPriceSchema, 401: errorSchema, 403: errorSchema },
+  },
+  update: {
+    method: 'PATCH',
+    path: '/variety-prices/:id',
+    pathParams: idParamSchema,
+    body: updateVarietyPriceSchema,
+    responses: { 200: varietyPriceSchema, 401: errorSchema, 403: errorSchema, 404: errorSchema },
+  },
+  remove: {
+    method: 'DELETE',
+    path: '/variety-prices/:id',
+    pathParams: idParamSchema,
+    responses: { 200: deletedSchema, 401: errorSchema, 403: errorSchema, 404: errorSchema },
+  },
+});
+
 export const apiContract = contract.router({
   users: userContract,
   harvests: harvestContract,
   plants: plantContract,
   expenses: expenseContract,
+  varietyPrices: varietyPriceContract,
 });
