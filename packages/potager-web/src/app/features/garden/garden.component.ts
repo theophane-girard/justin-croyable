@@ -17,10 +17,12 @@ import {
   FabButtonComponent,
   FabContainerComponent,
   FabListComponent,
+  injectQueryFilters,
   SegmentComponent,
   type SegmentItem,
   SelectImports,
   SheetService,
+  stringFilter,
   TableComponent,
 } from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
@@ -291,7 +293,7 @@ const SEASON_FILTER_ITEMS: SegmentItem[] = [
         <app-select
           label="Culture"
           prefixIcon="phosphorPlant"
-          [value]="cultureFilter()"
+          [value]="filters.culture()"
           (valueChange)="onCultureChange($event)"
         >
           @for (option of cultureOptions; track option.value) {
@@ -318,10 +320,12 @@ export class GardenComponent {
   protected readonly cultureOptions = CULTURE_FILTER_OPTIONS;
 
   protected readonly selectedId = signal<string | null>(null);
-  protected readonly cultureFilter = signal<string>(CULTURE_FILTER_ALL);
+  protected readonly filters = injectQueryFilters({
+    culture: stringFilter(CULTURE_FILTER_ALL),
+  });
 
   protected readonly displayedRows = computed<PlantRow[]>(() => {
-    const culture = this.cultureFilter();
+    const culture = this.filters.culture();
     if (culture === CULTURE_FILTER_ALL) {
       return this.store.rows();
     }
@@ -350,7 +354,7 @@ export class GardenComponent {
 
   protected onCultureChange(value: string | string[] | null): void {
     if (typeof value === 'string') {
-      this.cultureFilter.set(value);
+      this.filters.set('culture', value);
     }
   }
 

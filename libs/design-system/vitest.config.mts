@@ -1,12 +1,18 @@
+import angular from '@analogjs/vite-plugin-angular';
 import { defineConfig } from 'vitest/config';
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   root: import.meta.dirname,
   cacheDir: '../../node_modules/.vite/libs/design-system',
+  plugins: [angular()],
   test: {
     name: '@justin-croyable/design-system',
     globals: true,
-    environment: 'node',
+    environment: 'jsdom',
+    setupFiles: ['src/test-setup.ts'],
     include: ['src/**/*.spec.ts', 'src/**/*.test.ts'],
   },
-});
+  define: {
+    'import.meta.vitest': mode !== 'production',
+  },
+}));
