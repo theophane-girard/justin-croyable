@@ -22,7 +22,12 @@ import {
   phosphorArrowsClockwise,
   phosphorArrowUp,
 } from '@ng-icons/phosphor-icons/regular';
-import { applicationConfig, type Meta, type StoryObj } from '@storybook/angular-vite';
+import {
+  applicationConfig,
+  type Meta,
+  moduleMetadata,
+  type StoryObj,
+} from '@storybook/angular-vite';
 
 const CULTURE = {
   all: 'all',
@@ -182,6 +187,7 @@ const meta: Meta<UrlFiltersDemoComponent> = {
   component: UrlFiltersDemoComponent,
   tags: ['autodocs'],
   decorators: [
+    moduleMetadata({ imports: [UrlFiltersDemoComponent] }),
     applicationConfig({
       providers: [provideIcons({ phosphorArrowUp, phosphorArrowDown, phosphorArrowsClockwise })],
     }),
