@@ -1,14 +1,24 @@
-import { ChipComponent, type ChipShape, type ChipVariant } from '@justin-croyable/design-system';
+import {
+  ChipComponent,
+  type ChipShape,
+  type ChipVariant,
+} from '@justin-croyable/design-system/components/chip';
 import { provideIcons } from '@ng-icons/core';
-import { phosphorX } from '@ng-icons/phosphor-icons/regular';
+import { phosphorFunnel, phosphorLeaf, phosphorTag, phosphorX } from '@ng-icons/phosphor-icons/regular';
 import { applicationConfig, type Meta, type StoryObj } from '@storybook/angular-vite';
 import { expect, fn, userEvent } from 'storybook/test';
+
+const DEMO_IMAGE =
+  'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTIiIGZpbGw9IiM0ZjQ2ZTUiLz48L3N2Zz4=';
 
 type ChipArgs = {
   variant: ChipVariant;
   shape: ChipShape;
   disabled: boolean;
   label: string;
+  imgUrl: string;
+  icon: string;
+  hint: string;
   removed: () => void;
 };
 
@@ -16,12 +26,16 @@ const meta: Meta<ChipArgs> = {
   title: 'Composants/Chip',
   component: ChipComponent,
   tags: ['autodocs'],
-  decorators: [applicationConfig({ providers: [provideIcons({ phosphorX })] })],
+  decorators: [
+    applicationConfig({
+      providers: [provideIcons({ phosphorX, phosphorTag, phosphorLeaf, phosphorFunnel })],
+    }),
+  ],
   parameters: {
     docs: {
       description: {
         component:
-          "Tag de couleur neutre doté d'une icône de fermeture, utilisé exclusivement pour afficher les filtres actifs. Un clic sur la croix émet l'événement `removed`. Les couleurs reposent sur les tokens sémantiques du thème (`secondary`, `border`, `foreground`) et s'adaptent donc automatiquement au mode sombre.",
+          "Tag de couleur neutre doté d'une icône de fermeture, utilisé pour afficher des filtres actifs ou des éléments sélectionnés. Un clic sur la croix émet l'événement `removed`. Une image (`imgUrl`) ou une icône (`icon`) de tête et une indication secondaire (`hint`) peuvent être ajoutées. Les couleurs reposent sur les tokens sémantiques du thème (`secondary`, `border`, `foreground`, `muted-foreground`) et s'adaptent donc automatiquement au mode sombre.",
       },
     },
   },
@@ -30,6 +44,13 @@ const meta: Meta<ChipArgs> = {
     shape: { control: 'inline-radio', options: ['default', 'pill'] },
     disabled: { control: 'boolean' },
     label: { control: 'text' },
+    imgUrl: { control: 'text', description: 'Image de tête (prioritaire sur `icon`).' },
+    icon: {
+      control: 'select',
+      options: ['', 'phosphorTag', 'phosphorLeaf', 'phosphorFunnel'],
+      description: "Icône de tête (`ng-icon`), affichée si `imgUrl` est vide.",
+    },
+    hint: { control: 'text', description: 'Indication secondaire atténuée (ex. un compteur).' },
     removed: { action: 'removed' },
   },
   args: {
@@ -37,6 +58,9 @@ const meta: Meta<ChipArgs> = {
     shape: 'pill',
     disabled: false,
     label: 'Statut : Actif',
+    imgUrl: '',
+    icon: '',
+    hint: '',
     removed: fn(),
   },
   render: args => ({
@@ -46,6 +70,9 @@ const meta: Meta<ChipArgs> = {
         [variant]="variant"
         [shape]="shape"
         [disabled]="disabled"
+        [imgUrl]="imgUrl"
+        [icon]="icon || undefined"
+        [hint]="hint"
         (removed)="removed()"
       >{{ label }}</app-chip>
     `,
@@ -82,13 +109,94 @@ export const Shapes: Story = {
   }),
 };
 
+export const AvecIcone: Story = {
+  parameters: {
+    controls: { disable: true },
+    docs: {
+      description: {
+        story: "Une icône de tête (`icon`) précise la nature du chip — ici le type de filtre.",
+      },
+    },
+  },
+  render: () => ({
+    template: `
+      <div class="flex flex-wrap items-center gap-2">
+        <app-chip icon="phosphorTag">Catégorie : Vêtements</app-chip>
+        <app-chip icon="phosphorLeaf" variant="accent">Bio</app-chip>
+        <app-chip icon="phosphorFunnel">Filtre avancé</app-chip>
+      </div>
+    `,
+  }),
+};
+
+export const AvecImage: Story = {
+  parameters: {
+    controls: { disable: true },
+    docs: {
+      description: {
+        story:
+          "Une image de tête (`imgUrl`) — avatar, miniature ou sprite. Elle est prioritaire sur `icon`.",
+      },
+    },
+  },
+  render: () => ({
+    props: { image: DEMO_IMAGE },
+    template: `
+      <div class="flex flex-wrap items-center gap-2">
+        <app-chip [imgUrl]="image">Dracaufeu</app-chip>
+        <app-chip [imgUrl]="image" variant="accent">Tortank</app-chip>
+      </div>
+    `,
+  }),
+};
+
+export const AvecIndice: Story = {
+  parameters: {
+    controls: { disable: true },
+    docs: {
+      description: {
+        story: "Une indication secondaire atténuée (`hint`) affichée après le libellé, ex. un total.",
+      },
+    },
+  },
+  render: () => ({
+    template: `
+      <div class="flex flex-wrap items-center gap-2">
+        <app-chip hint="534">Dracaufeu</app-chip>
+        <app-chip hint="530">Tortank</app-chip>
+        <app-chip hint="12">Panier</app-chip>
+      </div>
+    `,
+  }),
+};
+
+export const ImageEtIndice: Story = {
+  parameters: {
+    controls: { disable: true },
+    docs: {
+      description: {
+        story: "Combinaison image + libellé + indice : un élément sélectionné riche, ex. un Pokémon et son total de statistiques.",
+      },
+    },
+  },
+  render: () => ({
+    props: { image: DEMO_IMAGE },
+    template: `
+      <div class="flex flex-wrap items-center gap-2">
+        <app-chip [imgUrl]="image" hint="634">Méga-Dracaufeu X</app-chip>
+        <app-chip [imgUrl]="image" hint="600">Léviator</app-chip>
+      </div>
+    `,
+  }),
+};
+
 export const Filtres: Story = {
   parameters: {
     controls: { disable: true },
     docs: {
       description: {
         story:
-          "Cas d'usage principal : une barre de filtres actifs. Chaque chip représente un critère appliqué et peut être retiré via sa croix.",
+          "Cas d'usage historique : une barre de filtres actifs. Chaque chip représente un critère appliqué et peut être retiré via sa croix.",
       },
     },
   },

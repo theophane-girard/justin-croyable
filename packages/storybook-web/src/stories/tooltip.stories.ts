@@ -1,9 +1,9 @@
+import { ButtonComponent } from '@justin-croyable/design-system/components/button';
 import {
-  ButtonComponent,
   TooltipImports,
   type TooltipPositionVariants,
   type TooltipTriggers,
-} from '@justin-croyable/design-system';
+} from '@justin-croyable/design-system/components/tooltip';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
 import { expect, userEvent, waitFor } from 'storybook/test';
 

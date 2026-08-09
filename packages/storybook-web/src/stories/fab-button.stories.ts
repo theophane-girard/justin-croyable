@@ -1,14 +1,16 @@
 import {
+  type FabButtonBadge,
   FabButtonComponent,
-  FabContainerComponent,
-  FabListComponent,
   type FabButtonPosition,
   type FabButtonSize,
   type FabButtonType,
-} from '@justin-croyable/design-system';
+  FabContainerComponent,
+  FabListComponent,
+} from '@justin-croyable/design-system/components/fab-button';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   phosphorCamera,
+  phosphorFunnel,
   phosphorHeart,
   phosphorPencilSimple,
   phosphorPlus,
@@ -28,6 +30,8 @@ type FabButtonArgs = {
   position: FabButtonPosition;
   loading: boolean;
   fabDisabled: boolean;
+  badge: FabButtonBadge;
+  badgeType: FabButtonType;
 };
 
 const meta: Meta<FabButtonArgs> = {
@@ -45,6 +49,7 @@ const meta: Meta<FabButtonArgs> = {
           phosphorCamera,
           phosphorHeart,
           phosphorShareNetwork,
+          phosphorFunnel,
         }),
       ],
     }),
@@ -75,6 +80,11 @@ const meta: Meta<FabButtonArgs> = {
     },
     loading: { control: 'boolean' },
     fabDisabled: { control: 'boolean' },
+    badge: { control: 'text' },
+    badgeType: {
+      control: 'select',
+      options: ['default', 'secondary', 'outline', 'destructive'],
+    },
   },
   args: {
     variant: 'default',
@@ -82,6 +92,8 @@ const meta: Meta<FabButtonArgs> = {
     position: 'static',
     loading: false,
     fabDisabled: false,
+    badge: null,
+    badgeType: 'destructive',
   },
   render: (args) => ({
     props: args,
@@ -93,6 +105,8 @@ const meta: Meta<FabButtonArgs> = {
         [position]="position"
         [loading]="loading"
         [fabDisabled]="fabDisabled"
+        [badge]="badge"
+        [badgeType]="badgeType"
         aria-label="Ajouter"
       >
         <ng-icon name="phosphorPlus" />
@@ -155,6 +169,37 @@ export const Disabled: Story = {
   args: { fabDisabled: true },
 };
 
+export const Badge: Story = {
+  name: 'Badge (compteur)',
+  parameters: {
+    controls: { disable: true },
+    docs: {
+      description: {
+        story:
+          "L'entrée `badge` affiche une pastille en surimpression (coin supérieur droit), idéale pour indiquer un compteur comme le nombre de filtres actifs. Elle accepte une chaîne ou un nombre et se masque automatiquement lorsque la valeur est nulle, vide ou `0`. `badgeType` reprend les variantes du composant Badge (`destructive` par défaut).",
+      },
+    },
+  },
+  render: () => ({
+    template: `
+      <div class="flex flex-wrap items-center gap-6">
+        <button appFabButton [badge]="3" aria-label="Filtres (3 actifs)">
+          <ng-icon name="phosphorFunnel" />
+        </button>
+        <button appFabButton variant="secondary" badgeType="default" [badge]="12" aria-label="Notifications (12)">
+          <ng-icon name="phosphorHeart" />
+        </button>
+        <button appFabButton variant="outline" size="lg" [badge]="99" aria-label="Messages (99)">
+          <ng-icon name="phosphorShareNetwork" />
+        </button>
+        <button appFabButton size="sm" [badge]="0" aria-label="Aucun filtre actif">
+          <ng-icon name="phosphorFunnel" />
+        </button>
+      </div>
+    `,
+  }),
+};
+
 export const SpeedDial: Story = {
   name: 'Speed dial (sous-boutons)',
   parameters: {
@@ -172,12 +217,12 @@ export const SpeedDial: Story = {
   render: () => ({
     template: `
       <div class="relative h-96 w-full overflow-hidden rounded-lg border border-border">
-        <app-fab position="bottom-right" triggerLabel="Ouvrir les actions">
+        <app-fab position="bottom-right" triggerLabel="Ouvrir les actions" [badge]="5">
           <app-fab-list side="top">
-            <button appFabButton size="sm" variant="secondary" aria-label="Partager">
+            <button appFabButton size="sm" variant="secondary" [badge]="2" aria-label="Partager (2)">
               <ng-icon name="phosphorShareNetwork" />
             </button>
-            <button appFabButton size="sm" variant="secondary" aria-label="Photo">
+            <button appFabButton size="sm" variant="secondary" [badge]="3" aria-label="Photo (3)">
               <ng-icon name="phosphorCamera" />
             </button>
             <button appFabButton size="sm" variant="secondary" aria-label="Favori">

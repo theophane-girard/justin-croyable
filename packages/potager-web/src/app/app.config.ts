@@ -3,7 +3,10 @@ import { type ApplicationConfig, provideZonelessChangeDetection } from '@angular
 import { provideRouter, withComponentInputBinding, withInMemoryScrolling } from '@angular/router';
 
 import {
+  DEFAULT_ROUTE_SKELETONS,
+  GenericSkeletonComponent,
   provideJustinCroyableDS,
+  provideRouteSkeletons,
   withCharts,
   withIcons,
   withTables,
@@ -28,5 +31,9 @@ export const appConfig: ApplicationConfig = {
       withCharts(),
       withTranslations(),
     ),
+    provideRouteSkeletons({
+      registry: DEFAULT_ROUTE_SKELETONS,
+      fallback: GenericSkeletonComponent,
+    }),
   ],
 };

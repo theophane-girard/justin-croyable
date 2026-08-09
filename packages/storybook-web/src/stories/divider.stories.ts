@@ -1,4 +1,4 @@
-import { DividerComponent } from '@justin-croyable/design-system';
+import { DividerComponent } from '@justin-croyable/design-system/components/divider';
 import type { Meta, StoryObj } from '@storybook/angular-vite';
 
 type DividerArgs = {

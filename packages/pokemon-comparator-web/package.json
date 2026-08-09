@@ -1,0 +1,39 @@
+{
+  "name": "@justin-croyable/pokemon-comparator-web",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nx build @justin-croyable/pokemon-comparator-web",
+    "serve": "nx serve @justin-croyable/pokemon-comparator-web"
+  },
+  "//": "Versions épinglées ici comme dans potager-web : le track React Native de la racine tient sur Tailwind 3, alors que le DS web tient sur Angular 21 + Tailwind 4. npm isole donc ce jeu dans packages/pokemon-comparator-web/node_modules. Application zoneless : zone.js n'est volontairement pas listé (provideZonelessChangeDetection).",
+  "dependencies": {
+    "@angular/cdk": "^21.2.0",
+    "@angular/common": "^21.2.0",
+    "@angular/compiler": "^21.2.0",
+    "@angular/core": "^21.2.0",
+    "@angular/forms": "^21.2.0",
+    "@angular/platform-browser": "^21.2.0",
+    "@angular/router": "^21.2.0",
+    "@jsverse/transloco": "^8.4.0",
+    "@justin-croyable/design-system": "*",
+    "@ng-icons/core": "^33.4.0",
+    "@ng-icons/phosphor-icons": "^33.4.0",
+    "ag-grid-angular": "^36.0.2",
+    "ag-grid-community": "^36.0.2",
+    "echarts": "^6.1.0",
+    "ngx-echarts": "^21.0.0",
+    "ngx-sonner": "^3.1.0",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@angular/build": "^21.2.0",
+    "@angular/compiler-cli": "^21.2.0",
+    "@tailwindcss/postcss": "^4.3.3",
+    "tailwindcss": "^4.3.3",
+    "tailwindcss-animate": "^1.0.7",
+    "typescript": "~5.9.2"
+  }
+}

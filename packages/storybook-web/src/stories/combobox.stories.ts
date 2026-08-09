@@ -3,7 +3,7 @@ import {
   type ComboboxGroup,
   type ComboboxOption,
   type ComboboxWidthVariants,
-} from '@justin-croyable/design-system';
+} from '@justin-croyable/design-system/components/combobox';
 import type { Meta, StoryObj } from '@storybook/angular-vite';
 import { expect, userEvent, waitFor } from 'storybook/test';
 

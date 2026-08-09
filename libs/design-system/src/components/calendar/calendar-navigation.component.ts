@@ -87,6 +87,7 @@ export class CalendarNavigationComponent {
   readonly minDate = input<Date | null>(null);
   readonly maxDate = input<Date | null>(null);
   readonly disabled = input<boolean>(false);
+  readonly fluid = input<boolean>(false);
 
   // Outputs
   readonly monthChange = output<string>();
@@ -95,7 +96,9 @@ export class CalendarNavigationComponent {
   readonly nextMonth = output<void>();
   readonly months = calendarMonths;
 
-  protected readonly navClasses = computed(() => mergeClasses(calendarNavVariants()));
+  protected readonly navClasses = computed(() =>
+    mergeClasses(calendarNavVariants({ fluid: this.fluid() })),
+  );
 
   protected readonly availableYears = computed(() => {
     const minYear = this.minDate()?.getFullYear() ?? new Date().getFullYear() - 10;

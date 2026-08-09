@@ -61,9 +61,11 @@ jobs:
           if AFFECTED=$(npx nx show projects --affected --json 2>/dev/null); then
             echo "storybook=$(echo "$AFFECTED" | grep -q 'storybook-web' && echo true || echo false)" >> "$GITHUB_OUTPUT"
             echo "potager=$(echo "$AFFECTED" | grep -q 'potager-web' && echo true || echo false)" >> "$GITHUB_OUTPUT"
+            echo "pokemon=$(echo "$AFFECTED" | grep -q 'pokemon-comparator-web' && echo true || echo false)" >> "$GITHUB_OUTPUT"
           else
             echo "storybook=true" >> "$GITHUB_OUTPUT"
             echo "potager=true" >> "$GITHUB_OUTPUT"
+            echo "pokemon=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Typecheck et lint
@@ -99,9 +101,21 @@ jobs:
       - name: Tests
         timeout-minutes: 18
         run: |
+          # `nx affected` sélectionne les PROJETS impactés ; `--changed` restreint
+          # ENSUITE, au sein de chaque projet Vitest, aux seuls fichiers de test dont
+          # le graphe d'imports touche un fichier modifié depuis NX_BASE. Les stories
+          # importent le DS en deep import (…/components/<x>), donc changer un composant
+          # ne rejoue que SES stories, pas les 47. `--passWithNoTests` : un projet
+          # affecté sans test impacté (ex. changement de config) reste vert.
+          # Sans NX_BASE (détection en échec), on retombe sur le run complet plutôt que
+          # de risquer un skip silencieux.
+          ARGS_VITEST=(--passWithNoTests)
+          if [ -n "$NX_BASE" ]; then
+            ARGS_VITEST+=(--changed "$NX_BASE")
+          fi
           for tentative in 1 2 3; do
             echo "::group::Tests — tentative $tentative"
-            if timeout 330 npx nx affected -t test --skip-nx-cache; then
+            if timeout 330 npx nx affected -t test --skip-nx-cache -- "${ARGS_VITEST[@]}"; then
               echo "::endgroup::"
               exit 0
             fi
@@ -117,6 +131,10 @@ jobs:
       - name: Build de l'app potager
         if: steps.affected.outputs.potager == 'true'
         run: npx nx build @justin-croyable/potager-web
+
+      - name: Build de l'app pokemon-comparator
+        if: steps.affected.outputs.pokemon == 'true'
+        run: npx nx build @justin-croyable/pokemon-comparator-web
 
       - name: Firebase est-il configuré ?
         id: firebase
@@ -150,6 +168,16 @@ jobs:
           target: potager
           channelId: live
 
+      - name: Déploiement de l'app pokemon-comparator sur le canal live
+        if: steps.firebase.outputs.ready == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master' && steps.affected.outputs.pokemon == 'true'
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          projectId: ${{ env.FIREBASE_PROJECT_ID }}
+          target: pokemon
+          channelId: live
+
       - name: Prévisualisation du Storybook
         if: steps.firebase.outputs.ready == 'true' && github.event_name == 'pull_request' && steps.affected.outputs.storybook == 'true'
         uses: FirebaseExtended/action-hosting-deploy@v0
@@ -168,4 +196,14 @@ jobs:
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           projectId: ${{ env.FIREBASE_PROJECT_ID }}
           target: potager
+          expires: 7d
+
+      - name: Prévisualisation de l'app pokemon-comparator
+        if: steps.firebase.outputs.ready == 'true' && github.event_name == 'pull_request' && steps.affected.outputs.pokemon == 'true'
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          projectId: ${{ env.FIREBASE_PROJECT_ID }}
+          target: pokemon
           expires: 7d

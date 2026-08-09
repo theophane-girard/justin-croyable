@@ -1,13 +1,15 @@
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import {
-  CellProgressBarComponent,
   type CellProgressBarColor,
-  CellTagComponent,
+  CellProgressBarComponent,
+  CellLinkComponent,
+  CellUserComponent,
   type CellTagColor,
+  CellTagComponent,
   CellTagListComponent,
   type CellTagListItem,
   TableComponent,
-} from '@justin-croyable/design-system';
+} from '@justin-croyable/design-system/components/table';
 import { provideIcons } from '@ng-icons/core';
 import {
   phosphorCheckCircle,
@@ -29,12 +31,21 @@ type StatutCellule = {
   readonly icon: string;
 };
 type AvancementCellule = { readonly value: number; readonly color: CellProgressBarColor };
+type ResponsableCellule = {
+  readonly firstName: string;
+  readonly lastName: string;
+  readonly email: string;
+  readonly avatarSrc: string;
+};
+type FicheCellule = { readonly href: string; readonly label: string };
 
 type LigneProjet = {
   readonly tache: string;
+  readonly responsable: ResponsableCellule;
   readonly statut: StatutCellule;
   readonly etiquettes: readonly CellTagListItem[];
   readonly avancement: AvancementCellule;
+  readonly fiche: FicheCellule;
 };
 
 @Component({
@@ -105,9 +116,69 @@ class AvancementCellRenderer implements ICellRendererAngularComp {
   }
 }
 
+@Component({
+  selector: 'app-responsable-cell',
+  imports: [CellUserComponent],
+  template: `
+    @if (responsable(); as valeur) {
+      <app-cell-user
+        size="sm"
+        [firstName]="valeur.firstName"
+        [lastName]="valeur.lastName"
+        [email]="valeur.email"
+        [avatarSrc]="valeur.avatarSrc"
+      />
+    }
+  `,
+  host: { class: 'flex h-full w-full items-center' },
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+class ResponsableCellRenderer implements ICellRendererAngularComp {
+  protected readonly responsable = signal<ResponsableCellule | null>(null);
+
+  agInit(params: ICellRendererParams<LigneProjet, ResponsableCellule>): void {
+    this.responsable.set(params.value ?? null);
+  }
+
+  refresh(params: ICellRendererParams<LigneProjet, ResponsableCellule>): boolean {
+    this.responsable.set(params.value ?? null);
+    return true;
+  }
+}
+
+@Component({
+  selector: 'app-fiche-cell',
+  imports: [CellLinkComponent],
+  template: `
+    @if (fiche(); as valeur) {
+      <app-cell-link [href]="valeur.href" [label]="valeur.label" />
+    }
+  `,
+  host: { class: 'flex h-full w-full items-center' },
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+class FicheCellRenderer implements ICellRendererAngularComp {
+  protected readonly fiche = signal<FicheCellule | null>(null);
+
+  agInit(params: ICellRendererParams<LigneProjet, FicheCellule>): void {
+    this.fiche.set(params.value ?? null);
+  }
+
+  refresh(params: ICellRendererParams<LigneProjet, FicheCellule>): boolean {
+    this.fiche.set(params.value ?? null);
+    return true;
+  }
+}
+
 const lignes: LigneProjet[] = [
   {
     tache: 'Refonte du potager',
+    responsable: {
+      firstName: 'Théophane',
+      lastName: 'Girard',
+      email: 'theophane.girard@sensinov.com',
+      avatarSrc: 'https://i.pravatar.cc/64?img=12',
+    },
     statut: { label: 'Terminé', color: 'success', icon: 'phosphorCheckCircle' },
     etiquettes: [
       { label: 'Plateforme', color: 'primary', icon: 'phosphorLeaf' },
@@ -115,18 +186,32 @@ const lignes: LigneProjet[] = [
       { label: 'Prioritaire', color: 'danger' },
     ],
     avancement: { value: 100, color: 'success' },
+    fiche: { href: 'https://www.rnm.franceagrimer.fr', label: 'Cotations RNM' },
   },
   {
     tache: 'Import des récoltes',
+    responsable: {
+      firstName: 'Ada',
+      lastName: 'Lovelace',
+      email: 'ada.lovelace@exemple.fr',
+      avatarSrc: 'https://i.pravatar.cc/64?img=5',
+    },
     statut: { label: 'En cours', color: 'info', icon: 'phosphorRocket' },
     etiquettes: [
       { label: 'Données', color: 'primary' },
       { label: 'API', color: 'neutral' },
     ],
     avancement: { value: 62, color: 'primary' },
+    fiche: { href: 'https://angular.dev', label: 'Documentation' },
   },
   {
     tache: 'Alertes de prix',
+    responsable: {
+      firstName: '',
+      lastName: '',
+      email: 'alertes@exemple.fr',
+      avatarSrc: '',
+    },
     statut: { label: 'En attente', color: 'warning', icon: 'phosphorClockCountdown' },
     etiquettes: [
       { label: 'Notifications', color: 'info' },
@@ -135,26 +220,49 @@ const lignes: LigneProjet[] = [
       { label: 'QA', color: 'success' },
     ],
     avancement: { value: 28, color: 'warning' },
+    fiche: { href: 'https://www.rnm.franceagrimer.fr', label: 'Barème détail' },
   },
   {
     tache: 'Migration Angular 21',
+    responsable: {
+      firstName: 'Grace',
+      lastName: 'Hopper',
+      email: 'grace.hopper@exemple.fr',
+      avatarSrc: '',
+    },
     statut: { label: 'À risque', color: 'danger', icon: 'phosphorWarning' },
     etiquettes: [{ label: 'Technique', color: 'primary', icon: 'phosphorTree' }],
     avancement: { value: 45, color: 'danger' },
+    fiche: { href: 'https://angular.dev/roadmap', label: 'Feuille de route' },
   },
   {
     tache: 'Nettoyage du backlog',
+    responsable: {
+      firstName: 'Linus',
+      lastName: 'Torvalds',
+      email: 'linus.torvalds@exemple.fr',
+      avatarSrc: 'https://i.pravatar.cc/64?img=33',
+    },
     statut: { label: 'Annulé', color: 'neutral', icon: 'phosphorXCircle' },
     etiquettes: [
       { label: 'Interne', color: 'neutral' },
       { label: 'Docs', color: 'info' },
     ],
     avancement: { value: 0, color: 'neutral' },
+    fiche: { href: 'https://github.com', label: 'Dépôt' },
   },
 ];
 
 const colonnes: ColDef<LigneProjet>[] = [
   { field: 'tache', headerName: 'Tâche', minWidth: 200, flex: 1 },
+  {
+    field: 'responsable',
+    headerName: 'Responsable',
+    minWidth: 220,
+    flex: 1,
+    sortable: false,
+    cellRenderer: ResponsableCellRenderer,
+  },
   {
     field: 'statut',
     headerName: 'Statut',
@@ -176,6 +284,13 @@ const colonnes: ColDef<LigneProjet>[] = [
     minWidth: 200,
     sortable: false,
     cellRenderer: AvancementCellRenderer,
+  },
+  {
+    field: 'fiche',
+    headerName: 'Fiche',
+    minWidth: 160,
+    sortable: false,
+    cellRenderer: FicheCellRenderer,
   },
 ];
 
@@ -203,7 +318,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          'Assemblage des trois composants de cellule (`app-cell-tag`, `app-cell-tag-list`, `app-cell-progress-bar`) dans `app-table`. Chaque composant présentationnel est branché via un `cellRenderer` AG Grid minimal qui implémente `ICellRendererAngularComp` et mappe `params.value` sur les entrées du composant.',
+          'Assemblage des composants de cellule (`app-cell-user`, `app-cell-tag`, `app-cell-tag-list`, `app-cell-progress-bar`, `app-cell-link`) dans `app-table`. Chaque composant présentationnel est branché via un `cellRenderer` AG Grid minimal qui implémente `ICellRendererAngularComp` et mappe `params.value` sur les entrées du composant.',
       },
     },
   },
@@ -231,15 +346,18 @@ export const Default: Story = {
     });
 
     await waitFor(() => {
+      expect(canvasElement.querySelector('app-cell-user')).toBeTruthy();
       expect(canvasElement.querySelector('app-cell-tag')).toBeTruthy();
       expect(canvasElement.querySelector('app-cell-tag-list')).toBeTruthy();
       expect(canvasElement.querySelector('app-cell-progress-bar')).toBeTruthy();
+      expect(canvasElement.querySelector('app-cell-link')).toBeTruthy();
     });
 
     await waitFor(() => {
       expect(canvasElement.textContent).toContain('Terminé');
       expect(canvasElement.textContent).toContain('+2');
       expect(canvasElement.querySelector('[role="progressbar"]')).toBeTruthy();
+      expect(canvasElement.querySelector('a[target="_blank"]')).toBeTruthy();
     });
   },
 };

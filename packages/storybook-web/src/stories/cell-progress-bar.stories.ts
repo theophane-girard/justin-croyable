@@ -1,4 +1,7 @@
-import { CellProgressBarComponent, type CellProgressBarColor } from '@justin-croyable/design-system';
+import {
+  type CellProgressBarColor,
+  CellProgressBarComponent,
+} from '@justin-croyable/design-system/components/table';
 import { type Meta, type StoryObj } from '@storybook/angular-vite';
 import { expect, waitFor } from 'storybook/test';
 

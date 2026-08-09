@@ -14,10 +14,12 @@ import { phosphorPlus, phosphorX } from '@ng-icons/phosphor-icons/regular';
 import type { ClassValue } from 'clsx';
 
 import { mergeClasses } from '../../utils/merge-classes';
+import { type BadgeTypeVariants } from '../badge';
 
 import { FabButtonComponent } from './fab-button.component';
 import {
   fabContainerVariants,
+  type FabButtonBadge,
   type FabButtonPosition,
   type FabButtonSize,
   type FabButtonType,
@@ -34,6 +36,8 @@ import {
       type="button"
       [variant]="variant()"
       [size]="size()"
+      [badge]="badge()"
+      [badgeType]="badgeType()"
       [attr.aria-label]="triggerLabel()"
       [attr.aria-expanded]="open()"
       aria-haspopup="true"
@@ -66,6 +70,8 @@ export class FabContainerComponent {
   readonly triggerIcon = input<IconName>('phosphorPlus');
   readonly closeIcon = input<IconName>('phosphorX');
   readonly triggerLabel = input('Actions');
+  readonly badge = input<FabButtonBadge>(null);
+  readonly badgeType = input<BadgeTypeVariants>('destructive');
   readonly class = input<ClassValue>('');
 
   protected readonly classes = computed(() =>

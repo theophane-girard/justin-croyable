@@ -1,4 +1,4 @@
-import { BreadcrumbImports } from '@justin-croyable/design-system';
+import { BreadcrumbImports } from '@justin-croyable/design-system/components/breadcrumb';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
 
 type BreadcrumbArgs = {

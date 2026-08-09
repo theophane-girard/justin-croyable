@@ -1,4 +1,4 @@
-import { SliderComponent } from '@justin-croyable/design-system';
+import { SliderComponent } from '@justin-croyable/design-system/components/slider';
 import type { Meta, StoryObj } from '@storybook/angular-vite';
 import { expect } from 'storybook/test';
 

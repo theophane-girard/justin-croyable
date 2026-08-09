@@ -5,3 +5,5 @@ export * from './cell-tag.component';
 export * from './cell-tag-list.component';
 export * from './cell-progress-bar.variants';
 export * from './cell-progress-bar.component';
+export * from './cell-user.component';
+export * from './cell-link.component';

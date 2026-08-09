@@ -1,4 +1,4 @@
-import { ProgressComponent } from '@justin-croyable/design-system';
+import { ProgressComponent } from '@justin-croyable/design-system/components/progress';
 import type { Meta, StoryObj } from '@storybook/angular-vite';
 
 type ProgressArgs = { value: number };

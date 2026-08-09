@@ -1,10 +1,10 @@
 import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
+import { ButtonComponent } from '@justin-croyable/design-system/components/button';
 import {
-  ButtonComponent,
   SonnerComponent,
-  SonnerService,
   type SonnerPosition,
-} from '@justin-croyable/design-system';
+  SonnerService,
+} from '@justin-croyable/design-system/components/sonner';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
 
 @Component({

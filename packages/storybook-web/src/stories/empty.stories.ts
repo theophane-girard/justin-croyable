@@ -1,4 +1,5 @@
-import { ButtonComponent, EmptyComponent } from '@justin-croyable/design-system';
+import { ButtonComponent } from '@justin-croyable/design-system/components/button';
+import { EmptyComponent } from '@justin-croyable/design-system/components/empty';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
 
 type EmptyArgs = {

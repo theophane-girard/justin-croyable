@@ -1,4 +1,4 @@
-import { CountUpDirective } from '@justin-croyable/design-system';
+import { CountUpDirective } from '@justin-croyable/design-system/core';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
 
 type CountUpArgs = {

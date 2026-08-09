@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import {
   BadgeComponent,
   ButtonComponent,
@@ -7,11 +8,17 @@ import {
   CheckboxComponent,
   ComboboxComponent,
   DatePickerComponent,
+  DEFAULT_ROUTE_SKELETONS,
+  GenericSkeletonComponent,
   InputDirective,
   InputGroupComponent,
   LayoutImports,
+  provideRouteSkeletons,
   RadioGroupImports,
   SelectImports,
+  SKELETON_KIND,
+  type SkeletonKind,
+  SkeletonWhileDirective,
   SliderComponent,
   SwitchComponent,
   TableComponent,
@@ -23,10 +30,19 @@ import {
 import { NgIcon } from '@ng-icons/core';
 import type { ColDef } from 'ag-grid-community';
 import type { EChartsCoreOption } from 'echarts/core';
-import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
+import { applicationConfig, moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
+import { concat, map, of, Subject, switchMap, timer } from 'rxjs';
 
 const TAB = { dashboard: 'dashboard', form: 'form', list: 'list' } as const;
 type TabSlug = (typeof TAB)[keyof typeof TAB];
+
+const MOCK_RESOLVER_MS = 1400;
+
+const TAB_SKELETON: Record<TabSlug, SkeletonKind> = {
+  [TAB.dashboard]: SKELETON_KIND.dashboard,
+  [TAB.form]: SKELETON_KIND.form,
+  [TAB.list]: SKELETON_KIND.list,
+};
 
 type NavItem = { slug: TabSlug; label: string; icon: string };
 
@@ -152,6 +168,7 @@ type SelectValue = string | string[] | null;
     SwitchComponent,
     SliderComponent,
     DatePickerComponent,
+    SkeletonWhileDirective,
   ],
   template: `
     <div class="bg-background text-foreground h-dvh overflow-hidden">
@@ -194,11 +211,16 @@ type SelectValue = string | string[] | null;
               >
                 <ng-icon [name]="theme.isDark() ? 'lucideSun' : 'lucideMoon'" class="size-4" />
               </button>
+              <button appButton variant="outline" size="sm" [buttonDisabled]="loading()" (click)="reload()">
+                <ng-icon name="lucideRefreshCw" class="size-4" />
+                Recharger
+              </button>
               <button appButton size="sm">Nouveau</button>
             </div>
           </app-header>
 
-          <app-content class="min-h-0 p-4">
+          <app-content class="min-h-0 overflow-auto p-4">
+            <div *skeletonWhile="loading(); kind: skeletonKind()">
             @switch (activeTab()) {
               @case (tab.dashboard) {
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -332,6 +354,7 @@ type SelectValue = string | string[] | null;
                 </div>
               }
             }
+            </div>
           </app-content>
 
           <app-footer class="text-muted-foreground flex items-center px-4 text-xs">
@@ -361,6 +384,19 @@ class AppShowcaseComponent {
   protected readonly activeTab = signal<TabSlug>(TAB.dashboard);
   protected readonly sidebarCollapsed = signal<boolean>(false);
 
+  readonly #resolverRequests = new Subject<void>();
+  protected readonly loading = toSignal(
+    this.#resolverRequests.pipe(
+      switchMap(() => concat(of(true), timer(MOCK_RESOLVER_MS).pipe(map(() => false)))),
+    ),
+    { initialValue: false },
+  );
+  protected readonly skeletonKind = computed<SkeletonKind>(() => TAB_SKELETON[this.activeTab()]);
+
+  constructor() {
+    this.#resolverRequests.next();
+  }
+
   protected readonly role = signal<SelectValue>('user');
   protected readonly framework = signal<string | null>('angular');
   protected readonly startDate = signal<Date | null>(null);
@@ -376,6 +412,11 @@ class AppShowcaseComponent {
       return;
     }
     this.activeTab.set(item.slug);
+    this.#resolverRequests.next();
+  }
+
+  protected reload(): void {
+    this.#resolverRequests.next();
   }
 
   protected selectPlan(value: unknown): void {
@@ -389,7 +430,17 @@ class AppShowcaseComponent {
 const meta: Meta<AppShowcaseComponent> = {
   title: 'Exemples/App Showcase',
   tags: ['autodocs'],
-  decorators: [moduleMetadata({ imports: [AppShowcaseComponent] })],
+  decorators: [
+    moduleMetadata({ imports: [AppShowcaseComponent] }),
+    applicationConfig({
+      providers: [
+        provideRouteSkeletons({
+          registry: DEFAULT_ROUTE_SKELETONS,
+          fallback: GenericSkeletonComponent,
+        }),
+      ],
+    }),
+  ],
   parameters: {
     layout: 'fullscreen',
     // L'app fournit son propre fond (`bg-background`) : on désactive le canvas
@@ -400,7 +451,7 @@ const meta: Meta<AppShowcaseComponent> = {
     docs: {
       description: {
         component:
-          "Exemple d'assemblage grandeur nature : une coquille applicative (`app-layout` + `app-sidebar` + `app-header` à onglets) dont la navigation pilote un signal partagé entre la barre latérale et les onglets de l'en-tête. Chaque onglet illustre un usage réel du design system — le tableau de bord reprend le visuel de la story « Dashboard », le formulaire regroupe tous les champs disponibles, et la liste s'appuie sur le tableau.",
+          "Exemple d'assemblage grandeur nature : une coquille applicative (`app-layout` + `app-sidebar` + `app-header` à onglets) dont la navigation pilote un signal partagé entre la barre latérale et les onglets de l'en-tête. Chaque onglet illustre un usage réel du design system — le tableau de bord reprend le visuel de la story « Dashboard », le formulaire regroupe tous les champs disponibles, et la liste s'appuie sur le tableau. Chaque changement d'onglet (et le bouton « Recharger ») simule un délai de resolver : la directive `*skeletonWhile` affiche le skeleton de page correspondant au type ciblé (`dashboard`, `form`, `list`) via `provideRouteSkeletons`, avec l'anti-flicker du design system.",
       },
     },
   },

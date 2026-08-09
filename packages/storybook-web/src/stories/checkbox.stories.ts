@@ -1,4 +1,4 @@
-import { CheckboxComponent } from '@justin-croyable/design-system';
+import { CheckboxComponent } from '@justin-croyable/design-system/components/checkbox';
 import type { Meta, StoryObj } from '@storybook/angular-vite';
 import { expect, userEvent } from 'storybook/test';
 

@@ -1,5 +1,9 @@
 import { type Route } from '@angular/router';
 
+import { SKELETON_KIND } from '@justin-croyable/design-system';
+
+import { simulatedLoadResolver } from './core/simulated-load.resolver';
+
 export const APP_PATHS = {
   dashboard: '',
   harvests: 'recoltes',
@@ -26,6 +30,8 @@ export const APP_ROUTES: Route[] = [
     loadComponent: () =>
       import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent),
     title: 'Tableau de bord — Potager',
+    data: { skeleton: SKELETON_KIND.dashboard },
+    resolve: { simulatedLoad: simulatedLoadResolver },
   },
   {
     path: APP_PATHS.harvests,
@@ -35,12 +41,16 @@ export const APP_ROUTES: Route[] = [
         loadComponent: () =>
           import('./features/harvests/harvests.component').then(m => m.HarvestsComponent),
         title: 'Récoltes — Potager',
+        data: { skeleton: SKELETON_KIND.list },
+        resolve: { simulatedLoad: simulatedLoadResolver },
       },
       {
         path: APP_PATHS.add,
         loadComponent: () =>
           import('./features/harvests/add-harvest.component').then(m => m.AddHarvestComponent),
         title: 'Ajouter une récolte — Potager',
+        data: { skeleton: SKELETON_KIND.form },
+        resolve: { simulatedLoad: simulatedLoadResolver },
       },
     ],
   },
@@ -52,12 +62,16 @@ export const APP_ROUTES: Route[] = [
         loadComponent: () =>
           import('./features/expenses/expenses.component').then(m => m.ExpensesComponent),
         title: 'Dépenses — Potager',
+        data: { skeleton: SKELETON_KIND.list },
+        resolve: { simulatedLoad: simulatedLoadResolver },
       },
       {
         path: APP_PATHS.add,
         loadComponent: () =>
           import('./features/expenses/add-expense.component').then(m => m.AddExpenseComponent),
         title: 'Ajouter une dépense — Potager',
+        data: { skeleton: SKELETON_KIND.form },
+        resolve: { simulatedLoad: simulatedLoadResolver },
       },
     ],
   },
@@ -69,12 +83,16 @@ export const APP_ROUTES: Route[] = [
         loadComponent: () =>
           import('./features/garden/garden.component').then(m => m.GardenComponent),
         title: 'Mon jardin — Potager',
+        data: { skeleton: SKELETON_KIND.list },
+        resolve: { simulatedLoad: simulatedLoadResolver },
       },
       {
         path: APP_PATHS.add,
         loadComponent: () =>
           import('./features/garden/add-plant.component').then(m => m.AddPlantComponent),
         title: 'Ajouter un plant — Potager',
+        data: { skeleton: SKELETON_KIND.form },
+        resolve: { simulatedLoad: simulatedLoadResolver },
       },
     ],
   },
@@ -82,6 +100,8 @@ export const APP_ROUTES: Route[] = [
     path: APP_PATHS.prices,
     loadComponent: () => import('./features/prices/prices.component').then(m => m.PricesComponent),
     title: 'Prix moyens — Potager',
+    data: { skeleton: SKELETON_KIND.list },
+    resolve: { simulatedLoad: simulatedLoadResolver },
   },
   {
     path: '**',

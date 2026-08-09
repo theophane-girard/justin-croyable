@@ -6,24 +6,17 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import {
-  NavigationCancel,
-  NavigationEnd,
-  NavigationError,
-  NavigationStart,
-  Router,
-  RouterLink,
-  RouterOutlet,
-} from '@angular/router';
-import { filter, map } from 'rxjs';
+import { RouterLink, RouterOutlet } from '@angular/router';
 
 import {
   BadgeComponent,
+  injectCurrentPath,
+  isActivePath,
   LayoutImports,
   SegmentComponent,
   type SegmentItem,
   SkeletonComponent,
+  SkeletonOutletComponent,
   ThemeService,
 } from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
@@ -59,6 +52,7 @@ const THEME_VALUE = { light: 'light', dark: 'dark' } as const;
     SegmentComponent,
     BadgeComponent,
     SkeletonComponent,
+    SkeletonOutletComponent,
     AuthMenuComponent,
     LoginComponent,
   ],
@@ -70,102 +64,91 @@ const THEME_VALUE = { light: 'light', dark: 'dark' } as const;
         <app-skeleton class="h-10 w-40" />
       </div>
     } @else {
-    <div class="bg-background text-foreground h-dvh overflow-hidden">
-      <app-layout direction="horizontal" class="h-full">
-        <app-sidebar
-          [width]="220"
-          [collapsible]="true"
-          [collapsed]="sidebarCollapsed()"
-          (collapsedChange)="sidebarCollapsed.set($event)"
-        >
-          <div class="flex h-full flex-col">
-            <app-sidebar-group class="px-1 py-3">
-              <div class="mb-2 flex items-center gap-2 px-2" [class.justify-center]="sidebarCollapsed()">
-                <ng-icon name="phosphorPlant" class="text-primary size-6 shrink-0" />
-                <span class="text-base font-semibold" [class.hidden]="sidebarCollapsed()">Mon Potager</span>
-              </div>
-              <app-sidebar-group-label [class.hidden]="sidebarCollapsed()">Navigation</app-sidebar-group-label>
-              @for (item of navLinks(); track item.path) {
-                <a
-                  appSidebarItem
-                  [routerLink]="item.link"
-                  [icon]="item.icon"
-                  [label]="item.label"
-                  [active]="item.active"
-                  [collapsed]="sidebarCollapsed()"
-                ></a>
-              }
-            </app-sidebar-group>
+      <div class="bg-background text-foreground h-dvh overflow-hidden">
+        <app-layout direction="horizontal" class="h-full">
+          <app-sidebar
+            [width]="220"
+            [collapsible]="true"
+            [collapsed]="sidebarCollapsed()"
+            (collapsedChange)="sidebarCollapsed.set($event)"
+          >
+            <div class="flex h-full flex-col">
+              <app-sidebar-group class="px-1 py-3">
+                <div class="mb-2 flex items-center gap-2 px-2" [class.justify-center]="sidebarCollapsed()">
+                  <ng-icon name="phosphorPlant" class="text-primary size-6 shrink-0" />
+                  <span class="text-base font-semibold" [class.hidden]="sidebarCollapsed()">Mon Potager</span>
+                </div>
+                <app-sidebar-group-label [class.hidden]="sidebarCollapsed()">Navigation</app-sidebar-group-label>
+                @for (item of navLinks(); track item.path) {
+                  <a
+                    appSidebarItem
+                    [routerLink]="item.link"
+                    [icon]="item.icon"
+                    [label]="item.label"
+                    [active]="item.active"
+                    [collapsed]="sidebarCollapsed()"
+                  ></a>
+                }
+              </app-sidebar-group>
 
-            <app-sidebar-group class="mt-auto px-1 py-3">
-              <app-segment
-                variant="accent"
-                size="sm"
-                class="w-full"
-                [items]="themeItems()"
-                [value]="theme.theme()"
-                (valueChange)="onThemeChange($event)"
-              />
-            </app-sidebar-group>
-          </div>
-        </app-sidebar>
-
-        <app-layout direction="vertical" class="min-w-0 flex-1">
-          <app-header class="px-4">
-            <div class="flex items-center gap-2">
-              <p class="text-sm font-medium">Récoltes & économies</p>
+              <app-sidebar-group class="mt-auto px-1 py-3">
+                <app-segment
+                  variant="accent"
+                  size="sm"
+                  class="w-full"
+                  [items]="themeItems()"
+                  [value]="theme.theme()"
+                  (valueChange)="onThemeChange($event)"
+                />
+              </app-sidebar-group>
             </div>
-            <div class="ml-auto flex items-center gap-2">
-              @if (priceModeBio()) {
-                @if (priceSourceLive()) {
+          </app-sidebar>
+
+          <app-layout direction="vertical" class="min-w-0 flex-1">
+            <app-header class="px-4">
+              <div class="flex items-center gap-2">
+                <p class="text-sm font-medium">Récoltes & économies</p>
+              </div>
+              <div class="ml-auto flex items-center gap-2">
+                @if (priceModeBio()) {
+                  @if (priceSourceLive()) {
+                    <app-badge type="secondary" class="gap-1">
+                      <ng-icon name="phosphorCloudArrowDown" />
+                      Prix RNM bio en direct
+                    </app-badge>
+                  } @else {
+                    <app-badge type="secondary" class="gap-1">
+                      <ng-icon name="phosphorLeaf" />
+                      Prix bio (référence)
+                    </app-badge>
+                  }
+                } @else if (priceSourceLive()) {
                   <app-badge type="secondary" class="gap-1">
                     <ng-icon name="phosphorCloudArrowDown" />
-                    Prix RNM bio en direct
+                    Prix RNM en direct
                   </app-badge>
                 } @else {
-                  <app-badge type="secondary" class="gap-1">
-                    <ng-icon name="phosphorLeaf" />
-                    Prix bio (référence)
+                  <app-badge type="outline" class="gap-1">
+                    <ng-icon name="phosphorInfo" />
+                    Prix de référence
                   </app-badge>
                 }
-              } @else if (priceSourceLive()) {
-                <app-badge type="secondary" class="gap-1">
-                  <ng-icon name="phosphorCloudArrowDown" />
-                  Prix RNM en direct
-                </app-badge>
-              } @else {
-                <app-badge type="outline" class="gap-1">
-                  <ng-icon name="phosphorInfo" />
-                  Prix de référence
-                </app-badge>
-              }
-              <app-auth-menu />
-            </div>
-          </app-header>
-
-          <app-content class="relative min-h-0 overflow-auto p-4">
-            <router-outlet />
-            @if (navigating()) {
-              <div class="bg-background absolute inset-0 z-10 flex flex-col gap-4 p-4">
-                <app-skeleton class="h-7 w-56" />
-                <app-skeleton class="h-4 w-80 max-w-full" />
-                <div class="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                  <app-skeleton class="h-24" />
-                  <app-skeleton class="h-24" />
-                  <app-skeleton class="h-24" />
-                  <app-skeleton class="h-24" />
-                </div>
-                <app-skeleton class="h-80" />
+                <app-auth-menu />
               </div>
-            }
-          </app-content>
+            </app-header>
 
-          <app-footer class="text-muted-foreground flex items-center px-4 text-xs">
-            Économies estimées d'après les prix moyens des fruits et légumes en France (FranceAgriMer — RNM).
-          </app-footer>
+            <app-content class="min-h-0 overflow-auto p-4">
+              <app-skeleton-outlet class="min-h-full">
+                <router-outlet />
+              </app-skeleton-outlet>
+            </app-content>
+
+            <app-footer class="text-muted-foreground flex items-center px-4 text-xs">
+              Économies estimées d'après les prix moyens des fruits et légumes en France (FranceAgriMer — RNM).
+            </app-footer>
+          </app-layout>
         </app-layout>
-      </app-layout>
-    </div>
+      </div>
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -173,55 +156,26 @@ const THEME_VALUE = { light: 'light', dark: 'dark' } as const;
 export class AppComponent {
   protected readonly theme = inject(ThemeService);
   readonly #store = inject(HarvestStore);
-  readonly #router = inject(Router);
   readonly #auth = inject(AuthService);
   readonly #api = inject(ApiService);
 
-  constructor() {
-    effect(() => {
-      if (this.#auth.isAuthenticated()) {
-        void this.#provisionAccount();
-      }
-    });
-  }
+  protected readonly sidebarCollapsed = signal(false);
+
+  protected readonly currentPath = injectCurrentPath();
 
   protected readonly showSplash = computed(() => AUTH_GATE_ENABLED && !this.#auth.ready());
   protected readonly showLogin = computed(
     () => AUTH_GATE_ENABLED && this.#auth.ready() && !this.#auth.isAuthenticated(),
   );
 
-  protected readonly sidebarCollapsed = signal(false);
-
-  protected readonly navigating = toSignal(
-    this.#router.events.pipe(
-      filter(
-        (event): event is NavigationStart | NavigationEnd | NavigationCancel | NavigationError =>
-          event instanceof NavigationStart ||
-          event instanceof NavigationEnd ||
-          event instanceof NavigationCancel ||
-          event instanceof NavigationError,
-      ),
-      map(event => event instanceof NavigationStart),
-    ),
-    { initialValue: false },
-  );
-
   protected readonly priceSourceLive = computed(() => this.#store.priceSource() === 'live');
   protected readonly priceModeBio = computed(() => this.#store.priceMode() === PRICE_MODE.bio);
-
-  protected readonly currentPath = toSignal(
-    this.#router.events.pipe(
-      filter((event): event is NavigationEnd => event instanceof NavigationEnd),
-      map(event => this.#normalizePath(event.urlAfterRedirects)),
-    ),
-    { initialValue: this.#normalizePath(this.#router.url) },
-  );
 
   protected readonly navLinks = computed(() => {
     const current = this.currentPath();
     return NAV_ITEMS.map(item => ({
       ...item,
-      active: this.#isActive(item.path, current),
+      active: isActivePath(item.path, current),
     }));
   });
 
@@ -243,20 +197,16 @@ export class AppComponent {
     ];
   });
 
+  constructor() {
+    effect(() => {
+      if (this.#auth.isAuthenticated()) {
+        void this.#provisionAccount();
+      }
+    });
+  }
+
   protected onThemeChange(value: string): void {
     this.theme.set(value === THEME_VALUE.dark ? THEME_VALUE.dark : THEME_VALUE.light);
-  }
-
-  #isActive(path: string, active: string): boolean {
-    if (path === '') {
-      return active === '';
-    }
-    return active === path || active.startsWith(`${path}/`);
-  }
-
-  #normalizePath(url: string): string {
-    const path = url.split('?')[0]?.split('#')[0] ?? url;
-    return path.replace(/^\/+/, '');
   }
 
   async #provisionAccount(): Promise<void> {

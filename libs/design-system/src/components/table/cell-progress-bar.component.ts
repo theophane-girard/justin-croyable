@@ -48,10 +48,7 @@ export class CellProgressBarComponent {
   protected readonly displayValue = computed(() => `${Math.round(this.clampedValue())}%`);
 
   protected readonly progressClasses = computed(() =>
-    mergeClasses(
-      'h-2 w-full [&_[data-slot=progress-indicator]]:rounded-full',
-      cellProgressBarVariants({ color: this.color() }),
-    ),
+    mergeClasses('h-2 w-full', cellProgressBarVariants({ color: this.color() })),
   );
 
   protected readonly classes = computed(() =>

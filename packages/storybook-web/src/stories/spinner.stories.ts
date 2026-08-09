@@ -1,4 +1,4 @@
-import { SpinnerComponent } from '@justin-croyable/design-system';
+import { SpinnerComponent } from '@justin-croyable/design-system/components/spinner';
 import type { Meta, StoryObj } from '@storybook/angular-vite';
 
 type SpinnerArgs = { class: string };

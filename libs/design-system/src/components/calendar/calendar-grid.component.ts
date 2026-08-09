@@ -19,9 +19,9 @@ import { calendarDayButtonVariants, calendarDayVariants, calendarWeekdayVariants
 @Component({
   selector: 'app-calendar-grid',
   template: `
-    <div #gridContainer>
+    <div [class]="containerClasses()" #gridContainer>
       <!-- Weekdays Header -->
-      <div class="grid w-fit grid-cols-7 text-center" role="row">
+      <div [class]="weekdaysRowClasses()" role="row">
         @for (weekday of weekdays; track weekday) {
           <div [class]="weekdayClasses()" role="columnheader">
             {{ weekday }}
@@ -30,7 +30,7 @@ import { calendarDayButtonVariants, calendarDayVariants, calendarWeekdayVariants
       </div>
 
       <!-- Calendar Days Grid -->
-      <div class="mt-2 grid w-fit auto-rows-min grid-cols-7 gap-0" role="rowgroup">
+      <div [class]="daysGridClasses()" role="rowgroup">
         @for (day of calendarDays(); track day.date.getTime(); let i = $index) {
           <div [class]="dayContainerClasses()" role="gridcell">
             <button
@@ -67,6 +67,7 @@ export class CalendarGridComponent {
   // Inputs
   readonly calendarDays = input.required<CalendarDay[]>();
   readonly disabled = input<boolean>(false);
+  readonly fluid = input<boolean>(false);
 
   // Outputs
   readonly dateSelect = output<{ date: Date; index: number }>();
@@ -78,9 +79,23 @@ export class CalendarGridComponent {
 
   private readonly focusedDayIndex = signal<number>(-1);
 
-  protected readonly weekdayClasses = computed(() => mergeClasses(calendarWeekdayVariants()));
+  protected readonly containerClasses = computed(() => (this.fluid() ? 'w-full' : ''));
 
-  protected readonly dayContainerClasses = computed(() => mergeClasses(calendarDayVariants()));
+  protected readonly weekdaysRowClasses = computed(() =>
+    mergeClasses('grid grid-cols-7 text-center', this.fluid() ? 'w-full' : 'w-fit'),
+  );
+
+  protected readonly daysGridClasses = computed(() =>
+    mergeClasses('mt-2 grid auto-rows-min grid-cols-7 gap-0', this.fluid() ? 'w-full' : 'w-fit'),
+  );
+
+  protected readonly weekdayClasses = computed(() =>
+    mergeClasses(calendarWeekdayVariants({ fluid: this.fluid() })),
+  );
+
+  protected readonly dayContainerClasses = computed(() =>
+    mergeClasses(calendarDayVariants({ fluid: this.fluid() })),
+  );
 
   protected dayButtonClasses(day: CalendarDay): string {
     return mergeClasses(
@@ -93,6 +108,7 @@ export class CalendarGridComponent {
         rangeEnd: day.isRangeEnd ?? false,
         inRange: day.isInRange ?? false,
       }),
+      this.fluid() ? 'text-base' : '',
     );
   }
 

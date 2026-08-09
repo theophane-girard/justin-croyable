@@ -33,11 +33,12 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import type { Field, FormValueControl } from '@angular/forms/signals';
 
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideChevronDown } from '@ng-icons/lucide';
+import { lucideChevronDown, lucideSearch } from '@ng-icons/lucide';
 import type { ClassValue } from 'clsx';
 import { filter } from 'rxjs';
 
 import { BadgeComponent } from '../badge';
+import { EmptyComponent } from '../empty';
 import { SheetHandleComponent } from '../sheet-handle';
 import { SelectItemComponent } from './select-item.component';
 import {
@@ -62,7 +63,7 @@ const COMPACT_MODE_WIDTH_THRESHOLD = 100;
 
 @Component({
   selector: 'app-select, [app-select]',
-  imports: [OverlayModule, BadgeComponent, NgIcon, IdDirective, SheetHandleComponent],
+  imports: [OverlayModule, BadgeComponent, EmptyComponent, NgIcon, IdDirective, SheetHandleComponent],
   template: `
     @if (label()) {
       <label [id]="labelId()" [attr.for]="triggerId()" [class]="labelClasses()">
@@ -141,24 +142,48 @@ const COMPACT_MODE_WIDTH_THRESHOLD = 100;
         "
         tabindex="-1"
       >
-        @if (isMobile()) {
+        @if (isMobile() || withSearch()) {
           <div class="bg-popover sticky top-0 z-10">
-            <app-sheet-handle [sheetElement]="dropdownEl" (dismissed)="dismissFromHandle()" />
-            @if (sheetHeader()) {
-              <div class="text-foreground border-b px-3 py-3 text-sm font-medium">
-                {{ sheetHeader() }}
+            @if (isMobile()) {
+              <app-sheet-handle [sheetElement]="dropdownEl" (dismissed)="dismissFromHandle()" />
+              @if (sheetHeader()) {
+                <div class="text-foreground border-b px-3 py-3 text-sm font-medium">
+                  {{ sheetHeader() }}
+                </div>
+              }
+            }
+            @if (withSearch()) {
+              <div class="flex items-center border-b px-3">
+                <ng-icon name="lucideSearch" class="text-muted-foreground mr-2 size-4! shrink-0" />
+                <input
+                  #searchInput
+                  type="text"
+                  role="searchbox"
+                  [placeholder]="searchPlaceholder()"
+                  [value]="searchTerm()"
+                  [attr.aria-label]="searchPlaceholder()"
+                  class="placeholder:text-muted-foreground flex h-10 w-full rounded-md bg-transparent py-2 text-sm outline-none"
+                  autocomplete="off"
+                  autocorrect="off"
+                  spellcheck="false"
+                  (input)="onSearchInput($event)"
+                  (keydown)="onSearchKeydown($event)"
+                />
               </div>
             }
           </div>
         }
         <div class="p-1">
           <ng-content />
+          @if (withSearch() && !hasVisibleItems()) {
+            <app-empty [description]="emptyText()" />
+          }
         </div>
       </div>
     </ng-template>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  viewProviders: [provideIcons({ lucideChevronDown })],
+  viewProviders: [provideIcons({ lucideChevronDown, lucideSearch })],
   host: {
     '[attr.data-active]': 'isFocus() ? "" : null',
     '[attr.data-disabled]': 'disabledState() ? "" : null',
@@ -181,6 +206,7 @@ export class SelectComponent implements FormValueControl<SelectValue>, OnDestroy
   protected readonly sheetHeader = computed(() => this.label() || this.placeholder());
 
   readonly dropdownTemplate = viewChild.required<TemplateRef<void>>('dropdownTemplate');
+  readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
   readonly selectItems = contentChildren(SelectItemComponent);
 
   private overlayRef?: OverlayRef;
@@ -189,11 +215,14 @@ export class SelectComponent implements FormValueControl<SelectValue>, OnDestroy
 
   readonly class = input<ClassValue>('');
   readonly maxLabelCount = input<number>(1);
-  readonly multiple = input<boolean>(false);
+  readonly multiple = input(false, { transform: booleanAttribute });
   readonly placeholder = input<string>('Select an option...');
   readonly size = input<SelectSizeVariants>('default');
   readonly displayLabel = input<string>('');
   readonly prefixIcon = input<string>('');
+  readonly withSearch = input(false, { transform: booleanAttribute });
+  readonly searchPlaceholder = input<string>('Search...');
+  readonly emptyText = input<string>('No results found.');
 
   readonly label = input<string>('');
   readonly hint = input<string>('');
@@ -212,7 +241,14 @@ export class SelectComponent implements FormValueControl<SelectValue>, OnDestroy
   readonly focusedIndex = signal<number>(-1);
   protected readonly isFocus = signal(false);
   protected readonly isCompact = signal(false);
+  protected readonly searchTerm = signal('');
   protected readonly disabledState = computed(() => this.disabled());
+
+  private readonly normalizedSearchTerm = computed(() => this.searchTerm().toLowerCase().trim());
+
+  protected readonly hasVisibleItems = computed(() =>
+    this.selectItems().some((item) => item.matchesSearch(this.normalizedSearchTerm())),
+  );
 
   constructor() {
     effect(() => {
@@ -222,6 +258,12 @@ export class SelectComponent implements FormValueControl<SelectValue>, OnDestroy
     });
 
     effect(() => this.updateItems(this.selectItems()));
+    effect(() => this.applySearchFilter());
+  }
+
+  private applySearchFilter(): void {
+    const searchTerm = this.normalizedSearchTerm();
+    this.selectItems().forEach((item) => item.isHidden.set(!item.matchesSearch(searchTerm)));
   }
 
   protected onFocus(): void {
@@ -344,6 +386,25 @@ export class SelectComponent implements FormValueControl<SelectValue>, OnDestroy
     }
   }
 
+  protected onSearchInput(event: Event): void {
+    this.searchTerm.set((event.target as HTMLInputElement).value);
+    this.focusedIndex.set(-1);
+    this.updateOverlayPosition();
+  }
+
+  protected onSearchKeydown(event: KeyboardEvent): void {
+    const { key } = event;
+    const navigationKeys = ['ArrowDown', 'ArrowUp', 'Enter', 'Escape', 'Home', 'End'];
+    if (!navigationKeys.includes(key)) {
+      event.stopPropagation();
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    this.onDropdownKeydown(event);
+  }
+
   toggle() {
     if (this.disabledState()) {
       return;
@@ -457,6 +518,7 @@ export class SelectComponent implements FormValueControl<SelectValue>, OnDestroy
       return;
     }
 
+    this.searchTerm.set('');
     const mobile = this.isMobile();
 
     // Recreate the overlay if the presentation mode changed (viewport resize).
@@ -492,6 +554,10 @@ export class SelectComponent implements FormValueControl<SelectValue>, OnDestroy
   }
 
   private setFocusOnOpen(): void {
+    if (this.withSearch()) {
+      this.searchInput()?.nativeElement.focus();
+      return;
+    }
     this.focusDropdown();
     this.focusSelectedItem();
   }
@@ -506,6 +572,7 @@ export class SelectComponent implements FormValueControl<SelectValue>, OnDestroy
     }
     this.isOpen.set(false);
     this.focusedIndex.set(-1);
+    this.searchTerm.set('');
     if (shouldTouch) {
       this.touch.emit();
     }
@@ -519,6 +586,7 @@ export class SelectComponent implements FormValueControl<SelectValue>, OnDestroy
     }
     this.isOpen.set(false);
     this.focusedIndex.set(-1);
+    this.searchTerm.set('');
     this.touch.emit();
     this.updateFocusWhenNormalMode();
   }
@@ -681,7 +749,7 @@ export class SelectComponent implements FormValueControl<SelectValue>, OnDestroy
     const dropdownElement = this.overlayRef.overlayElement;
     return Array.from(
       dropdownElement.querySelectorAll<HTMLElement>('app-select-item, [app-select-item]'),
-    ).filter((item) => ignoreFilter || item.dataset['disabled'] === undefined);
+    ).filter((item) => !item.hidden && (ignoreFilter || item.dataset['disabled'] === undefined));
   }
 
   private navigateItems(direction: number, items: HTMLElement[]) {
@@ -736,13 +804,14 @@ export class SelectComponent implements FormValueControl<SelectValue>, OnDestroy
   private updateItemFocus(items: HTMLElement[], focusedIndex: number) {
     for (let index = 0; index < items.length; index++) {
       const item = items[index];
+      // `data-active` tracks the roving focus highlight only. Selection is kept on
+      // `aria-selected`/`data-selected` by the item itself, so focusing an option
+      // no longer erases the selected state of the others (important in `multiple`).
       if (index === focusedIndex) {
         item.focus();
-        item.setAttribute('aria-selected', 'true');
-        item.setAttribute('data-selected', 'true');
+        item.setAttribute('data-active', '');
       } else {
-        item.removeAttribute('aria-selected');
-        item.removeAttribute('data-selected');
+        item.removeAttribute('data-active');
       }
     }
   }
