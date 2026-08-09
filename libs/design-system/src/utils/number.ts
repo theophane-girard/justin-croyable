@@ -10,4 +10,9 @@ function convertValueToPercentage(value: number, min: number, max: number): numb
   return ((value - min) / (max - min)) * 100;
 }
 
-export { clamp, roundToStep, convertValueToPercentage };
+function convertPercentageToValue(percentage: number, min: number, max: number, step: number): number {
+  const raw = min + (max - min) * clamp(percentage, [0, 1]);
+  return clamp(roundToStep(raw, min, step), [min, max]);
+}
+
+export { clamp, roundToStep, convertValueToPercentage, convertPercentageToValue };

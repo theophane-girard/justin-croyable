@@ -25,7 +25,12 @@ import type { ClassValue } from 'clsx';
 import { filter, fromEvent, map, switchMap, takeUntil, tap } from 'rxjs';
 
 import { mergeClasses, noopFn } from '../../utils/merge-classes';
-import { clamp, convertValueToPercentage, roundToStep } from '../../utils/number';
+import {
+  clamp,
+  convertPercentageToValue,
+  convertValueToPercentage,
+  roundToStep,
+} from '../../utils/number';
 
 import {
   sliderOrientationVariants,
@@ -288,10 +293,12 @@ export class SliderComponent implements ControlValueAccessor, AfterViewInit {
           const coord = this.orientation() === 'vertical' ? event.clientY : event.clientX;
           const clickPercentage = this.calculatePercentage(coord);
           const [clickMin, clickMax] = this.getMinMax();
-          const clickValue = clamp(clickMin + (clickMax - clickMin) * clickPercentage, [
+          const clickValue = convertPercentageToValue(
+            clickPercentage,
             clickMin,
             clickMax,
-          ]);
+            this.step(),
+          );
 
           const currentValues = this.values();
           const closestIndex = currentValues.reduce(
@@ -417,8 +424,7 @@ export class SliderComponent implements ControlValueAccessor, AfterViewInit {
 
   private updateThumbFromPercentage(percentage: number, thumbIndex: number): void {
     const [min, max] = this.getMinMax();
-    const rawValue = min + (max - min) * clamp(percentage, [0, 1]);
-    let value = clamp(roundToStep(rawValue, min, this.step()), [min, max]);
+    let value = convertPercentageToValue(percentage, min, max, this.step());
 
     const currentValues = [...this.values()];
 
@@ -474,6 +480,6 @@ export class SliderComponent implements ControlValueAccessor, AfterViewInit {
   }
 
   private getMinMax(): [number, number] {
-    return [Math.max(this.min(), 0), Math.min(this.max(), 100)];
+    return [this.min(), this.max()];
   }
 }

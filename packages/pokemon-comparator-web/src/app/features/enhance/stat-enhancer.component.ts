@@ -101,7 +101,7 @@ interface NatureOption {
                 [min]="0"
                 [max]="maxEvPerStat"
                 [step]="evStep"
-                [value]="[draftEvs()[stat]]"
+                [default]="evSeed()[stat]"
                 [disabled]="!draftLevel100()"
                 (slideIndexChange)="onEvChange(stat, $event)"
               />
@@ -139,17 +139,28 @@ export class StatEnhancerComponent {
   protected readonly draftLevel100 = signal<boolean>(DEFAULT_ENHANCE_CONFIG.level100);
   protected readonly draftNature = signal<string>(DEFAULT_ENHANCE_CONFIG.nature);
   protected readonly draftEvs = signal<Readonly<Record<Stat, number>>>(DEFAULT_ENHANCE_CONFIG.evs);
+  protected readonly evSeed = signal<Readonly<Record<Stat, readonly number[]>>>(
+    this.#seedFrom(DEFAULT_ENHANCE_CONFIG.evs),
+  );
 
   protected readonly draftEvsTotal = computed(() => evsTotal(this.draftEvs()));
   protected readonly draftNatureEffect = computed(() =>
     natureEffectLabel(natureById(this.draftNature())),
   );
 
+  #seedFrom(evs: Readonly<Record<Stat, number>>): Record<Stat, number[]> {
+    return Object.fromEntries(STAT_ORDER.map(stat => [stat, [evs[stat]]])) as Record<
+      Stat,
+      number[]
+    >;
+  }
+
   protected open(): void {
     const config = this.#appliedConfig();
     this.draftLevel100.set(config.level100);
     this.draftNature.set(config.nature);
     this.draftEvs.set(config.evs);
+    this.evSeed.set(this.#seedFrom(config.evs));
     this.#sheet.create({
       content: this.enhanceTemplate(),
       side: 'bottom',
@@ -169,12 +180,8 @@ export class StatEnhancerComponent {
   }
 
   protected onEvChange(stat: Stat, values: number[]): void {
-    const requested = values[0] ?? 0;
-    const evs = this.draftEvs();
-    const others = evsTotal(evs) - evs[stat];
-    const remaining = Math.floor((MAX_EV_TOTAL - others) / EV_STEP) * EV_STEP;
-    const clamped = Math.max(0, Math.min(requested, MAX_EV_PER_STAT, remaining));
-    this.draftEvs.set({ ...evs, [stat]: clamped });
+    const value = Math.max(0, Math.min(values[0] ?? 0, MAX_EV_PER_STAT));
+    this.draftEvs.set({ ...this.draftEvs(), [stat]: value });
   }
 
   #applyDraft(): void {
