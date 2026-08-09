@@ -6,4 +6,6 @@ import {
   platformBrowserDynamicTesting,
 } from '@angular/platform-browser-dynamic/testing';
 
-getTestBed().initTestEnvironment(BrowserDynamicTestingModule, platformBrowserDynamicTesting());
+const testBed = getTestBed();
+testBed.resetTestEnvironment();
+testBed.initTestEnvironment(BrowserDynamicTestingModule, platformBrowserDynamicTesting());
