@@ -47,6 +47,7 @@ import { PokedexGridComponent } from './pokedex-grid.component';
           viewportClass="h-[calc(100dvh-13rem)]"
           [pokemons]="store.pokemons()"
           [abilities]="store.abilities()"
+          [syncUrl]="true"
           (select)="openDetail($event)"
         />
       }
@@ -59,7 +60,7 @@ export class PokedexComponent {
   readonly #router = inject(Router);
 
   protected openDetail(id: number): void {
-    this.#router.navigate([`/${APP_PATHS.pokedex}`, id]);
+    this.#router.navigate([`/${APP_PATHS.pokedex}`, id], { queryParamsHandling: 'preserve' });
   }
 
   protected reload(): void {

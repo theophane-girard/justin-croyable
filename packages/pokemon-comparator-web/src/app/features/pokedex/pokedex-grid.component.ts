@@ -16,16 +16,20 @@ import {
 } from '@angular/core';
 
 import {
+  arrayFilter,
   ButtonComponent,
   ChipComponent,
   EmptyComponent,
+  enumFilter,
   FabButtonComponent,
   FabContainerComponent,
   FabListComponent,
   InputDirective,
+  injectQueryFilters,
   BadgeComponent,
   SelectImports,
   SheetService,
+  stringFilter,
   ToggleGroupComponent,
   type ToggleGroupItem,
 } from '@justin-croyable/design-system';
@@ -95,6 +99,14 @@ const SORT_OPTIONS: readonly SortOption[] = [
   { value: 'type', label: 'Type' },
   ...STAT_ORDER.map(stat => ({ value: stat, label: STAT_META[stat].label })),
 ];
+
+const DEFAULT_SORT_FIELD = 'number';
+const DEFAULT_SORT_DIRECTION = 'asc';
+
+const STAGE_VALUES: readonly string[] = STAGE_ITEMS.map(item => item.value);
+const LEGENDARY_VALUES: readonly string[] = LEGENDARY_ITEMS.map(item => item.value);
+const DIRECTION_VALUES: readonly string[] = DIRECTION_ITEMS.map(item => item.value);
+const SORT_VALUES: readonly string[] = SORT_OPTIONS.map(option => option.value);
 
 const STAT_SET = new Set<string>(STAT_ORDER);
 
@@ -349,6 +361,7 @@ export class PokedexGridComponent {
   readonly disabledPicking = input<boolean>(false);
   readonly disabledHint = input<string>('');
   readonly viewportClass = input<string>('h-[70dvh]');
+  readonly syncUrl = input<boolean>(false);
 
   readonly select = output<number>();
 
@@ -368,24 +381,47 @@ export class PokedexGridComponent {
   protected readonly sortOptions = SORT_OPTIONS;
   protected readonly trackByIndex = (index: number): number => index;
 
+  readonly #url = injectQueryFilters({
+    q: stringFilter(),
+    types: arrayFilter(),
+    stage: enumFilter(STAGE_VALUES, ALL),
+    legendary: enumFilter(LEGENDARY_VALUES, ALL),
+    abilities: arrayFilter(),
+    sort: enumFilter(SORT_VALUES, DEFAULT_SORT_FIELD),
+    dir: enumFilter(DIRECTION_VALUES, DEFAULT_SORT_DIRECTION),
+  });
+
   readonly #query = signal('');
   readonly #selectedTypes = signal<string[]>([]);
   readonly #stageFilter = signal<string>(ALL);
   readonly #legendaryFilter = signal<string>(ALL);
   readonly #selectedAbilities = signal<string[]>([]);
   readonly #abilityQuery = signal('');
-  readonly #sortField = signal<string>('number');
-  readonly #sortDirection = signal<string>('asc');
+  readonly #sortField = signal<string>(DEFAULT_SORT_FIELD);
+  readonly #sortDirection = signal<string>(DEFAULT_SORT_DIRECTION);
   readonly #resetKey = signal(0);
   readonly #columns = signal(2);
 
-  protected readonly query = this.#query.asReadonly();
-  protected readonly selectedTypes = this.#selectedTypes.asReadonly();
-  protected readonly stageFilter = this.#stageFilter.asReadonly();
-  protected readonly legendaryFilter = this.#legendaryFilter.asReadonly();
+  protected readonly query = computed(() => (this.syncUrl() ? this.#url.q() : this.#query()));
+  protected readonly selectedTypes = computed<readonly string[]>(() =>
+    this.syncUrl() ? this.#url.types() : this.#selectedTypes(),
+  );
+  protected readonly stageFilter = computed(() =>
+    this.syncUrl() ? this.#url.stage() : this.#stageFilter(),
+  );
+  protected readonly legendaryFilter = computed(() =>
+    this.syncUrl() ? this.#url.legendary() : this.#legendaryFilter(),
+  );
   protected readonly abilityQuery = this.#abilityQuery.asReadonly();
-  protected readonly sortField = this.#sortField.asReadonly();
-  protected readonly sortDirection = this.#sortDirection.asReadonly();
+  protected readonly sortField = computed(() =>
+    this.syncUrl() ? this.#url.sort() : this.#sortField(),
+  );
+  protected readonly sortDirection = computed(() =>
+    this.syncUrl() ? this.#url.dir() : this.#sortDirection(),
+  );
+  readonly #effectiveAbilities = computed<readonly string[]>(() =>
+    this.syncUrl() ? this.#url.abilities() : this.#selectedAbilities(),
+  );
   protected readonly resetKeys = computed(() => [this.#resetKey()]);
 
   readonly #availableAbilities = computed<readonly Ability[]>(() => {
@@ -394,13 +430,13 @@ export class PokedexGridComponent {
   });
 
   protected readonly selectedAbilityViews = computed<readonly Ability[]>(() => {
-    const selected = new Set(this.#selectedAbilities());
+    const selected = new Set(this.#effectiveAbilities());
     return this.#availableAbilities().filter(ability => selected.has(ability.slug));
   });
 
   protected readonly abilityResults = computed<{ items: readonly Ability[]; total: number }>(() => {
     const needle = normalizeText(this.#abilityQuery());
-    const selected = new Set(this.#selectedAbilities());
+    const selected = new Set(this.#effectiveAbilities());
     const matches = this.#availableAbilities()
       .filter(ability => !selected.has(ability.slug))
       .filter(ability => needle.length === 0 || ability.searchText.includes(needle));
@@ -409,10 +445,10 @@ export class PokedexGridComponent {
 
   protected readonly tiles = computed<readonly PokedexTile[]>(() => {
     const excluded = this.excludedIds();
-    const types = new Set(this.#selectedTypes());
-    const stage = this.#stageFilter();
-    const legendary = this.#legendaryFilter();
-    const abilities = new Set(this.#selectedAbilities());
+    const types = new Set(this.selectedTypes());
+    const stage = this.stageFilter();
+    const legendary = this.legendaryFilter();
+    const abilities = new Set(this.#effectiveAbilities());
 
     const filtered = this.pokemons()
       .filter(pokemon => !excluded.has(pokemon.id))
@@ -428,13 +464,13 @@ export class PokedexGridComponent {
           abilities.size === 0 || pokemon.abilitySlugs.some(slug => abilities.has(slug)),
       );
 
-    const query = this.#query();
+    const query = this.query();
     if (query.trim()) {
       return searchPokemons(filtered, query, new Set<number>()).map(match => toTile(match.pokemon));
     }
 
-    const field = this.#sortField();
-    const ascending = this.#sortDirection() === 'asc';
+    const field = this.sortField();
+    const ascending = this.sortDirection() === 'asc';
     return [...filtered]
       .sort((a, b) => {
         const keyA = sortKey(a, field);
@@ -473,7 +509,12 @@ export class PokedexGridComponent {
   }
 
   protected onSearchInput(event: Event): void {
-    this.#query.set((event.target as HTMLInputElement).value);
+    const value = (event.target as HTMLInputElement).value;
+    if (this.syncUrl()) {
+      this.#url.set('q', value);
+      return;
+    }
+    this.#query.set(value);
   }
 
   protected openFilters(): void {
@@ -501,15 +542,30 @@ export class PokedexGridComponent {
   }
 
   protected onTypesChange(value: string | string[]): void {
-    this.#selectedTypes.set(asArray(value));
+    const types = asArray(value);
+    if (this.syncUrl()) {
+      this.#url.set('types', types);
+      return;
+    }
+    this.#selectedTypes.set(types);
   }
 
   protected onStageChange(value: string | string[]): void {
-    this.#stageFilter.set(asArray(value)[0] ?? ALL);
+    const stage = asArray(value)[0] ?? ALL;
+    if (this.syncUrl()) {
+      this.#url.set('stage', stage);
+      return;
+    }
+    this.#stageFilter.set(stage);
   }
 
   protected onLegendaryChange(value: string | string[]): void {
-    this.#legendaryFilter.set(asArray(value)[0] ?? ALL);
+    const legendary = asArray(value)[0] ?? ALL;
+    if (this.syncUrl()) {
+      this.#url.set('legendary', legendary);
+      return;
+    }
+    this.#legendaryFilter.set(legendary);
   }
 
   protected onAbilityQueryInput(event: Event): void {
@@ -517,32 +573,55 @@ export class PokedexGridComponent {
   }
 
   protected toggleAbility(slug: string): void {
-    const current = this.#selectedAbilities();
-    this.#selectedAbilities.set(
-      current.includes(slug) ? current.filter(entry => entry !== slug) : [...current, slug],
-    );
+    const current = this.#effectiveAbilities();
+    const next = current.includes(slug)
+      ? current.filter(entry => entry !== slug)
+      : [...current, slug];
+    if (this.syncUrl()) {
+      this.#url.set('abilities', next);
+      return;
+    }
+    this.#selectedAbilities.set(next);
   }
 
   protected onSortFieldChange(value: string | string[]): void {
-    this.#sortField.set(asArray(value)[0] ?? 'number');
+    const field = asArray(value)[0] ?? DEFAULT_SORT_FIELD;
+    if (this.syncUrl()) {
+      this.#url.set('sort', field);
+      return;
+    }
+    this.#sortField.set(field);
   }
 
   protected onDirectionChange(value: string | string[]): void {
-    this.#sortDirection.set(asArray(value)[0] ?? 'asc');
+    const direction = asArray(value)[0] ?? DEFAULT_SORT_DIRECTION;
+    if (this.syncUrl()) {
+      this.#url.set('dir', direction);
+      return;
+    }
+    this.#sortDirection.set(direction);
   }
 
   protected resetFilters(): void {
-    this.#selectedTypes.set([]);
-    this.#stageFilter.set(ALL);
-    this.#legendaryFilter.set(ALL);
-    this.#selectedAbilities.set([]);
+    if (this.syncUrl()) {
+      this.#url.patch({ types: [], stage: ALL, legendary: ALL, abilities: [] });
+    } else {
+      this.#selectedTypes.set([]);
+      this.#stageFilter.set(ALL);
+      this.#legendaryFilter.set(ALL);
+      this.#selectedAbilities.set([]);
+    }
     this.#abilityQuery.set('');
     this.#resetKey.update(key => key + 1);
   }
 
   protected resetSort(): void {
-    this.#sortField.set('number');
-    this.#sortDirection.set('asc');
+    if (this.syncUrl()) {
+      this.#url.patch({ sort: DEFAULT_SORT_FIELD, dir: DEFAULT_SORT_DIRECTION });
+    } else {
+      this.#sortField.set(DEFAULT_SORT_FIELD);
+      this.#sortDirection.set(DEFAULT_SORT_DIRECTION);
+    }
     this.#resetKey.update(key => key + 1);
   }
 }

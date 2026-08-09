@@ -113,7 +113,15 @@ function toDetail(pokemon: Pokemon): DetailView {
   ],
   template: `
     <div class="mx-auto flex w-full max-w-3xl flex-col gap-4">
-      <a appButton type="button" variant="ghost" size="sm" class="w-fit" [routerLink]="pokedexLink">
+      <a
+        appButton
+        type="button"
+        variant="ghost"
+        size="sm"
+        class="w-fit"
+        [routerLink]="pokedexLink"
+        queryParamsHandling="preserve"
+      >
         <ng-icon name="phosphorArrowLeft" class="size-4" />
         Retour au Pokédex
       </a>
