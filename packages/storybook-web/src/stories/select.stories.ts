@@ -190,6 +190,36 @@ export const MultipleWithSearch: Story = {
   },
 };
 
+export const SearchKeywords: Story = {
+  parameters: {
+    controls: { disable: true },
+    docs: {
+      description: {
+        story:
+          "`searchKeywords` étend la recherche au-delà du libellé visible : ici chaque option est trouvable via ses traductions (ex. saisir « cat » remonte « Chat »).",
+      },
+    },
+  },
+  render: () => ({
+    props: { value: [] as string[] },
+    template: `
+      <div class="w-72">
+        <app-select
+          [multiple]="true"
+          withSearch
+          placeholder="Animaux…"
+          searchPlaceholder="Rechercher (toutes langues)…"
+          [(value)]="value"
+        >
+          <app-select-item value="cat" searchKeywords="cat katze gato neko">Chat</app-select-item>
+          <app-select-item value="dog" searchKeywords="dog hund perro inu">Chien</app-select-item>
+          <app-select-item value="bird" searchKeywords="bird vogel pajaro tori">Oiseau</app-select-item>
+        </app-select>
+      </div>
+    `,
+  }),
+};
+
 export const Sizes: Story = {
   parameters: { controls: { disable: true } },
   render: () => ({

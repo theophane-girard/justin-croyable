@@ -12,7 +12,8 @@ base de plusieurs Pokémon.
   **virtual scroll** (CDK) pour afficher tout le Pokédex efficacement, et un
   **speed dial** (composant DS `fab`) à deux boutons :
   - **Filtrer** : type (multi), stade d'évolution, légendaires, **talent**
-    (recherche multilingue sur le libellé du talent, dans toutes les langues) ;
+    (select multi-choix avec recherche du composant DS `select` : la recherche
+    porte sur le libellé du talent dans toutes les langues) ;
   - **Trier** : par n°, type, total ou n'importe quelle statistique, ordre
     croissant/décroissant.
   Cette grille est utilisée par la page Pokédex **et** par la recherche du

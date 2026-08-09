@@ -63,6 +63,7 @@ export class SelectItemComponent {
   readonly value = input.required<string>();
   readonly disabled = input(false, { transform: booleanAttribute });
   readonly class = input<string>('');
+  readonly searchKeywords = input<string>('');
 
   private readonly select = signal<SelectHost | null>(null);
   noopFn = noopFn;
@@ -96,7 +97,10 @@ export class SelectItemComponent {
     if (!searchTerm) {
       return true;
     }
-    return this.label().toLowerCase().includes(searchTerm);
+    if (this.label().toLowerCase().includes(searchTerm)) {
+      return true;
+    }
+    return this.searchKeywords().toLowerCase().includes(searchTerm);
   }
 
   onMouseEnter() {

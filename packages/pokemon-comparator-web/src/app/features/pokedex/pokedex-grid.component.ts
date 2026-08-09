@@ -18,7 +18,6 @@ import {
 import {
   arrayFilter,
   ButtonComponent,
-  ChipComponent,
   EmptyComponent,
   enumFilter,
   FabButtonComponent,
@@ -36,7 +35,7 @@ import {
 import { NgIcon } from '@ng-icons/core';
 
 import { type Ability } from '../../core/pokemon-ability';
-import { normalizeText, searchPokemons } from '../../core/pokemon-search';
+import { searchPokemons } from '../../core/pokemon-search';
 import {
   LANG,
   type Pokemon,
@@ -63,8 +62,6 @@ const TILE_BASE =
   'relative flex h-28 flex-col justify-between gap-2 overflow-hidden rounded-2xl p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50';
 
 const ROW_HEIGHT = 124;
-
-const ABILITY_RESULT_LIMIT = 60;
 
 const ALL = 'all';
 
@@ -146,7 +143,6 @@ function toTile(pokemon: Pokemon): PokedexTile {
     NgIcon,
     BadgeComponent,
     ButtonComponent,
-    ChipComponent,
     EmptyComponent,
     FabButtonComponent,
     FabContainerComponent,
@@ -292,51 +288,23 @@ function toTile(pokemon: Pokemon): PokedexTile {
 
         <section class="flex flex-col gap-2">
           <h3 class="text-sm font-semibold">Talent</h3>
-          @if (selectedAbilityViews().length > 0) {
-            <div class="flex flex-wrap gap-1.5">
-              @for (ability of selectedAbilityViews(); track ability.slug) {
-                <app-chip [removeLabel]="'Retirer ' + ability.label" (removed)="toggleAbility(ability.slug)">
-                  {{ ability.label }}
-                </app-chip>
-              }
-            </div>
-          }
-          <div class="border-border flex items-center gap-2 rounded-lg border px-3">
-            <ng-icon name="phosphorMagnifyingGlass" class="text-muted-foreground size-4 shrink-0" />
-            <input
-              app-input
-              borderless
-              type="text"
-              placeholder="Rechercher un talent (toutes langues)"
-              class="flex-1"
-              [value]="abilityQuery()"
-              (input)="onAbilityQueryInput($event)"
-            />
-          </div>
-          @if (abilityResults().items.length === 0) {
-            <span class="text-muted-foreground text-sm">Aucun talent trouvé.</span>
-          } @else {
-            <div class="flex max-h-56 flex-col gap-1 overflow-y-auto pr-1">
-              @for (ability of abilityResults().items; track ability.slug) {
-                <button
-                  appButton
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  class="justify-start"
-                  (click)="toggleAbility(ability.slug)"
-                >
-                  <ng-icon name="phosphorPlus" class="size-4 shrink-0" />
-                  {{ ability.label }}
-                </button>
-              }
-            </div>
-            @if (abilityResults().total > abilityResults().items.length) {
-              <span class="text-muted-foreground text-xs">
-                {{ abilityResults().total }} talents — affinez la recherche.
-              </span>
+          <app-select
+            [multiple]="true"
+            withSearch
+            class="w-full"
+            placeholder="Filtrer par talent"
+            searchPlaceholder="Rechercher un talent (toutes langues)"
+            emptyText="Aucun talent trouvé."
+            [maxLabelCount]="2"
+            [value]="selectedAbilities()"
+            (selectionChange)="onAbilitiesChange($event)"
+          >
+            @for (ability of availableAbilities(); track ability.slug) {
+              <app-select-item [value]="ability.slug" [searchKeywords]="ability.searchText">
+                {{ ability.label }}
+              </app-select-item>
             }
-          }
+          </app-select>
         </section>
 
         <div class="flex items-center justify-between gap-2">
@@ -426,7 +394,6 @@ export class PokedexGridComponent {
   readonly #stageFilter = signal<string>(ALL);
   readonly #legendaryFilter = signal<string>(ALL);
   readonly #selectedAbilities = signal<string[]>([]);
-  readonly #abilityQuery = signal('');
   readonly #sortField = signal<string>(DEFAULT_SORT_FIELD);
   readonly #sortDirection = signal<string>(DEFAULT_SORT_DIRECTION);
   readonly #resetKey = signal(0);
@@ -442,7 +409,6 @@ export class PokedexGridComponent {
   protected readonly legendaryFilter = computed(() =>
     this.syncUrl() ? this.#url.legendary() : this.#legendaryFilter(),
   );
-  protected readonly abilityQuery = this.#abilityQuery.asReadonly();
   protected readonly sortField = computed(() =>
     this.syncUrl() ? this.#url.sort() : this.#sortField(),
   );
@@ -452,6 +418,7 @@ export class PokedexGridComponent {
   readonly #effectiveAbilities = computed<readonly string[]>(() =>
     this.syncUrl() ? this.#url.abilities() : this.#selectedAbilities(),
   );
+  protected readonly selectedAbilities = computed<string[]>(() => [...this.#effectiveAbilities()]);
   protected readonly resetKeys = computed(() => [this.#resetKey()]);
 
   protected readonly activeFilterCount = computed(
@@ -470,23 +437,9 @@ export class PokedexGridComponent {
 
   protected readonly activeCount = computed(() => this.activeFilterCount() + this.activeSortCount());
 
-  readonly #availableAbilities = computed<readonly Ability[]>(() => {
+  protected readonly availableAbilities = computed<readonly Ability[]>(() => {
     const present = new Set(this.pokemons().flatMap(pokemon => pokemon.abilitySlugs));
     return this.abilities().filter(ability => present.has(ability.slug));
-  });
-
-  protected readonly selectedAbilityViews = computed<readonly Ability[]>(() => {
-    const selected = new Set(this.#effectiveAbilities());
-    return this.#availableAbilities().filter(ability => selected.has(ability.slug));
-  });
-
-  protected readonly abilityResults = computed<{ items: readonly Ability[]; total: number }>(() => {
-    const needle = normalizeText(this.#abilityQuery());
-    const selected = new Set(this.#effectiveAbilities());
-    const matches = this.#availableAbilities()
-      .filter(ability => !selected.has(ability.slug))
-      .filter(ability => needle.length === 0 || ability.searchText.includes(needle));
-    return { items: matches.slice(0, ABILITY_RESULT_LIMIT), total: matches.length };
   });
 
   protected readonly tiles = computed<readonly PokedexTile[]>(() => {
@@ -614,20 +567,13 @@ export class PokedexGridComponent {
     this.#legendaryFilter.set(legendary);
   }
 
-  protected onAbilityQueryInput(event: Event): void {
-    this.#abilityQuery.set((event.target as HTMLInputElement).value);
-  }
-
-  protected toggleAbility(slug: string): void {
-    const current = this.#effectiveAbilities();
-    const next = current.includes(slug)
-      ? current.filter(entry => entry !== slug)
-      : [...current, slug];
+  protected onAbilitiesChange(value: string | string[]): void {
+    const abilities = asArray(value);
     if (this.syncUrl()) {
-      this.#url.set('abilities', next);
+      this.#url.set('abilities', abilities);
       return;
     }
-    this.#selectedAbilities.set(next);
+    this.#selectedAbilities.set(abilities);
   }
 
   protected onSortFieldChange(value: string | string[]): void {
@@ -657,7 +603,6 @@ export class PokedexGridComponent {
       this.#legendaryFilter.set(ALL);
       this.#selectedAbilities.set([]);
     }
-    this.#abilityQuery.set('');
     this.#resetKey.update(key => key + 1);
   }
 
@@ -689,7 +634,6 @@ export class PokedexGridComponent {
       this.#sortField.set(DEFAULT_SORT_FIELD);
       this.#sortDirection.set(DEFAULT_SORT_DIRECTION);
     }
-    this.#abilityQuery.set('');
     this.#resetKey.update(key => key + 1);
   }
 }
