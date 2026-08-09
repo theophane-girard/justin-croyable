@@ -55,6 +55,7 @@ export * from './components/separator';
 export * from './components/sheet';
 export * from './components/sheet-handle';
 export * from './components/skeleton';
+export * from './components/page-skeletons';
 export * from './components/slider';
 export * from './components/sonner';
 export * from './components/spinner';

@@ -20,6 +20,7 @@ import {
   lucideInbox,
   lucideMoon,
   lucidePanelLeft,
+  lucideRefreshCw,
   lucideSearch,
   lucideSun,
 } from '@ng-icons/lucide';
@@ -104,6 +105,7 @@ const preview: Preview = {
             lucideInbox,
             lucideMoon,
             lucidePanelLeft,
+            lucideRefreshCw,
             lucideSearch,
             lucideSun,
           }),
