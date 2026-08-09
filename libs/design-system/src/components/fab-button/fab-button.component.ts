@@ -14,9 +14,11 @@ import { lucideLoaderCircle } from '@ng-icons/lucide';
 import type { ClassValue } from 'clsx';
 
 import { mergeClasses } from '../../utils/merge-classes';
+import { BadgeComponent, type BadgeTypeVariants } from '../badge';
 
 import {
   fabButtonVariants,
+  type FabButtonBadge,
   type FabButtonPosition,
   type FabButtonSize,
   type FabButtonType,
@@ -24,12 +26,22 @@ import {
 
 @Component({
   selector: 'app-fab-button, button[appFabButton], a[appFabButton]',
-  imports: [NgIcon],
+  imports: [NgIcon, BadgeComponent],
   template: `
     @if (loading()) {
       <ng-icon name="lucideLoaderCircle" class="animate-spin duration-2000" />
     } @else {
       <ng-content />
+    }
+    @if (showBadge()) {
+      <app-badge
+        [type]="badgeType()"
+        shape="pill"
+        class="pointer-events-none absolute -top-1 -right-1 h-5 min-w-5 justify-center px-1 tabular-nums"
+        aria-hidden="true"
+      >
+        {{ badge() }}
+      </app-badge>
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -52,6 +64,8 @@ export class FabButtonComponent {
   readonly class = input<ClassValue>('');
   readonly loading = input(false, { transform: booleanAttribute });
   readonly fabDisabled = input(false, { transform: booleanAttribute });
+  readonly badge = input<FabButtonBadge>(null);
+  readonly badgeType = input<BadgeTypeVariants>('destructive');
 
   constructor() {
     if (this.needsButtonSemantics()) {
@@ -60,6 +74,11 @@ export class FabButtonComponent {
       host.setAttribute('tabindex', '0');
     }
   }
+
+  protected readonly showBadge = computed(() => {
+    const value = this.badge();
+    return value !== null && value !== '' && value !== 0;
+  });
 
   protected readonly classes = computed(() =>
     mergeClasses(
@@ -70,6 +89,7 @@ export class FabButtonComponent {
         loading: this.loading(),
         disabled: this.fabDisabled(),
       }),
+      this.showBadge() && this.position() === 'static' ? 'relative' : '',
       this.class(),
     ),
   );

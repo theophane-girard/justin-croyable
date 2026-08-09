@@ -106,3 +106,4 @@ export type FabButtonPosition = NonNullable<
 export type FabListSide = NonNullable<
   VariantProps<typeof fabListVariants>['side']
 >;
+export type FabButtonBadge = string | number | null;
