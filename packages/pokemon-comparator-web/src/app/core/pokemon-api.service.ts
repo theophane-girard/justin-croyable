@@ -187,13 +187,13 @@ function mapForm(
   const abilitySlugs = mapAbilitySlugs(form.pokemonabilities);
   const shared = { types, stats, stage: meta.stage, legendary: meta.legendary, abilitySlugs };
   if (form.is_default) {
-    return { id: form.id, names: speciesNames, ...shared };
+    return { id: form.id, names: speciesNames, mega: false, ...shared };
   }
   const variant = megaVariant(form.name);
   if (variant === undefined) {
     return undefined;
   }
-  return { id: form.id, names: megaNames(speciesNames, variant), ...shared };
+  return { id: form.id, names: megaNames(speciesNames, variant), mega: true, ...shared };
 }
 
 function buildStageResolver(
@@ -260,6 +260,7 @@ function buildDex(species: readonly GraphQlSpecies[]): Pokemon[] {
         stats: item.stats,
         stage: meta.stage,
         legendary: meta.legendary,
+        mega: true,
         abilitySlugs: meta.abilitySlugs,
       },
     ];
