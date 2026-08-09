@@ -215,7 +215,7 @@ function toTile(pokemon: Pokemon): PokedexTile {
     <app-fab
       triggerIcon="phosphorSliders"
       triggerLabel="Filtrer et trier"
-      badgeType="default"
+      badgeType="secondary"
       [badge]="activeCount()"
     >
       <app-fab-list>
@@ -223,7 +223,7 @@ function toTile(pokemon: Pokemon): PokedexTile {
           appFabButton
           type="button"
           aria-label="Filtrer"
-          badgeType="default"
+          badgeType="secondary"
           [badge]="activeFilterCount()"
           (click)="openFilters()"
         >
@@ -233,7 +233,7 @@ function toTile(pokemon: Pokemon): PokedexTile {
           appFabButton
           type="button"
           aria-label="Trier"
-          badgeType="default"
+          badgeType="secondary"
           [badge]="activeSortCount()"
           (click)="openSort()"
         >
