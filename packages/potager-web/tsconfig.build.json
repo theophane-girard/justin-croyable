@@ -12,7 +12,23 @@
     "lib": ["es2022", "dom", "dom.iterable"],
     "types": [],
     "experimentalDecorators": true,
-    "noUnusedLocals": false
+    "noUnusedLocals": false,
+    "baseUrl": ".",
+    // Libs source-only (leur `main` pointe sur src/index.ts) : le mapping vise
+    // le chemin réel du dépôt et non le lien npm de node_modules. Sinon le
+    // serveur de dev les prend pour des paquets publiés et les confie au
+    // pré-bundling Vite, qui ne résout que .mjs/.js/.cjs et casse sur leurs
+    // imports TypeScript.
+    "paths": {
+      "@justin-croyable/design-system": ["../../libs/design-system/src/index.ts"],
+      "@justin-croyable/design-system/package.json": ["../../libs/design-system/package.json"],
+      "@justin-croyable/design-system/palettes/*": [
+        "../../libs/design-system/src/theme/palettes/*"
+      ],
+      "@justin-croyable/design-system/*": ["../../libs/design-system/src/*"],
+      "@justin-croyable/api-contract": ["../../libs/api-contract/src/index.ts"],
+      "@justin-croyable/api-contract/*": ["../../libs/api-contract/src/*"]
+    }
   },
   "angularCompilerOptions": {
     "strictInjectionParameters": true,
