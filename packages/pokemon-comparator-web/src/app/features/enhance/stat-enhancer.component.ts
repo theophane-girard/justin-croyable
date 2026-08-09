@@ -121,6 +121,13 @@ interface NatureOption {
             </div>
           }
         </section>
+
+        <div class="flex justify-end">
+          <button appButton type="button" variant="ghost" size="sm" (click)="reset()">
+            <ng-icon name="phosphorArrowClockwise" class="size-4" />
+            Réinitialiser
+          </button>
+        </div>
       </div>
     </ng-template>
   `,
@@ -183,6 +190,12 @@ export class StatEnhancerComponent {
       customClasses: 'p-4',
       onOk: () => this.#applyDraft(),
     });
+  }
+
+  protected reset(): void {
+    this.draftNature.set(DEFAULT_ENHANCE_CONFIG.nature);
+    this.draftEvs.set(DEFAULT_ENHANCE_CONFIG.evs);
+    this.#enhance.patch(DEFAULT_ENHANCE_CONFIG);
   }
 
   protected onNatureChange(value: string | string[]): void {
