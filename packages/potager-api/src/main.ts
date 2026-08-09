@@ -11,7 +11,12 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const config = app.get<ConfigService<Env, true>>(ConfigService);
   app.setGlobalPrefix(GLOBAL_PREFIX);
-  app.enableCors({ origin: config.get('CORS_ORIGIN', { infer: true }), credentials: true });
+  const corsOrigins = config
+    .get('CORS_ORIGIN', { infer: true })
+    .split(',')
+    .map(origin => origin.trim())
+    .filter(Boolean);
+  app.enableCors({ origin: corsOrigins, credentials: true });
   const port = config.get('PORT', { infer: true });
   await app.listen(port);
   Logger.log(`🚀 API en écoute sur http://localhost:${port}/${GLOBAL_PREFIX}`);
