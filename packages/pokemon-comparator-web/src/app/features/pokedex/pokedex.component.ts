@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
 
-import { ButtonComponent, EmptyComponent, SpinnerComponent } from '@justin-croyable/design-system';
+import { ButtonComponent, EmptyComponent, GridSkeletonComponent } from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
 
 import { ComparatorStore } from '../../core/comparator-store';
@@ -10,7 +10,7 @@ import { PokedexGridComponent } from './pokedex-grid.component';
 
 @Component({
   selector: 'app-pokedex',
-  imports: [NgIcon, ButtonComponent, EmptyComponent, SpinnerComponent, PokedexGridComponent],
+  imports: [NgIcon, ButtonComponent, EmptyComponent, GridSkeletonComponent, PokedexGridComponent],
   template: `
     <div class="mx-auto flex h-full w-full max-w-5xl flex-col gap-6">
       <header class="flex flex-col gap-1">
@@ -25,10 +25,7 @@ import { PokedexGridComponent } from './pokedex-grid.component';
       </header>
 
       @if (store.isLoading()) {
-        <div class="flex flex-col items-center justify-center gap-3 py-16">
-          <app-spinner class="text-primary size-8" />
-          <p class="text-muted-foreground text-sm">Chargement du Pokédex…</p>
-        </div>
+        <app-grid-skeleton class="min-h-0 flex-1" [tileCount]="18" />
       } @else if (store.hasError()) {
         <div class="flex flex-col items-center gap-4">
           <app-empty

@@ -18,8 +18,8 @@ import {
   ProgressComponent,
   SegmentComponent,
   type SegmentItem,
+  GenericSkeletonComponent,
   SheetService,
-  SpinnerComponent,
   ThemePaletteService,
 } from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
@@ -94,7 +94,7 @@ const DISPLAY_MODE_ITEMS: readonly SegmentItem[] = [
     EmptyComponent,
     ProgressComponent,
     SegmentComponent,
-    SpinnerComponent,
+    GenericSkeletonComponent,
     PokedexGridComponent,
   ],
   template: `
@@ -111,10 +111,7 @@ const DISPLAY_MODE_ITEMS: readonly SegmentItem[] = [
       </header>
 
       @if (store.isLoading()) {
-        <div class="flex flex-col items-center justify-center gap-3 py-16">
-          <app-spinner class="text-primary size-8" />
-          <p class="text-muted-foreground text-sm">Chargement du Pokédex…</p>
-        </div>
+        <app-generic-skeleton />
       } @else if (store.hasError()) {
         <div class="flex flex-col items-center gap-4">
           <app-empty
