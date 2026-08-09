@@ -2,6 +2,7 @@ import { httpResource } from '@angular/common/http';
 import { computed, Injectable, type Signal } from '@angular/core';
 
 import { MEGA_SUPPLEMENT } from './mega-supplement.data';
+import { ULTRA_BEAST_SPECIES_IDS } from './ultra-beast.data';
 import { type Ability, ABILITIES_QUERY, parseAbilities } from './pokemon-ability';
 import {
   EVOLUTION_STAGE,
@@ -164,6 +165,7 @@ function megaNames(speciesNames: readonly PokemonName[], variant: string): Pokem
 interface SpeciesMeta {
   readonly stage: EvolutionStage;
   readonly legendary: boolean;
+  readonly ultraBeast: boolean;
   readonly types: readonly string[];
   readonly abilitySlugs: readonly string[];
 }
@@ -185,7 +187,14 @@ function mapForm(
   }
   const types = form.pokemontypes.map(item => item.type.name);
   const abilitySlugs = mapAbilitySlugs(form.pokemonabilities);
-  const shared = { types, stats, stage: meta.stage, legendary: meta.legendary, abilitySlugs };
+  const shared = {
+    types,
+    stats,
+    stage: meta.stage,
+    legendary: meta.legendary,
+    ultraBeast: meta.ultraBeast,
+    abilitySlugs,
+  };
   if (form.is_default) {
     return { id: form.id, names: speciesNames, mega: false, ...shared };
   }
@@ -233,6 +242,7 @@ function buildDex(species: readonly GraphQlSpecies[]): Pokemon[] {
     const meta: SpeciesMeta = {
       stage: stageOf(entry.id),
       legendary: entry.is_legendary || entry.is_mythical,
+      ultraBeast: ULTRA_BEAST_SPECIES_IDS.has(entry.id),
       types: defaultForm ? defaultForm.pokemontypes.map(item => item.type.name) : [],
       abilitySlugs: defaultForm ? mapAbilitySlugs(defaultForm.pokemonabilities) : [],
     };
@@ -261,6 +271,7 @@ function buildDex(species: readonly GraphQlSpecies[]): Pokemon[] {
         stage: meta.stage,
         legendary: meta.legendary,
         mega: true,
+        ultraBeast: meta.ultraBeast,
         abilitySlugs: meta.abilitySlugs,
       },
     ];

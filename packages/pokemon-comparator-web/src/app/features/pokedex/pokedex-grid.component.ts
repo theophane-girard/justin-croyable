@@ -84,6 +84,12 @@ const MEGA_ITEMS: ToggleGroupItem[] = [
   { value: 'ordinary', label: 'Masquer les méga' },
 ];
 
+const ULTRA_BEAST_ITEMS: ToggleGroupItem[] = [
+  { value: ALL, label: 'Tous' },
+  { value: 'ultra', label: 'Ultra-Chimères' },
+  { value: 'ordinary', label: 'Masquer les Ultra-Chimères' },
+];
+
 const DIRECTION_ITEMS: ToggleGroupItem[] = [
   { value: 'desc', label: 'Décroissant' },
   { value: 'asc', label: 'Croissant' },
@@ -109,6 +115,7 @@ const DEFAULT_SORT_DIRECTION = 'asc';
 const STAGE_VALUES: readonly string[] = STAGE_ITEMS.map(item => item.value);
 const LEGENDARY_VALUES: readonly string[] = LEGENDARY_ITEMS.map(item => item.value);
 const MEGA_VALUES: readonly string[] = MEGA_ITEMS.map(item => item.value);
+const ULTRA_BEAST_VALUES: readonly string[] = ULTRA_BEAST_ITEMS.map(item => item.value);
 const DIRECTION_VALUES: readonly string[] = DIRECTION_ITEMS.map(item => item.value);
 const SORT_VALUES: readonly string[] = SORT_OPTIONS.map(option => option.value);
 
@@ -302,6 +309,17 @@ function toTile(pokemon: Pokemon): PokedexTile {
               (valueChange)="onMegaChange($event)"
             />
           </section>
+
+          <section class="flex flex-col gap-2">
+            <h3 class="text-sm font-semibold">Ultra-Chimères</h3>
+            <app-toggle-group
+              mode="single"
+              class="flex-wrap justify-start"
+              [items]="ultraBeastItems"
+              [value]="ultraBeastFilter()"
+              (valueChange)="onUltraBeastChange($event)"
+            />
+          </section>
         }
 
         <section class="flex flex-col gap-2">
@@ -394,6 +412,7 @@ export class PokedexGridComponent {
   protected readonly stageItems = STAGE_ITEMS;
   protected readonly legendaryItems = LEGENDARY_ITEMS;
   protected readonly megaItems = MEGA_ITEMS;
+  protected readonly ultraBeastItems = ULTRA_BEAST_ITEMS;
   protected readonly directionItems = DIRECTION_ITEMS;
   protected readonly sortOptions = SORT_OPTIONS;
   protected readonly trackByIndex = (index: number): number => index;
@@ -404,6 +423,7 @@ export class PokedexGridComponent {
     stage: enumFilter(STAGE_VALUES, ALL),
     legendary: enumFilter(LEGENDARY_VALUES, ALL),
     mega: enumFilter(MEGA_VALUES, ALL),
+    ultra: enumFilter(ULTRA_BEAST_VALUES, ALL),
     abilities: arrayFilter(),
     sort: enumFilter(SORT_VALUES, DEFAULT_SORT_FIELD),
     dir: enumFilter(DIRECTION_VALUES, DEFAULT_SORT_DIRECTION),
@@ -414,6 +434,7 @@ export class PokedexGridComponent {
   readonly #stageFilter = signal<string>(ALL);
   readonly #legendaryFilter = signal<string>(ALL);
   readonly #megaFilter = signal<string>(ALL);
+  readonly #ultraBeastFilter = signal<string>(ALL);
   readonly #selectedAbilities = signal<string[]>([]);
   readonly #sortField = signal<string>(DEFAULT_SORT_FIELD);
   readonly #sortDirection = signal<string>(DEFAULT_SORT_DIRECTION);
@@ -433,6 +454,9 @@ export class PokedexGridComponent {
   protected readonly megaFilter = computed(() =>
     this.syncUrl() ? this.#url.mega() : this.#megaFilter(),
   );
+  protected readonly ultraBeastFilter = computed(() =>
+    this.syncUrl() ? this.#url.ultra() : this.#ultraBeastFilter(),
+  );
   protected readonly sortField = computed(() =>
     this.syncUrl() ? this.#url.sort() : this.#sortField(),
   );
@@ -451,7 +475,8 @@ export class PokedexGridComponent {
       this.#effectiveAbilities().length +
       (this.stageFilter() !== ALL ? 1 : 0) +
       (this.legendaryFilter() !== ALL ? 1 : 0) +
-      (this.megaFilter() !== ALL ? 1 : 0),
+      (this.megaFilter() !== ALL ? 1 : 0) +
+      (this.ultraBeastFilter() !== ALL ? 1 : 0),
   );
 
   protected readonly activeSortCount = computed(() =>
@@ -473,6 +498,7 @@ export class PokedexGridComponent {
     const stage = this.stageFilter();
     const legendary = this.legendaryFilter();
     const mega = this.megaFilter();
+    const ultraBeast = this.ultraBeastFilter();
     const abilities = new Set(this.#effectiveAbilities());
 
     const filtered = this.pokemons()
@@ -485,6 +511,11 @@ export class PokedexGridComponent {
           (legendary === 'legendary' ? pokemon.legendary : !pokemon.legendary),
       )
       .filter(pokemon => mega === ALL || (mega === 'mega' ? pokemon.mega : !pokemon.mega))
+      .filter(
+        pokemon =>
+          ultraBeast === ALL ||
+          (ultraBeast === 'ultra' ? pokemon.ultraBeast : !pokemon.ultraBeast),
+      )
       .filter(
         pokemon =>
           abilities.size === 0 || pokemon.abilitySlugs.some(slug => abilities.has(slug)),
@@ -603,6 +634,15 @@ export class PokedexGridComponent {
     this.#megaFilter.set(mega);
   }
 
+  protected onUltraBeastChange(value: string | string[]): void {
+    const ultraBeast = asArray(value)[0] ?? ALL;
+    if (this.syncUrl()) {
+      this.#url.set('ultra', ultraBeast);
+      return;
+    }
+    this.#ultraBeastFilter.set(ultraBeast);
+  }
+
   protected onAbilitiesChange(value: string | string[]): void {
     const abilities = asArray(value);
     if (this.syncUrl()) {
@@ -632,12 +672,13 @@ export class PokedexGridComponent {
 
   protected resetFilters(): void {
     if (this.syncUrl()) {
-      this.#url.patch({ types: [], stage: ALL, legendary: ALL, mega: ALL, abilities: [] });
+      this.#url.patch({ types: [], stage: ALL, legendary: ALL, mega: ALL, ultra: ALL, abilities: [] });
     } else {
       this.#selectedTypes.set([]);
       this.#stageFilter.set(ALL);
       this.#legendaryFilter.set(ALL);
       this.#megaFilter.set(ALL);
+      this.#ultraBeastFilter.set(ALL);
       this.#selectedAbilities.set([]);
     }
     this.#resetKey.update(key => key + 1);
@@ -660,6 +701,7 @@ export class PokedexGridComponent {
         stage: ALL,
         legendary: ALL,
         mega: ALL,
+        ultra: ALL,
         abilities: [],
         sort: DEFAULT_SORT_FIELD,
         dir: DEFAULT_SORT_DIRECTION,
@@ -669,6 +711,7 @@ export class PokedexGridComponent {
       this.#stageFilter.set(ALL);
       this.#legendaryFilter.set(ALL);
       this.#megaFilter.set(ALL);
+      this.#ultraBeastFilter.set(ALL);
       this.#selectedAbilities.set([]);
       this.#sortField.set(DEFAULT_SORT_FIELD);
       this.#sortDirection.set(DEFAULT_SORT_DIRECTION);

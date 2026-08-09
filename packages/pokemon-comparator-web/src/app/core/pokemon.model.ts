@@ -70,6 +70,7 @@ export interface Pokemon {
   readonly stage: EvolutionStage;
   readonly legendary: boolean;
   readonly mega: boolean;
+  readonly ultraBeast: boolean;
   readonly abilitySlugs: readonly string[];
 }
 
