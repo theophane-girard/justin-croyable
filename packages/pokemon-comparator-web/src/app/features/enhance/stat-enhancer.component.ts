@@ -97,14 +97,39 @@ interface NatureOption {
                 <span class="text-muted-foreground text-sm">{{ statMeta[stat].label }}</span>
                 <span class="text-sm font-medium tabular-nums">{{ draftEvs()[stat] }}</span>
               </div>
-              <app-slider
-                [min]="0"
-                [max]="maxEvPerStat"
-                [step]="evStep"
-                [default]="evSeed()[stat]"
-                [disabled]="!draftLevel100()"
-                (slideIndexChange)="onEvChange(stat, $event)"
-              />
+              <div class="flex items-center gap-2">
+                <button
+                  appButton
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  [attr.aria-label]="'EV minimum ' + statMeta[stat].label"
+                  [buttonDisabled]="!draftLevel100()"
+                  (click)="setEv(stat, 0)"
+                >
+                  <ng-icon name="phosphorCaretLineLeft" class="size-4" />
+                </button>
+                <app-slider
+                  class="flex-1"
+                  [min]="0"
+                  [max]="maxEvPerStat"
+                  [step]="evStep"
+                  [value]="evValues()[stat]"
+                  [disabled]="!draftLevel100()"
+                  (slideIndexChange)="onEvChange(stat, $event)"
+                />
+                <button
+                  appButton
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  [attr.aria-label]="'EV maximum ' + statMeta[stat].label"
+                  [buttonDisabled]="!draftLevel100()"
+                  (click)="setEv(stat, maxEvPerStat)"
+                >
+                  <ng-icon name="phosphorCaretLineRight" class="size-4" />
+                </button>
+              </div>
             </div>
           }
         </section>
@@ -139,28 +164,24 @@ export class StatEnhancerComponent {
   protected readonly draftLevel100 = signal<boolean>(DEFAULT_ENHANCE_CONFIG.level100);
   protected readonly draftNature = signal<string>(DEFAULT_ENHANCE_CONFIG.nature);
   protected readonly draftEvs = signal<Readonly<Record<Stat, number>>>(DEFAULT_ENHANCE_CONFIG.evs);
-  protected readonly evSeed = signal<Readonly<Record<Stat, readonly number[]>>>(
-    this.#seedFrom(DEFAULT_ENHANCE_CONFIG.evs),
-  );
 
   protected readonly draftEvsTotal = computed(() => evsTotal(this.draftEvs()));
   protected readonly draftNatureEffect = computed(() =>
     natureEffectLabel(natureById(this.draftNature())),
   );
-
-  #seedFrom(evs: Readonly<Record<Stat, number>>): Record<Stat, number[]> {
+  protected readonly evValues = computed<Record<Stat, number[]>>(() => {
+    const evs = this.draftEvs();
     return Object.fromEntries(STAT_ORDER.map(stat => [stat, [evs[stat]]])) as Record<
       Stat,
       number[]
     >;
-  }
+  });
 
   protected open(): void {
     const config = this.#appliedConfig();
     this.draftLevel100.set(config.level100);
     this.draftNature.set(config.nature);
     this.draftEvs.set(config.evs);
-    this.evSeed.set(this.#seedFrom(config.evs));
     this.#sheet.create({
       content: this.enhanceTemplate(),
       side: 'bottom',
@@ -180,8 +201,12 @@ export class StatEnhancerComponent {
   }
 
   protected onEvChange(stat: Stat, values: number[]): void {
-    const value = Math.max(0, Math.min(values[0] ?? 0, MAX_EV_PER_STAT));
-    this.draftEvs.set({ ...this.draftEvs(), [stat]: value });
+    this.setEv(stat, values[0] ?? 0);
+  }
+
+  protected setEv(stat: Stat, value: number): void {
+    const bounded = Math.max(0, Math.min(value, MAX_EV_PER_STAT));
+    this.draftEvs.set({ ...this.draftEvs(), [stat]: bounded });
   }
 
   #applyDraft(): void {
