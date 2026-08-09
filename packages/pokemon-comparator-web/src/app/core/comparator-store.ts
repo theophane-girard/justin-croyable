@@ -1,5 +1,6 @@
 import { computed, inject, Injectable, type Signal, signal } from '@angular/core';
 
+import { type Ability } from './pokemon-ability';
 import { PokemonApiService } from './pokemon-api.service';
 import { type Pokemon } from './pokemon.model';
 
@@ -27,6 +28,7 @@ export class ComparatorStore {
   readonly maxSelection = MAX_SELECTION;
 
   readonly pokemons: Signal<readonly Pokemon[]> = this.#api.pokemons;
+  readonly abilities: Signal<readonly Ability[]> = this.#api.abilities;
   readonly isLoading: Signal<boolean> = this.#api.isLoading;
   readonly hasError = this.#api.hasError;
 

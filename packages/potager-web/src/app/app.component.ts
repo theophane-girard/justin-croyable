@@ -1,22 +1,14 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import {
-  NavigationCancel,
-  NavigationEnd,
-  NavigationError,
-  NavigationStart,
-  Router,
-  RouterLink,
-  RouterOutlet,
-} from '@angular/router';
-import { filter, map } from 'rxjs';
+import { RouterLink, RouterOutlet } from '@angular/router';
 
 import {
   BadgeComponent,
+  injectCurrentPath,
+  isActivePath,
   LayoutImports,
   SegmentComponent,
   type SegmentItem,
-  SkeletonComponent,
+  SkeletonOutletComponent,
   ThemeService,
 } from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
@@ -46,7 +38,7 @@ const THEME_VALUE = { light: 'light', dark: 'dark' } as const;
     NgIcon,
     SegmentComponent,
     BadgeComponent,
-    SkeletonComponent,
+    SkeletonOutletComponent,
   ],
   template: `
     <div class="bg-background text-foreground h-dvh overflow-hidden">
@@ -121,21 +113,10 @@ const THEME_VALUE = { light: 'light', dark: 'dark' } as const;
             </div>
           </app-header>
 
-          <app-content class="relative min-h-0 overflow-auto p-4">
-            <router-outlet />
-            @if (navigating()) {
-              <div class="bg-background absolute inset-0 z-10 flex flex-col gap-4 p-4">
-                <app-skeleton class="h-7 w-56" />
-                <app-skeleton class="h-4 w-80 max-w-full" />
-                <div class="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                  <app-skeleton class="h-24" />
-                  <app-skeleton class="h-24" />
-                  <app-skeleton class="h-24" />
-                  <app-skeleton class="h-24" />
-                </div>
-                <app-skeleton class="h-80" />
-              </div>
-            }
+          <app-content class="min-h-0 overflow-auto p-4">
+            <app-skeleton-outlet class="min-h-full">
+              <router-outlet />
+            </app-skeleton-outlet>
           </app-content>
 
           <app-footer class="text-muted-foreground flex items-center px-4 text-xs">
@@ -150,40 +131,19 @@ const THEME_VALUE = { light: 'light', dark: 'dark' } as const;
 export class AppComponent {
   protected readonly theme = inject(ThemeService);
   readonly #store = inject(HarvestStore);
-  readonly #router = inject(Router);
 
   protected readonly sidebarCollapsed = signal(false);
 
-  protected readonly navigating = toSignal(
-    this.#router.events.pipe(
-      filter(
-        (event): event is NavigationStart | NavigationEnd | NavigationCancel | NavigationError =>
-          event instanceof NavigationStart ||
-          event instanceof NavigationEnd ||
-          event instanceof NavigationCancel ||
-          event instanceof NavigationError,
-      ),
-      map(event => event instanceof NavigationStart),
-    ),
-    { initialValue: false },
-  );
+  protected readonly currentPath = injectCurrentPath();
 
   protected readonly priceSourceLive = computed(() => this.#store.priceSource() === 'live');
   protected readonly priceModeBio = computed(() => this.#store.priceMode() === PRICE_MODE.bio);
-
-  protected readonly currentPath = toSignal(
-    this.#router.events.pipe(
-      filter((event): event is NavigationEnd => event instanceof NavigationEnd),
-      map(event => this.#normalizePath(event.urlAfterRedirects)),
-    ),
-    { initialValue: this.#normalizePath(this.#router.url) },
-  );
 
   protected readonly navLinks = computed(() => {
     const current = this.currentPath();
     return NAV_ITEMS.map(item => ({
       ...item,
-      active: this.#isActive(item.path, current),
+      active: isActivePath(item.path, current),
     }));
   });
 
@@ -207,17 +167,5 @@ export class AppComponent {
 
   protected onThemeChange(value: string): void {
     this.theme.set(value === THEME_VALUE.dark ? THEME_VALUE.dark : THEME_VALUE.light);
-  }
-
-  #isActive(path: string, active: string): boolean {
-    if (path === '') {
-      return active === '';
-    }
-    return active === path || active.startsWith(`${path}/`);
-  }
-
-  #normalizePath(url: string): string {
-    const path = url.split('?')[0]?.split('#')[0] ?? url;
-    return path.replace(/^\/+/, '');
   }
 }
