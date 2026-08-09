@@ -6,7 +6,10 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AuthModule } from '../auth/auth.module';
 import { validateEnv } from '../config/env';
 import { DbModule } from '../db/db.module';
+import { ExpenseModule } from '../expenses/expense.module';
 import { FirebaseModule } from '../firebase/firebase.module';
+import { HarvestModule } from '../harvests/harvest.module';
+import { PlantModule } from '../plants/plant.module';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -28,6 +31,9 @@ const RATE_LIMIT_MAX_REQUESTS = 100;
     DbModule,
     FirebaseModule,
     AuthModule,
+    HarvestModule,
+    PlantModule,
+    ExpenseModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
