@@ -34,7 +34,7 @@ jobs:
           WIF_PROVIDER: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           SA_EMAIL: ${{ secrets.GCP_SERVICE_ACCOUNT }}
           PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-          DB_URL: ${{ secrets.DATABASE_URL }}
+          DB_URL: ${{ secrets.GARDEN_HARVEST_DATABASE_URL }}
         run: |
           if [ -n "$WIF_PROVIDER" ] && [ -n "$SA_EMAIL" ] && [ -n "$PROJECT_ID" ]; then
             echo 'ready=true' >> "$GITHUB_OUTPUT"
@@ -94,7 +94,7 @@ jobs:
       - name: Migrations Drizzle
         if: steps.gcp.outputs.ready == 'true' && steps.affected.outputs.api == 'true' && steps.gcp.outputs.migrate == 'true'
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.GARDEN_HARVEST_DATABASE_URL }}
         run: npx nx db-migrate potager-api
 
       - name: Build & push de l'image

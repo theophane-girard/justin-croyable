@@ -22,18 +22,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      # Tant que le secret DATABASE_URL n'est pas configuré, tout est ignoré :
-      # le job reste vert (même logique de garde que le déploiement Firebase).
-      - name: DATABASE_URL configuré ?
+      # Tant que le secret GARDEN_HARVEST_DATABASE_URL n'est pas configuré, tout
+      # est ignoré : le job reste vert (même garde que le déploiement Firebase).
+      - name: Base de données configurée ?
         id: db
         env:
-          DB_URL: ${{ secrets.DATABASE_URL }}
+          DB_URL: ${{ secrets.GARDEN_HARVEST_DATABASE_URL }}
         run: |
           if [ -n "$DB_URL" ]; then
             echo 'ready=true' >> "$GITHUB_OUTPUT"
           else
             echo 'ready=false' >> "$GITHUB_OUTPUT"
-            echo "::warning::Migration ignorée : secret DATABASE_URL absent (Settings → Secrets and variables → Actions)."
+            echo "::warning::Migration ignorée : secret GARDEN_HARVEST_DATABASE_URL absent (Settings → Secrets and variables → Actions)."
           fi
 
       - name: Checkout
@@ -54,5 +54,5 @@ jobs:
       - name: Migrations Drizzle
         if: steps.db.outputs.ready == 'true'
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.GARDEN_HARVEST_DATABASE_URL }}
         run: npx nx db-migrate potager-api
