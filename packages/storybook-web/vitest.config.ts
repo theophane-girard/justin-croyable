@@ -53,6 +53,27 @@ export default defineConfig({
     storybookTest({ configDir: '.storybook' }),
     decodeStoryPathGuard(),
   ],
+  // Pré-bundle en amont les dépendances tierces que seules quelques stories
+  // importent. Sinon Vite les découvre à la volée quand la première story
+  // concernée se charge, ré-optimise, puis force un rechargement dur de l'iframe
+  // d'aperçu ; le test en cours de connexion échoue alors avec « Cannot connect
+  // to the iframe » — d'où des échecs aléatoires en CI selon l'ordre des tests.
+  // Uniquement des libs sans compilation Angular (esbuild suffit) ; les paquets
+  // Angular/CDK restent optimisés par `@storybook/angular-vite`.
+  optimizeDeps: {
+    include: [
+      'clsx',
+      'class-variance-authority',
+      'tailwind-merge',
+      'rxjs',
+      'storybook/test',
+      '@ng-icons/phosphor-icons/regular',
+      '@ng-icons/lucide',
+      'echarts',
+      'echarts/core',
+      'ag-grid-community',
+    ],
+  },
   test: {
     name: 'storybook-web',
     dir: DOSSIER_STORIES,
