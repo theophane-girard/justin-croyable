@@ -1,6 +1,6 @@
 import { computed, Injectable } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { initializeApp } from 'firebase/app';
+import { getApps, initializeApp } from 'firebase/app';
 import {
   type Auth,
   GoogleAuthProvider,
@@ -18,7 +18,7 @@ type AuthState = { readonly user: User | null; readonly ready: boolean };
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  readonly #auth: Auth = getAuth(initializeApp(FIREBASE_CONFIG));
+  readonly #auth: Auth = getAuth(getApps().at(0) ?? initializeApp(FIREBASE_CONFIG));
 
   readonly #state$ = new Observable<AuthState>(subscriber =>
     onIdTokenChanged(this.#auth, user => subscriber.next({ user, ready: true })),

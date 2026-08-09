@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import {
   NavigationCancel,
@@ -21,6 +28,7 @@ import {
 } from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
 
+import { ApiService } from './core/api.service';
 import { AUTH_GATE_ENABLED } from './core/app-config';
 import { AuthService } from './core/auth.service';
 import { HarvestStore } from './core/harvest-store';
@@ -167,6 +175,15 @@ export class AppComponent {
   readonly #store = inject(HarvestStore);
   readonly #router = inject(Router);
   readonly #auth = inject(AuthService);
+  readonly #api = inject(ApiService);
+
+  constructor() {
+    effect(() => {
+      if (this.#auth.isAuthenticated()) {
+        void this.#provisionAccount();
+      }
+    });
+  }
 
   protected readonly showSplash = computed(() => AUTH_GATE_ENABLED && !this.#auth.ready());
   protected readonly showLogin = computed(
@@ -240,5 +257,13 @@ export class AppComponent {
   #normalizePath(url: string): string {
     const path = url.split('?')[0]?.split('#')[0] ?? url;
     return path.replace(/^\/+/, '');
+  }
+
+  async #provisionAccount(): Promise<void> {
+    try {
+      await this.#api.me();
+    } catch {
+      return;
+    }
   }
 }
