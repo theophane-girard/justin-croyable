@@ -239,13 +239,13 @@ function toTile(pokemon: Pokemon): PokedexTile {
         >
           <ng-icon name="phosphorArrowsDownUp" class="size-5" />
         </button>
-        @if (activeFilterCount() > 0) {
+        @if (activeCount() > 0) {
           <button
             appFabButton
             type="button"
             variant="secondary"
-            aria-label="Effacer tous les filtres"
-            (click)="resetFilters()"
+            aria-label="Effacer les filtres et le tri"
+            (click)="clearAll()"
           >
             <ng-icon name="phosphorTrash" class="size-5" />
           </button>
@@ -668,6 +668,28 @@ export class PokedexGridComponent {
       this.#sortField.set(DEFAULT_SORT_FIELD);
       this.#sortDirection.set(DEFAULT_SORT_DIRECTION);
     }
+    this.#resetKey.update(key => key + 1);
+  }
+
+  protected clearAll(): void {
+    if (this.syncUrl()) {
+      this.#url.patch({
+        types: [],
+        stage: ALL,
+        legendary: ALL,
+        abilities: [],
+        sort: DEFAULT_SORT_FIELD,
+        dir: DEFAULT_SORT_DIRECTION,
+      });
+    } else {
+      this.#selectedTypes.set([]);
+      this.#stageFilter.set(ALL);
+      this.#legendaryFilter.set(ALL);
+      this.#selectedAbilities.set([]);
+      this.#sortField.set(DEFAULT_SORT_FIELD);
+      this.#sortDirection.set(DEFAULT_SORT_DIRECTION);
+    }
+    this.#abilityQuery.set('');
     this.#resetKey.update(key => key + 1);
   }
 }
