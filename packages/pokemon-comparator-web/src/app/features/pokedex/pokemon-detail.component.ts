@@ -5,6 +5,7 @@ import { RouterLink } from '@angular/router';
 import {
   BadgeComponent,
   ButtonComponent,
+  DetailSkeletonComponent,
   EmptyComponent,
   PopoverComponent,
   PopoverDirective,
@@ -102,6 +103,7 @@ function toDetail(pokemon: Pokemon): DetailView {
     NgIcon,
     BadgeComponent,
     ButtonComponent,
+    DetailSkeletonComponent,
     EmptyComponent,
     PopoverComponent,
     PopoverDirective,
@@ -119,7 +121,9 @@ function toDetail(pokemon: Pokemon): DetailView {
       </a>
 
       @let view = detail();
-      @if (!view) {
+      @if (store.isLoading()) {
+        <app-detail-skeleton />
+      } @else if (!view) {
         <app-empty
           icon="phosphorMagnifyingGlass"
           title="Pokémon introuvable"
