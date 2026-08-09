@@ -10,6 +10,9 @@ out-tsc
 .env.*
 !.env.example
 
+# rapports ESLint générés pour le contrôle du plafond de warnings
+eslint-report.json
+
 # cache du CLI Angular (track design-system web)
 .angular
 

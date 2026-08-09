@@ -71,6 +71,18 @@ jobs:
       - name: Typecheck et lint
         run: npx nx affected -t typecheck lint
 
+      # Les règles de style ESLint sont taguées `warn` pour ne pas bloquer le
+      # lint ci-dessus. Ce garde-fou compte l'ensemble des warnings du monorepo
+      # (tous les projets, pas seulement les affectés, car le plafond est
+      # global) et échoue au-delà du seuil, empêchant l'ajout de nouveaux
+      # warnings. Cible : faire redescendre le plafond au fil des corrections.
+      - name: Plafond de warnings ESLint
+        env:
+          ESLINT_MAX_WARNINGS: 94
+        run: |
+          npx nx run-many -t lint --all -- --format json --output-file eslint-report.json
+          node tools/check-eslint-warnings.mjs
+
       # Le binaire du navigateur est mis en cache entre les runs. Les
       # dépendances système (apt) sont réinstallées à chaque run car l'OS du
       # runner ne persiste pas.
