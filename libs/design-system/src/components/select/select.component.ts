@@ -215,7 +215,7 @@ export class SelectComponent implements FormValueControl<SelectValue>, OnDestroy
 
   readonly class = input<ClassValue>('');
   readonly maxLabelCount = input<number>(1);
-  readonly multiple = input<boolean>(false);
+  readonly multiple = input(false, { transform: booleanAttribute });
   readonly placeholder = input<string>('Select an option...');
   readonly size = input<SelectSizeVariants>('default');
   readonly displayLabel = input<string>('');
@@ -804,13 +804,14 @@ export class SelectComponent implements FormValueControl<SelectValue>, OnDestroy
   private updateItemFocus(items: HTMLElement[], focusedIndex: number) {
     for (let index = 0; index < items.length; index++) {
       const item = items[index];
+      // `data-active` tracks the roving focus highlight only. Selection is kept on
+      // `aria-selected`/`data-selected` by the item itself, so focusing an option
+      // no longer erases the selected state of the others (important in `multiple`).
       if (index === focusedIndex) {
         item.focus();
-        item.setAttribute('aria-selected', 'true');
-        item.setAttribute('data-selected', 'true');
+        item.setAttribute('data-active', '');
       } else {
-        item.removeAttribute('aria-selected');
-        item.removeAttribute('data-selected');
+        item.removeAttribute('data-active');
       }
     }
   }
