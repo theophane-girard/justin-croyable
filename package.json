@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
+    "lint:max-warnings": "nx run-many -t lint --all -- --format json --output-file eslint-report.json && node tools/check-eslint-warnings.mjs",
     "build:storybook-web": "nx build-storybook @justin-croyable/storybook-web",
     "build:potager-web": "nx build @justin-croyable/potager-web",
     "deploy:storybook-web": "nx build-storybook @justin-croyable/storybook-web && firebase deploy --only hosting:storybook",
