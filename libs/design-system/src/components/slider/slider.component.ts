@@ -251,9 +251,6 @@ export class SliderComponent implements ControlValueAccessor, AfterViewInit {
   });
 
   protected readonly percentages = computed(() => {
-    if (this.max() > 1) {
-      return this.values();
-    }
     const [min, max] = [this.min(), this.max()];
     return this.values().map(v => convertValueToPercentage(v, min, max));
   });
@@ -290,13 +287,11 @@ export class SliderComponent implements ControlValueAccessor, AfterViewInit {
         if (isTrack) {
           const coord = this.orientation() === 'vertical' ? event.clientY : event.clientX;
           const clickPercentage = this.calculatePercentage(coord);
-          let clickValue: number;
-          if (this.max() <= 1) {
-            const [userMin, userMax] = [this.min(), this.max()];
-            clickValue = userMin + (userMax - userMin) * clickPercentage;
-          } else {
-            clickValue = clamp(clickPercentage * 100, this.getMinMax());
-          }
+          const [clickMin, clickMax] = this.getMinMax();
+          const clickValue = clamp(clickMin + (clickMax - clickMin) * clickPercentage, [
+            clickMin,
+            clickMax,
+          ]);
 
           const currentValues = this.values();
           const closestIndex = currentValues.reduce(
@@ -422,15 +417,8 @@ export class SliderComponent implements ControlValueAccessor, AfterViewInit {
 
   private updateThumbFromPercentage(percentage: number, thumbIndex: number): void {
     const [min, max] = this.getMinMax();
-    let value: number;
-
-    if (this.max() <= 1) {
-      const [userMin, userMax] = [this.min(), this.max()];
-      value = roundToStep(userMin + (userMax - userMin) * clamp(percentage, [0, 1]), userMin, this.step());
-      value = clamp(value, [min, max]);
-    } else {
-      value = roundToStep(clamp(percentage * 100, [min, max]), min, this.step());
-    }
+    const rawValue = min + (max - min) * clamp(percentage, [0, 1]);
+    let value = clamp(roundToStep(rawValue, min, this.step()), [min, max]);
 
     const currentValues = [...this.values()];
 
