@@ -1,3 +1,4 @@
+import { USER_ROLE } from '@justin-croyable/api-contract';
 import {
   AbilityBuilder,
   createMongoAbility,
@@ -36,6 +37,10 @@ export type AppAbility = MongoAbility<[Action, AppSubject]>;
 export class AbilityFactory {
   createForUser(user: UserRecord): AppAbility {
     const { can, build } = new AbilityBuilder<AppAbility>(createMongoAbility);
+    if (user.role === USER_ROLE.admin) {
+      can(ACTION.manage, 'all');
+      return build();
+    }
     can(ACTION.manage, 'all', { userId: user.id });
     return build();
   }

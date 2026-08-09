@@ -14,6 +14,7 @@ function toProfile(user: UserRecord): UserProfile {
     email: user.email,
     displayName: user.displayName,
     photoUrl: user.photoUrl,
+    role: user.role,
     createdAt: user.createdAt.toISOString(),
   };
 }
