@@ -20,6 +20,12 @@
     },
     {
       "path": "./packages/pokemon-comparator-web"
+    },
+    {
+      "path": "./packages/potager-api"
+    },
+    {
+      "path": "./libs/api-contract"
     }
   ]
 }

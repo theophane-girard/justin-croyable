@@ -6,6 +6,7 @@ import {
   phosphorCoins,
   phosphorDotsThreeVertical,
   phosphorFunnel,
+  phosphorGoogleLogo,
   phosphorInfo,
   phosphorLeaf,
   phosphorListBullets,
@@ -16,6 +17,7 @@ import {
   phosphorPottedPlant,
   phosphorReceipt,
   phosphorScales,
+  phosphorSignOut,
   phosphorSnowflake,
   phosphorSquaresFour,
   phosphorSun,
@@ -23,6 +25,7 @@ import {
   phosphorTrash,
   phosphorTrendDown,
   phosphorTrendUp,
+  phosphorUserCircle,
 } from '@ng-icons/phosphor-icons/regular';
 
 export const APP_ICONS = {
@@ -33,6 +36,7 @@ export const APP_ICONS = {
   phosphorCoins,
   phosphorDotsThreeVertical,
   phosphorFunnel,
+  phosphorGoogleLogo,
   phosphorInfo,
   phosphorLeaf,
   phosphorListBullets,
@@ -43,6 +47,7 @@ export const APP_ICONS = {
   phosphorPottedPlant,
   phosphorReceipt,
   phosphorScales,
+  phosphorSignOut,
   phosphorSnowflake,
   phosphorSquaresFour,
   phosphorSun,
@@ -50,4 +55,5 @@ export const APP_ICONS = {
   phosphorTrash,
   phosphorTrendDown,
   phosphorTrendUp,
+  phosphorUserCircle,
 } as const;

@@ -17,16 +17,20 @@
     "@angular/platform-browser": "^21.2.0",
     "@angular/router": "^21.2.0",
     "@jsverse/transloco": "^8.4.0",
+    "@justin-croyable/api-contract": "*",
     "@justin-croyable/design-system": "*",
     "@ng-icons/core": "^33.4.0",
     "@ng-icons/phosphor-icons": "^33.4.0",
+    "@ts-rest/core": "^3.52.1",
     "ag-grid-angular": "^36.0.2",
     "ag-grid-community": "^36.0.2",
     "echarts": "^6.1.0",
+    "firebase": "^12.17.1",
     "ngx-echarts": "^21.0.0",
     "ngx-sonner": "^3.1.0",
     "rxjs": "~7.8.0",
-    "tslib": "^2.3.0"
+    "tslib": "^2.3.0",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@angular/build": "^21.2.0",

@@ -5,6 +5,11 @@ dist
 tmp
 out-tsc
 
+# variables d'environnement / secrets
+.env
+.env.*
+!.env.example
+
 # rapports ESLint générés pour le contrôle du plafond de warnings
 eslint-report.json
 

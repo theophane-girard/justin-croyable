@@ -1,0 +1,58 @@
+name: Migrate DB
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'packages/potager-api/drizzle/**'
+      - 'packages/potager-api/src/db/**'
+      - '.github/workflows/migrate-db.yml'
+  # Déclenchement manuel : Actions → Migrate DB → Run workflow (sur la branche
+  # de ton choix), pour appliquer les migrations sans merger dans master.
+  workflow_dispatch:
+
+# Une seule migration à la fois, jamais interrompue en cours de route.
+concurrency:
+  group: migrate-db
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: Applique les migrations Drizzle
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # Tant que le secret GARDEN_HARVEST_DATABASE_URL n'est pas configuré, tout
+      # est ignoré : le job reste vert (même garde que le déploiement Firebase).
+      - name: Base de données configurée ?
+        id: db
+        env:
+          DB_URL: ${{ secrets.GARDEN_HARVEST_DATABASE_URL }}
+        run: |
+          if [ -n "$DB_URL" ]; then
+            echo 'ready=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'ready=false' >> "$GITHUB_OUTPUT"
+            echo "::warning::Migration ignorée : secret GARDEN_HARVEST_DATABASE_URL absent (Settings → Secrets and variables → Actions)."
+          fi
+
+      - name: Checkout
+        if: steps.db.outputs.ready == 'true'
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        if: steps.db.outputs.ready == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        if: steps.db.outputs.ready == 'true'
+        run: npm ci
+
+      - name: Migrations Drizzle
+        if: steps.db.outputs.ready == 'true'
+        env:
+          DATABASE_URL: ${{ secrets.GARDEN_HARVEST_DATABASE_URL }}
+        run: npx nx db-migrate potager-api
