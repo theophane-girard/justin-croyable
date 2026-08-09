@@ -32,6 +32,10 @@ cp packages/potager-api/.env.example packages/potager-api/.env
 
 ## Base de données (Drizzle)
 
+`drizzle.config.ts` charge automatiquement `packages/potager-api/.env` (via
+dotenv) : une fois `DATABASE_URL` renseigné dans ce fichier, les commandes
+ci-dessous fonctionnent sans préfixer la variable, sur tout OS (Windows inclus).
+
 ```bash
 # Générer une migration SQL à partir du schéma (src/db/schema.ts)
 npx nx db-generate potager-api
