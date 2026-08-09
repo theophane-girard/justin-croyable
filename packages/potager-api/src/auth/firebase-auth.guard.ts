@@ -9,6 +9,7 @@ import { type Auth, type DecodedIdToken } from 'firebase-admin/auth';
 
 import { FIREBASE_AUTH } from '../firebase/firebase';
 
+import { AbilityFactory } from './ability';
 import { type AuthenticatedRequest } from './auth.types';
 import { UserService } from './user.service';
 
@@ -19,6 +20,7 @@ export class FirebaseAuthGuard implements CanActivate {
   constructor(
     @Inject(FIREBASE_AUTH) private readonly firebaseAuth: Auth,
     private readonly users: UserService,
+    private readonly abilities: AbilityFactory,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -28,12 +30,14 @@ export class FirebaseAuthGuard implements CanActivate {
       throw new UnauthorizedException("Jeton d'authentification manquant.");
     }
     const decoded = await this.#verify(token);
-    request.user = await this.users.findOrCreate({
+    const user = await this.users.findOrCreate({
       uid: decoded.uid,
       email: decoded.email ?? '',
       displayName: decoded.name ?? null,
       photoUrl: decoded.picture ?? null,
     });
+    request.user = user;
+    request.ability = this.abilities.createForUser(user);
     return true;
   }
 

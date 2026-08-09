@@ -1,6 +1,5 @@
 import {
   varietyPriceContract,
-  USER_ROLE,
   type CreateVarietyPricePayload,
   type UpdateVarietyPricePayload,
   type VarietyPrice,
@@ -9,10 +8,11 @@ import { Controller, Inject, Injectable, Module, UseGuards } from '@nestjs/commo
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { eq } from 'drizzle-orm';
 
-import { CurrentUser } from '../auth/current-user.decorator';
+import { ACTION, type AppAbility, SUBJECT } from '../auth/ability';
+import { CurrentAbility } from '../auth/current-ability.decorator';
 import { FirebaseAuthGuard } from '../auth/firebase-auth.guard';
 import { type Database, DRIZZLE } from '../db/drizzle';
-import { varietyPrices, type UserRecord, type VarietyPriceRecord } from '../db/schema';
+import { varietyPrices, type VarietyPriceRecord } from '../db/schema';
 
 const ADMIN_ONLY = { message: 'Action réservée aux administrateurs.' };
 
@@ -86,18 +86,17 @@ export class VarietyPriceController {
   constructor(private readonly prices: VarietyPriceService) {}
 
   @TsRestHandler(varietyPriceContract)
-  async handler(@CurrentUser() user: UserRecord) {
-    const isAdmin = user.role === USER_ROLE.admin;
+  async handler(@CurrentAbility() ability: AppAbility) {
     return tsRestHandler(varietyPriceContract, {
       list: async () => ({ status: 200, body: await this.prices.list() }),
       create: async ({ body }) => {
-        if (!isAdmin) {
+        if (ability.cannot(ACTION.create, SUBJECT.varietyPrice)) {
           return { status: 403, body: ADMIN_ONLY };
         }
         return { status: 201, body: await this.prices.create(body) };
       },
       update: async ({ params, body }) => {
-        if (!isAdmin) {
+        if (ability.cannot(ACTION.update, SUBJECT.varietyPrice)) {
           return { status: 403, body: ADMIN_ONLY };
         }
         const updated = await this.prices.update(params.id, body);
@@ -107,7 +106,7 @@ export class VarietyPriceController {
         return { status: 200, body: updated };
       },
       remove: async ({ params }) => {
-        if (!isAdmin) {
+        if (ability.cannot(ACTION.delete, SUBJECT.varietyPrice)) {
           return { status: 403, body: ADMIN_ONLY };
         }
         const removed = await this.prices.remove(params.id);
