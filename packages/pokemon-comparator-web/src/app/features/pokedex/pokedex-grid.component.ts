@@ -26,6 +26,8 @@ import {
   InputDirective,
   injectQueryFilters,
   BadgeComponent,
+  SegmentComponent,
+  type SegmentItem,
   SelectImports,
   SheetService,
   stringFilter,
@@ -72,22 +74,22 @@ const STAGE_ITEMS: ToggleGroupItem[] = [
   { value: '2', label: 'Finale' },
 ];
 
-const LEGENDARY_ITEMS: ToggleGroupItem[] = [
+const LEGENDARY_ITEMS: SegmentItem[] = [
   { value: ALL, label: 'Tous' },
-  { value: 'legendary', label: 'Légendaires' },
-  { value: 'ordinary', label: 'Non légendaires' },
+  { value: 'legendary', label: 'Seulement' },
+  { value: 'ordinary', label: 'Masquer' },
 ];
 
-const MEGA_ITEMS: ToggleGroupItem[] = [
+const MEGA_ITEMS: SegmentItem[] = [
   { value: ALL, label: 'Tous' },
-  { value: 'mega', label: 'Méga uniquement' },
-  { value: 'ordinary', label: 'Masquer les méga' },
+  { value: 'mega', label: 'Seulement' },
+  { value: 'ordinary', label: 'Masquer' },
 ];
 
-const ULTRA_BEAST_ITEMS: ToggleGroupItem[] = [
+const ULTRA_BEAST_ITEMS: SegmentItem[] = [
   { value: ALL, label: 'Tous' },
-  { value: 'ultra', label: 'Ultra-Chimères' },
-  { value: 'ordinary', label: 'Masquer les Ultra-Chimères' },
+  { value: 'ultra', label: 'Seulement' },
+  { value: 'ordinary', label: 'Masquer' },
 ];
 
 const DIRECTION_ITEMS: ToggleGroupItem[] = [
@@ -162,6 +164,7 @@ function toTile(pokemon: Pokemon): PokedexTile {
     FabContainerComponent,
     FabListComponent,
     InputDirective,
+    SegmentComponent,
     ToggleGroupComponent,
     PokemonSpriteComponent,
     ...SelectImports,
@@ -290,9 +293,8 @@ function toTile(pokemon: Pokemon): PokedexTile {
 
           <section class="flex flex-col gap-2">
             <h3 class="text-sm font-semibold">Légendaires</h3>
-            <app-toggle-group
-              mode="single"
-              class="justify-start"
+            <app-segment
+              class="w-full"
               [items]="legendaryItems"
               [value]="legendaryFilter()"
               (valueChange)="onLegendaryChange($event)"
@@ -301,9 +303,8 @@ function toTile(pokemon: Pokemon): PokedexTile {
 
           <section class="flex flex-col gap-2">
             <h3 class="text-sm font-semibold">Méga-évolutions</h3>
-            <app-toggle-group
-              mode="single"
-              class="flex-wrap justify-start"
+            <app-segment
+              class="w-full"
               [items]="megaItems"
               [value]="megaFilter()"
               (valueChange)="onMegaChange($event)"
@@ -312,9 +313,8 @@ function toTile(pokemon: Pokemon): PokedexTile {
 
           <section class="flex flex-col gap-2">
             <h3 class="text-sm font-semibold">Ultra-Chimères</h3>
-            <app-toggle-group
-              mode="single"
-              class="flex-wrap justify-start"
+            <app-segment
+              class="w-full"
               [items]="ultraBeastItems"
               [value]="ultraBeastFilter()"
               (valueChange)="onUltraBeastChange($event)"

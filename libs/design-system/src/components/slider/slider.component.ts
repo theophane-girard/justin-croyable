@@ -25,7 +25,12 @@ import type { ClassValue } from 'clsx';
 import { filter, fromEvent, map, switchMap, takeUntil, tap } from 'rxjs';
 
 import { mergeClasses, noopFn } from '../../utils/merge-classes';
-import { clamp, convertValueToPercentage, roundToStep } from '../../utils/number';
+import {
+  clamp,
+  convertPercentageToValue,
+  convertValueToPercentage,
+  roundToStep,
+} from '../../utils/number';
 
 import {
   sliderOrientationVariants,
@@ -251,9 +256,6 @@ export class SliderComponent implements ControlValueAccessor, AfterViewInit {
   });
 
   protected readonly percentages = computed(() => {
-    if (this.max() > 1) {
-      return this.values();
-    }
     const [min, max] = [this.min(), this.max()];
     return this.values().map(v => convertValueToPercentage(v, min, max));
   });
@@ -290,13 +292,13 @@ export class SliderComponent implements ControlValueAccessor, AfterViewInit {
         if (isTrack) {
           const coord = this.orientation() === 'vertical' ? event.clientY : event.clientX;
           const clickPercentage = this.calculatePercentage(coord);
-          let clickValue: number;
-          if (this.max() <= 1) {
-            const [userMin, userMax] = [this.min(), this.max()];
-            clickValue = userMin + (userMax - userMin) * clickPercentage;
-          } else {
-            clickValue = clamp(clickPercentage * 100, this.getMinMax());
-          }
+          const [clickMin, clickMax] = this.getMinMax();
+          const clickValue = convertPercentageToValue(
+            clickPercentage,
+            clickMin,
+            clickMax,
+            this.step(),
+          );
 
           const currentValues = this.values();
           const closestIndex = currentValues.reduce(
@@ -422,15 +424,7 @@ export class SliderComponent implements ControlValueAccessor, AfterViewInit {
 
   private updateThumbFromPercentage(percentage: number, thumbIndex: number): void {
     const [min, max] = this.getMinMax();
-    let value: number;
-
-    if (this.max() <= 1) {
-      const [userMin, userMax] = [this.min(), this.max()];
-      value = roundToStep(userMin + (userMax - userMin) * clamp(percentage, [0, 1]), userMin, this.step());
-      value = clamp(value, [min, max]);
-    } else {
-      value = roundToStep(clamp(percentage * 100, [min, max]), min, this.step());
-    }
+    let value = convertPercentageToValue(percentage, min, max, this.step());
 
     const currentValues = [...this.values()];
 
@@ -486,6 +480,6 @@ export class SliderComponent implements ControlValueAccessor, AfterViewInit {
   }
 
   private getMinMax(): [number, number] {
-    return [Math.max(this.min(), 0), Math.min(this.max(), 100)];
+    return [this.min(), this.max()];
   }
 }

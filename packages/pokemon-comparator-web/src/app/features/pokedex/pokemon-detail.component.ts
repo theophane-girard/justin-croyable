@@ -28,15 +28,21 @@ import {
 import {
   EVOLUTION_STAGE_LABEL,
   LANG,
-  MAX_BASE_STAT,
   type Pokemon,
   pokemonImageUrl,
   pokemonName,
-  pokemonTotal,
   STAT_META,
   STAT_ORDER,
 } from '../../core/pokemon.model';
+import {
+  applyEnhancedStats,
+  type EnhanceConfig,
+  enhancedStatScaleMax,
+  statsTotal,
+} from '../../core/pokemon-stats';
 import { typeBarClass, typeLabels, typeTileClass } from '../../core/pokemon-type';
+import { StatEnhancerComponent } from '../enhance/stat-enhancer.component';
+import { injectEnhanceUrl } from '../enhance/enhance-url';
 import { PokemonMovesComponent } from './pokemon-moves.component';
 
 const TAG_STAGE = 'border-transparent bg-sky-500/15 text-sky-700 dark:text-sky-300';
@@ -69,8 +75,11 @@ interface DetailView {
   readonly total: number;
 }
 
-function toDetail(pokemon: Pokemon): DetailView {
+function toDetail(pokemon: Pokemon, config: EnhanceConfig): DetailView {
   const name = pokemonName(pokemon, LANG.fr);
+  const stats = applyEnhancedStats(pokemon.stats, config);
+  const scaleMax = enhancedStatScaleMax(config);
+  const total = statsTotal(stats);
   return {
     id: pokemon.id,
     name,
@@ -84,15 +93,15 @@ function toDetail(pokemon: Pokemon): DetailView {
       pokemon.legendary
         ? { label: 'Légendaire', class: TAG_LEGENDARY }
         : { label: 'Ordinaire', class: TAG_ORDINARY },
-      { label: `Total ${pokemonTotal(pokemon)}`, class: TAG_TOTAL },
+      { label: `Total ${total}`, class: TAG_TOTAL },
     ],
     stats: STAT_ORDER.map(stat => ({
       key: stat,
       label: STAT_META[stat].label,
-      value: pokemon.stats[stat],
-      percent: Math.round((pokemon.stats[stat] / MAX_BASE_STAT) * 100),
+      value: stats[stat],
+      percent: Math.round((stats[stat] / scaleMax) * 100),
     })),
-    total: pokemonTotal(pokemon),
+    total,
   };
 }
 
@@ -111,6 +120,7 @@ function toDetail(pokemon: Pokemon): DetailView {
     SkeletonComponent,
     TabGroupComponent,
     TabComponent,
+    StatEnhancerComponent,
     PokemonMovesComponent,
   ],
   template: `
@@ -205,9 +215,12 @@ function toDetail(pokemon: Pokemon): DetailView {
                   </section>
 
                   <section class="flex flex-col gap-2">
-                    <div class="flex items-center justify-between">
-                      <h3 class="text-foreground text-sm font-semibold">Statistiques de base</h3>
-                      <span class="text-muted-foreground text-sm">Total {{ view.total }}</span>
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                      <h3 class="text-foreground text-sm font-semibold">{{ statsHeading() }}</h3>
+                      <div class="flex items-center gap-3">
+                        <span class="text-muted-foreground text-sm">Total {{ view.total }}</span>
+                        <app-stat-enhancer />
+                      </div>
                     </div>
                     <div class="flex flex-col gap-2">
                       @for (row of view.stats; track row.key) {
@@ -279,13 +292,18 @@ export class PokemonDetailComponent {
 
   protected readonly pokedexLink = `/${APP_PATHS.pokedex}`;
   protected readonly selectedAbility = signal<PokemonAbility | undefined>(undefined);
+  protected readonly enhanceConfig = injectEnhanceUrl().config;
+
+  protected readonly statsHeading = computed(() =>
+    this.enhanceConfig().level100 ? 'Statistiques (niveau 100)' : 'Statistiques de base',
+  );
 
   readonly #numericId = computed(() => Number(this.id()));
 
   protected readonly detail = computed<DetailView | undefined>(() => {
     const id = this.#numericId();
     const pokemon = this.store.pokemons().find(entry => entry.id === id);
-    return pokemon ? toDetail(pokemon) : undefined;
+    return pokemon ? toDetail(pokemon, this.enhanceConfig()) : undefined;
   });
 
   protected readonly isSelected = computed(() => this.store.selectedIdSet().has(this.#numericId()));

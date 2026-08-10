@@ -28,15 +28,17 @@ import type { EChartsCoreOption } from 'echarts/core';
 import { ComparatorStore, DISPLAY_MODE } from '../../core/comparator-store';
 import { APP_PATHS } from '../../app.routes';
 import { PokedexGridComponent } from '../pokedex/pokedex-grid.component';
+import { StatEnhancerComponent } from '../enhance/stat-enhancer.component';
+import { injectEnhanceUrl } from '../enhance/enhance-url';
 import {
   LANG,
-  MAX_BASE_STAT,
   pokemonImageUrl,
   pokemonName,
-  pokemonTotal,
+  type Stat,
   STAT_META,
   STAT_ORDER,
 } from '../../core/pokemon.model';
+import { applyEnhancedStats, enhancedStatScaleMax, statsTotal } from '../../core/pokemon-stats';
 
 interface SelectedView {
   readonly id: number;
@@ -96,6 +98,7 @@ const DISPLAY_MODE_ITEMS: readonly SegmentItem[] = [
     SegmentComponent,
     GenericSkeletonComponent,
     PokedexGridComponent,
+    StatEnhancerComponent,
   ],
   template: `
     <div class="mx-auto flex w-full max-w-5xl flex-col gap-6">
@@ -164,13 +167,16 @@ const DISPLAY_MODE_ITEMS: readonly SegmentItem[] = [
           <app-card>
             <div class="flex flex-col gap-5">
               <div class="flex flex-wrap items-center justify-between gap-3">
-                <h2 class="text-lg font-semibold">Statistiques de base</h2>
-                <app-segment
-                  variant="accent"
-                  [items]="displayModeItems"
-                  [value]="displayMode()"
-                  (valueChange)="onDisplayModeChange($event)"
-                />
+                <h2 class="text-lg font-semibold">{{ statsHeading() }}</h2>
+                <div class="flex flex-wrap items-center gap-2">
+                  <app-stat-enhancer />
+                  <app-segment
+                    variant="accent"
+                    [items]="displayModeItems"
+                    [value]="displayMode()"
+                    (valueChange)="onDisplayModeChange($event)"
+                  />
+                </div>
               </div>
 
               @if (displayMode() === displayModeBars) {
@@ -237,11 +243,27 @@ export class ComparatorComponent {
 
   protected readonly displayMode = this.store.displayMode;
 
+  protected readonly enhanceConfig = injectEnhanceUrl().config;
+
+  protected readonly statsHeading = computed(() =>
+    this.enhanceConfig().level100 ? 'Statistiques (niveau 100)' : 'Statistiques de base',
+  );
+
+  readonly #enhancedStatsById = computed<ReadonlyMap<number, Readonly<Record<Stat, number>>>>(() => {
+    const config = this.enhanceConfig();
+    return new Map(
+      this.store.selected().map(pokemon => [pokemon.id, applyEnhancedStats(pokemon.stats, config)]),
+    );
+  });
+
+  readonly #statValue = (id: number, stat: Stat): number =>
+    this.#enhancedStatsById().get(id)?.[stat] ?? 0;
+
   protected readonly selection = computed<readonly SelectedView[]>(() =>
     this.store.selected().map((pokemon, index) => ({
       id: pokemon.id,
       name: pokemonName(pokemon, LANG.fr),
-      totalLabel: `${pokemonTotal(pokemon)}`,
+      totalLabel: `${statsTotal(this.#enhancedStatsById().get(pokemon.id) ?? pokemon.stats)}`,
       imageUrl: pokemonImageUrl(pokemon.id),
       mediaClass: MEDIA_BORDER_CLASSES[index % MEDIA_BORDER_CLASSES.length],
     })),
@@ -249,29 +271,34 @@ export class ComparatorComponent {
 
   protected readonly statGroups = computed<readonly StatGroup[]>(() => {
     const selected = this.store.selected();
+    const scaleMax = enhancedStatScaleMax(this.enhanceConfig());
     return STAT_ORDER.map(stat => ({
       key: stat,
       label: STAT_META[stat].label,
-      rows: selected.map((pokemon, index) => ({
-        id: pokemon.id,
-        name: pokemonName(pokemon, LANG.fr),
-        value: pokemon.stats[stat],
-        percent: Math.round((pokemon.stats[stat] / MAX_BASE_STAT) * 100),
-        barClass: BAR_CLASSES[index % BAR_CLASSES.length],
-      })),
+      rows: selected.map((pokemon, index) => {
+        const value = this.#statValue(pokemon.id, stat);
+        return {
+          id: pokemon.id,
+          name: pokemonName(pokemon, LANG.fr),
+          value,
+          percent: Math.round((value / scaleMax) * 100),
+          barClass: BAR_CLASSES[index % BAR_CLASSES.length],
+        };
+      }),
     }));
   });
 
   protected readonly radarOptions = computed<EChartsCoreOption>(() => {
     const palette = this.#palette.palette();
     const selected = this.store.selected();
+    const scaleMax = enhancedStatScaleMax(this.enhanceConfig());
     return {
       tooltip: { trigger: 'item' },
       legend: { bottom: 0, type: 'scroll' },
       radar: {
         radius: '65%',
         center: ['50%', '46%'],
-        indicator: STAT_ORDER.map(stat => ({ name: STAT_META[stat].short, max: MAX_BASE_STAT })),
+        indicator: STAT_ORDER.map(stat => ({ name: STAT_META[stat].short, max: scaleMax })),
         axisName: { color: palette.mutedForeground },
         axisLine: { lineStyle: { color: palette.border } },
         splitLine: { lineStyle: { color: palette.border } },
@@ -284,7 +311,7 @@ export class ComparatorComponent {
             const color = palette.series[index % palette.series.length];
             return {
               name: pokemonName(pokemon, LANG.fr),
-              value: STAT_ORDER.map(stat => pokemon.stats[stat]),
+              value: STAT_ORDER.map(stat => this.#statValue(pokemon.id, stat)),
               symbolSize: 4,
               lineStyle: { color, width: 2 },
               itemStyle: { color },
