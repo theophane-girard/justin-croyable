@@ -1,5 +1,9 @@
 import { computed, effect, inject, Injectable, signal } from '@angular/core';
-import { type VarietyPrice } from '@justin-croyable/api-contract';
+import {
+  type CreateVarietyPricePayload,
+  type UpdateVarietyPricePayload,
+  type VarietyPrice,
+} from '@justin-croyable/api-contract';
 
 import { AuthService } from './auth.service';
 import { ApiService } from './api.service';
@@ -53,6 +57,33 @@ export class PriceStore {
     } finally {
       this.#loading.set(false);
     }
+  }
+
+  async createPrice(payload: CreateVarietyPricePayload): Promise<boolean> {
+    const response = await this.#api.createVarietyPrice(payload);
+    if (response.status === 201) {
+      await this.reload();
+      return true;
+    }
+    return false;
+  }
+
+  async updatePrice(id: string, payload: UpdateVarietyPricePayload): Promise<boolean> {
+    const response = await this.#api.updateVarietyPrice(id, payload);
+    if (response.status === 200) {
+      await this.reload();
+      return true;
+    }
+    return false;
+  }
+
+  async removePrice(id: string): Promise<boolean> {
+    const response = await this.#api.removeVarietyPrice(id);
+    if (response.status === 200) {
+      await this.reload();
+      return true;
+    }
+    return false;
   }
 
   conventionalPriceFor(varietyId: VarietyId, atDate: Date): number {
