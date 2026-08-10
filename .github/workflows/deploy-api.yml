@@ -121,13 +121,18 @@ jobs:
         if: steps.gcp.outputs.ready == 'true' && steps.affected.outputs.api == 'true' && github.event_name == 'pull_request'
         run: |
           TAG="pr-${{ github.event.number }}"
+          if gcloud run services describe "$SERVICE" --region "$REGION" >/dev/null 2>&1; then
+            NO_TRAFFIC="--no-traffic"
+          else
+            NO_TRAFFIC=""
+          fi
           gcloud run deploy "$SERVICE" \
             --image "${{ steps.image.outputs.image }}" \
             --region "$REGION" \
             --platform managed \
             --allow-unauthenticated \
             --tag "$TAG" \
-            --no-traffic \
+            $NO_TRAFFIC \
             --set-env-vars "^@^NODE_ENV=production@CORS_ORIGIN=${{ secrets.GARDEN_HARVEST_API_CORS_ORIGIN }}@CORS_ORIGIN_REGEX=${{ secrets.GARDEN_HARVEST_API_CORS_ORIGIN_REGEX }}" \
             --set-secrets "DATABASE_URL=DATABASE_URL:latest,FIREBASE_PROJECT_ID=FIREBASE_PROJECT_ID:latest,FIREBASE_CLIENT_EMAIL=FIREBASE_CLIENT_EMAIL:latest,FIREBASE_PRIVATE_KEY=FIREBASE_PRIVATE_KEY:latest"
           URL=$(gcloud run services describe "$SERVICE" --region "$REGION" --format=json | jq -r --arg t "$TAG" '.status.traffic[] | select(.tag==$t) | .url')
