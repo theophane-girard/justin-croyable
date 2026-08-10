@@ -85,6 +85,18 @@ Le plus simple : la [console Secret Manager](https://console.cloud.google.com/se
 | `FIREBASE_CLIENT_EMAIL` | `firebase-adminsdk-…@….iam.gserviceaccount.com` |
 | `FIREBASE_PRIVATE_KEY` | la clé privée, **exactement** comme dans ton `.env` (avec les `\n`) |
 
+Enfin, **autorise le compte qui exécute le conteneur** à lire ces secrets. Ce
+n'est pas le même compte que le « robot » de l'étape 2 : Cloud Run exécute le
+conteneur avec le *compte Compute par défaut* du projet. À coller dans Cloud
+Shell :
+
+```bash
+PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
+  --role="roles/secretmanager.secretAccessor"
+```
+
 ## Étape 4 — Les secrets côté GitHub
 
 Dans GitHub : **Settings → Secrets and variables → Actions → New repository
