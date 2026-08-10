@@ -61,12 +61,12 @@ done
 
 # Générer la clé JSON, puis l'afficher pour la copier
 gcloud iam service-accounts keys create gha-key.json --iam-account="$SA"
-echo "=== COPIE TOUT LE BLOC JSON CI-DESSOUS (secret GitHub GCP_SA_KEY) ==="
+echo "=== COPIE TOUT LE BLOC JSON CI-DESSOUS (secret GitHub GARDEN_HARVEST_GCP_SA_KEY) ==="
 cat gha-key.json
 ```
 
 Copie **l'intégralité** du JSON affiché (des `{` au `}`). Tu le colleras à
-l'étape 4 dans le secret `GCP_SA_KEY`.
+l'étape 4 dans le secret `GARDEN_HARVEST_GCP_SA_KEY`.
 
 ## Étape 3 — Les 4 valeurs dont l'API a besoin pour tourner
 
@@ -92,10 +92,10 @@ secret**. Crée :
 
 | Secret GitHub | Valeur |
 | --- | --- |
-| `GCP_PROJECT_ID` | `justin-croyable-story` |
-| `GCP_SA_KEY` | tout le JSON copié à l'étape 2 |
-| `API_CORS_ORIGIN` | l'URL de ton front (ex. `https://justin-croyable-potager.web.app`) |
-| `API_CORS_ORIGIN_REGEX` | `^https://justin-croyable-potager--[a-z0-9-]+\.web\.app$` (autorise les previews) |
+| `GARDEN_HARVEST_GCP_PROJECT_ID` | `justin-croyable-story` |
+| `GARDEN_HARVEST_GCP_SA_KEY` | tout le JSON copié à l'étape 2 |
+| `GARDEN_HARVEST_API_CORS_ORIGIN` | l'URL de ton front (ex. `https://justin-croyable-potager.web.app`) |
+| `GARDEN_HARVEST_API_CORS_ORIGIN_REGEX` | `^https://justin-croyable-potager--[a-z0-9-]+\.web\.app$` (autorise les previews) |
 | `GARDEN_HARVEST_DATABASE_URL` | *(optionnel)* même valeur que `DATABASE_URL` → applique les migrations Drizzle avant chaque déploiement |
 
 ## Étape 5 — Déclencher et récupérer l'URL
@@ -117,7 +117,7 @@ Cette URL est celle à mettre dans le secret `STAGING_API_URL` pour le front
 
 - « permission denied » à la création d'un secret → l'API Secret Manager
   n'est pas activée (refais l'étape 1).
-- Le job reste vert mais ne déploie rien → un secret `GCP_SA_KEY` ou
-  `GCP_PROJECT_ID` manque côté GitHub.
+- Le job reste vert mais ne déploie rien → un secret `GARDEN_HARVEST_GCP_SA_KEY` ou
+  `GARDEN_HARVEST_GCP_PROJECT_ID` manque côté GitHub.
 - « already exists » sur un secret → il existe déjà ; ajoute une version :
   `printf '%s' 'nouvelle-valeur' | gcloud secrets versions add NOM --data-file=-`.
