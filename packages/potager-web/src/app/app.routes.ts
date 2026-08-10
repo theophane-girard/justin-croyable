@@ -10,6 +10,7 @@ export const APP_PATHS = {
   expenses: 'depenses',
   garden: 'jardin',
   prices: 'prix-moyens',
+  adminPrices: 'admin/prix',
   add: 'ajouter',
 } as const;
 
@@ -23,6 +24,7 @@ export const EXPENSE_ADD_LINK = `/${APP_PATHS.expenses}/${APP_PATHS.add}`;
 export const GARDEN_LINK = `/${APP_PATHS.garden}`;
 export const GARDEN_ADD_LINK = `/${APP_PATHS.garden}/${APP_PATHS.add}`;
 export const PRICES_LINK = `/${APP_PATHS.prices}`;
+export const ADMIN_PRICES_LINK = `/${APP_PATHS.adminPrices}`;
 
 export const APP_ROUTES: Route[] = [
   {
@@ -100,6 +102,14 @@ export const APP_ROUTES: Route[] = [
     path: APP_PATHS.prices,
     loadComponent: () => import('./features/prices/prices.component').then(m => m.PricesComponent),
     title: 'Prix moyens — Potager',
+    data: { skeleton: SKELETON_KIND.list },
+    resolve: { simulatedLoad: simulatedLoadResolver },
+  },
+  {
+    path: APP_PATHS.adminPrices,
+    loadComponent: () =>
+      import('./features/admin/admin-prices.component').then(m => m.AdminPricesComponent),
+    title: 'Administration des prix — Potager',
     data: { skeleton: SKELETON_KIND.list },
     resolve: { simulatedLoad: simulatedLoadResolver },
   },

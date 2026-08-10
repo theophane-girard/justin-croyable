@@ -112,10 +112,6 @@ export const CROP_BY_ID: Readonly<Record<CropId, Crop>> = CROPS.reduce(
   {} as Record<CropId, Crop>,
 );
 
-export type PricePerKgByCrop = Partial<Record<CropId, number>>;
-
-export type PriceSource = 'live' | 'reference';
-
 export type Variety = {
   readonly id: string;
   readonly cropId: CropId;
@@ -190,8 +186,6 @@ export function cropFallbackVarietyId(cropId: CropId): VarietyId {
   return cropId as VarietyId;
 }
 
-export type PricePerKgByVariety = Partial<Record<VarietyId, number>>;
-
 export const PRICE_ORIGIN = {
   rnm: 'rnm',
   fallback: 'fallback',
@@ -216,15 +210,6 @@ export type PriceRow = {
   readonly priceDate: Date | null;
 };
 
-export type HarvestEntry = {
-  readonly id: string;
-  readonly varietyId: VarietyId;
-  readonly weightKg: number;
-  readonly harvestedOn: string;
-  readonly conventionalPricePerKg?: number;
-  readonly bioPricePerKg?: number;
-};
-
 export type HarvestDraft = {
   readonly varietyId: VarietyId;
   readonly weightKg: number;
@@ -247,15 +232,6 @@ export type HarvestRow = {
   readonly savingsEur: number;
 };
 
-export type ExpenseEntry = {
-  readonly id: string;
-  readonly label: string;
-  readonly category: ExpenseCategoryId;
-  readonly amountEur: number;
-  readonly spentOn: string;
-  readonly plantIds: readonly string[];
-};
-
 export type ExpenseDraft = {
   readonly label: string;
   readonly category: ExpenseCategoryId;
@@ -274,12 +250,6 @@ export type ExpenseRow = {
   readonly season: Season;
   readonly amountEur: number;
   readonly plantIds: readonly string[];
-};
-
-export type PlantEntry = {
-  readonly id: string;
-  readonly cropId: CropId;
-  readonly quantity: number;
 };
 
 export type PlantDraft = {

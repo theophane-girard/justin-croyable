@@ -1,40 +1,25 @@
-import { isPlatformBrowser } from '@angular/common';
-import { computed, effect, inject, Injectable, PLATFORM_ID, signal } from '@angular/core';
+import { computed, inject, Injectable } from '@angular/core';
+import { type Plant } from '@justin-croyable/api-contract';
 
 import {
   CATEGORY_META,
   CROP_BY_ID,
+  type CropId,
   isCropId,
   type PlantDraft,
-  type PlantEntry,
   type PlantRow,
 } from './potager.model';
+import { ApiEntityStore } from './api-entity-store';
 import { HarvestStore } from './harvest-store';
 import { ExpenseStore } from './expense-store';
 
-const STORAGE_KEY = 'potager.plants.v2';
-
-const SEED_PLANTS: readonly PlantEntry[] = [
-  { id: 'plant-1', cropId: 'tomate', quantity: 6 },
-  { id: 'plant-2', cropId: 'courgette', quantity: 3 },
-  { id: 'plant-3', cropId: 'salade', quantity: 12 },
-  { id: 'plant-4', cropId: 'fraise', quantity: 20 },
-  { id: 'plant-5', cropId: 'haricot-vert', quantity: 15 },
-  { id: 'plant-6', cropId: 'pomme-de-terre', quantity: 10 },
-];
-
 @Injectable({ providedIn: 'root' })
-export class GardenStore {
-  readonly #platformId = inject(PLATFORM_ID);
+export class GardenStore extends ApiEntityStore<Plant> {
   readonly #harvests = inject(HarvestStore);
   readonly #expenses = inject(ExpenseStore);
 
-  readonly #entries = signal<readonly PlantEntry[]>(this.#restore());
-
-  readonly entries = this.#entries.asReadonly();
-
   readonly #expenseByPlantId = computed<Record<string, number>>(() => {
-    const plantIds = this.#entries().map(entry => entry.id);
+    const plantIds = this.entries().map(entry => entry.id);
     const plantIdSet = new Set(plantIds);
     return this.#expenses.periodRows().reduce<Record<string, number>>((accumulator, expense) => {
       const targets = expense.plantIds.length
@@ -55,12 +40,13 @@ export class GardenStore {
     const harvestedByCrop = this.#harvests.periodWeightByCropId();
     const valueByCrop = this.#harvests.periodValueByCropId();
     const expenseByPlant = this.#expenseByPlantId();
-    return this.#entries()
+    return this.entries()
+      .filter(entry => isCropId(entry.cropId))
       .map(entry =>
         this.#toRow(
           entry,
-          harvestedByCrop[entry.cropId] ?? 0,
-          valueByCrop[entry.cropId] ?? 0,
+          harvestedByCrop[entry.cropId as CropId] ?? 0,
+          valueByCrop[entry.cropId as CropId] ?? 0,
           expenseByPlant[entry.id] ?? 0,
         ),
       )
@@ -68,10 +54,10 @@ export class GardenStore {
   });
 
   readonly plantCount = computed(() =>
-    this.#entries().reduce((total, entry) => total + entry.quantity, 0),
+    this.entries().reduce((total, entry) => total + entry.quantity, 0),
   );
 
-  readonly cropCount = computed(() => new Set(this.#entries().map(entry => entry.cropId)).size);
+  readonly cropCount = computed(() => new Set(this.entries().map(entry => entry.cropId)).size);
 
   readonly averageYieldPerPlantKg = computed(() => {
     const plants = this.plantCount();
@@ -88,39 +74,39 @@ export class GardenStore {
 
   readonly bestNetSavingsCropLabel = computed(() => this.rows().at(0)?.cropLabel ?? '—');
 
-  constructor() {
-    effect(() => this.#persist(this.#entries()));
-  }
-
   add(draft: PlantDraft): void {
-    this.#entries.update(entries => {
-      const existing = entries.find(entry => entry.cropId === draft.cropId);
-      if (existing) {
-        return entries.map(entry =>
-          entry.cropId === draft.cropId
-            ? { ...entry, quantity: entry.quantity + draft.quantity }
-            : entry,
-        );
-      }
-      return [...entries, { id: this.#createId(), cropId: draft.cropId, quantity: draft.quantity }];
-    });
+    const existing = this.entries().find(entry => entry.cropId === draft.cropId);
+    if (existing) {
+      void this.updateEntry(existing.id, () =>
+        this.api.updatePlant(existing.id, { quantity: existing.quantity + draft.quantity }),
+      );
+      return;
+    }
+    void this.createEntry(() =>
+      this.api.createPlant({ cropId: draft.cropId, quantity: draft.quantity }),
+    );
   }
 
   remove(id: string): void {
-    this.#entries.update(entries => entries.filter(entry => entry.id !== id));
+    void this.removeEntry(id, () => this.api.removePlant(id));
+  }
+
+  protected fetchAll() {
+    return this.api.listPlants();
   }
 
   #toRow(
-    entry: PlantEntry,
+    entry: Plant,
     harvestedKg: number,
     harvestValueEur: number,
     expenseEur: number,
   ): PlantRow {
-    const crop = CROP_BY_ID[entry.cropId];
+    const cropId = entry.cropId as CropId;
+    const crop = CROP_BY_ID[cropId];
     const yieldPerPlantKg = entry.quantity > 0 ? harvestedKg / entry.quantity : 0;
     return {
       id: entry.id,
-      cropId: entry.cropId,
+      cropId,
       cropLabel: crop.label,
       cropIcon: crop.icon,
       categoryLabel: CATEGORY_META[crop.category].label,
@@ -131,53 +117,6 @@ export class GardenStore {
       expenseEur: this.#roundToCents(expenseEur),
       netSavingsEur: this.#roundToCents(harvestValueEur - expenseEur),
     };
-  }
-
-  #restore(): readonly PlantEntry[] {
-    if (!isPlatformBrowser(this.#platformId)) {
-      return SEED_PLANTS;
-    }
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      return SEED_PLANTS;
-    }
-    return this.#parseStored(raw) ?? SEED_PLANTS;
-  }
-
-  #parseStored(raw: string): readonly PlantEntry[] | null {
-    try {
-      const value: unknown = JSON.parse(raw);
-      if (!Array.isArray(value)) {
-        return null;
-      }
-      return value.filter((item): item is PlantEntry => this.#isValidEntry(item));
-    } catch {
-      return null;
-    }
-  }
-
-  #isValidEntry(item: unknown): item is PlantEntry {
-    if (typeof item !== 'object' || item === null) {
-      return false;
-    }
-    const candidate = item as Record<string, unknown>;
-    return (
-      typeof candidate['id'] === 'string' &&
-      typeof candidate['cropId'] === 'string' &&
-      isCropId(candidate['cropId']) &&
-      typeof candidate['quantity'] === 'number'
-    );
-  }
-
-  #persist(entries: readonly PlantEntry[]): void {
-    if (!isPlatformBrowser(this.#platformId)) {
-      return;
-    }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
-  }
-
-  #createId(): string {
-    return crypto.randomUUID();
   }
 
   #roundToCents(value: number): number {

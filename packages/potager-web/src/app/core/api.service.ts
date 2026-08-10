@@ -1,5 +1,15 @@
 import { inject, Injectable } from '@angular/core';
-import { apiContract } from '@justin-croyable/api-contract';
+import {
+  apiContract,
+  type CreateExpensePayload,
+  type CreateHarvestPayload,
+  type CreatePlantPayload,
+  type CreateVarietyPricePayload,
+  type UpdateExpensePayload,
+  type UpdateHarvestPayload,
+  type UpdatePlantPayload,
+  type UpdateVarietyPricePayload,
+} from '@justin-croyable/api-contract';
 import { type ApiFetcherArgs, initClient, tsRestFetchApi } from '@ts-rest/core';
 
 import { API_BASE_URL } from './app-config';
@@ -25,5 +35,69 @@ export class ApiService {
 
   updateProfile(displayName: string) {
     return this.#client.users.updateProfile({ body: { displayName } });
+  }
+
+  listHarvests() {
+    return this.#client.harvests.list();
+  }
+
+  createHarvest(body: CreateHarvestPayload) {
+    return this.#client.harvests.create({ body });
+  }
+
+  updateHarvest(id: string, body: UpdateHarvestPayload) {
+    return this.#client.harvests.update({ params: { id }, body });
+  }
+
+  removeHarvest(id: string) {
+    return this.#client.harvests.remove({ params: { id } });
+  }
+
+  listPlants() {
+    return this.#client.plants.list();
+  }
+
+  createPlant(body: CreatePlantPayload) {
+    return this.#client.plants.create({ body });
+  }
+
+  updatePlant(id: string, body: UpdatePlantPayload) {
+    return this.#client.plants.update({ params: { id }, body });
+  }
+
+  removePlant(id: string) {
+    return this.#client.plants.remove({ params: { id } });
+  }
+
+  listExpenses() {
+    return this.#client.expenses.list();
+  }
+
+  createExpense(body: CreateExpensePayload) {
+    return this.#client.expenses.create({ body });
+  }
+
+  updateExpense(id: string, body: UpdateExpensePayload) {
+    return this.#client.expenses.update({ params: { id }, body });
+  }
+
+  removeExpense(id: string) {
+    return this.#client.expenses.remove({ params: { id } });
+  }
+
+  listVarietyPrices() {
+    return this.#client.varietyPrices.list();
+  }
+
+  createVarietyPrice(body: CreateVarietyPricePayload) {
+    return this.#client.varietyPrices.create({ body });
+  }
+
+  updateVarietyPrice(id: string, body: UpdateVarietyPricePayload) {
+    return this.#client.varietyPrices.update({ params: { id }, body });
+  }
+
+  removeVarietyPrice(id: string) {
+    return this.#client.varietyPrices.remove({ params: { id } });
   }
 }

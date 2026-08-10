@@ -170,15 +170,9 @@ jobs:
           target: storybook
           channelId: live
 
-      - name: Déploiement de l'app potager sur le canal live
-        if: steps.firebase.outputs.ready == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master' && steps.affected.outputs.potager == 'true'
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          projectId: ${{ env.FIREBASE_PROJECT_ID }}
-          target: potager
-          channelId: live
+      # Le déploiement de l'app potager (preview + live) est géré par
+      # deploy-web.yml, qui injecte l'URL de l'API Cloud Run avant le build.
+      # Le laisser ici aussi déploierait une version avec l'URL placeholder.
 
       - name: Déploiement de l'app pokemon-comparator sur le canal live
         if: steps.firebase.outputs.ready == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master' && steps.affected.outputs.pokemon == 'true'
@@ -198,16 +192,6 @@ jobs:
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           projectId: ${{ env.FIREBASE_PROJECT_ID }}
           target: storybook
-          expires: 7d
-
-      - name: Prévisualisation de l'app potager
-        if: steps.firebase.outputs.ready == 'true' && github.event_name == 'pull_request' && steps.affected.outputs.potager == 'true'
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          projectId: ${{ env.FIREBASE_PROJECT_ID }}
-          target: potager
           expires: 7d
 
       - name: Prévisualisation de l'app pokemon-comparator

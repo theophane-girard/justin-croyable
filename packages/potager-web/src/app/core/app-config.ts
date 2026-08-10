@@ -1,3 +1,5 @@
+import { environment } from '../../environments/environment';
+
 const FIREBASE_PLACEHOLDER_PREFIX = 'A_REMPLACER';
 
 export const FIREBASE_CONFIG = {
@@ -10,6 +12,6 @@ export const FIREBASE_CONFIG = {
   measurementId: 'G-TBNFPQVSVV',
 } as const;
 
-export const API_BASE_URL = 'http://localhost:3000';
+export const API_BASE_URL = environment.apiBaseUrl;
 
 export const AUTH_GATE_ENABLED = !FIREBASE_CONFIG.apiKey.startsWith(FIREBASE_PLACEHOLDER_PREFIX);

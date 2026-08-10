@@ -1,11 +1,4 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  effect,
-  inject,
-  signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink, RouterOutlet } from '@angular/router';
 
 import {
@@ -21,10 +14,10 @@ import {
 } from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
 
-import { ApiService } from './core/api.service';
 import { AUTH_GATE_ENABLED } from './core/app-config';
 import { AuthService } from './core/auth.service';
 import { HarvestStore } from './core/harvest-store';
+import { UserStore } from './core/user-store';
 import { PRICE_MODE } from './core/potager.model';
 import { AuthMenuComponent } from './features/auth/auth-menu.component';
 import { LoginComponent } from './features/auth/login.component';
@@ -39,6 +32,13 @@ const NAV_ITEMS: readonly NavItem[] = [
   { path: APP_PATHS.garden, link: `/${APP_PATHS.garden}`, label: 'Mon jardin', icon: 'phosphorPottedPlant' },
   { path: APP_PATHS.prices, link: `/${APP_PATHS.prices}`, label: 'Prix moyens', icon: 'phosphorCoins' },
 ];
+
+const ADMIN_NAV_ITEM: NavItem = {
+  path: APP_PATHS.adminPrices,
+  link: `/${APP_PATHS.adminPrices}`,
+  label: 'Admin · Prix',
+  icon: 'phosphorSlidersHorizontal',
+};
 
 const THEME_VALUE = { light: 'light', dark: 'dark' } as const;
 
@@ -111,26 +111,14 @@ const THEME_VALUE = { light: 'light', dark: 'dark' } as const;
               </div>
               <div class="ml-auto flex items-center gap-2">
                 @if (priceModeBio()) {
-                  @if (priceSourceLive()) {
-                    <app-badge type="secondary" class="gap-1">
-                      <ng-icon name="phosphorCloudArrowDown" />
-                      Prix RNM bio en direct
-                    </app-badge>
-                  } @else {
-                    <app-badge type="secondary" class="gap-1">
-                      <ng-icon name="phosphorLeaf" />
-                      Prix bio (référence)
-                    </app-badge>
-                  }
-                } @else if (priceSourceLive()) {
                   <app-badge type="secondary" class="gap-1">
-                    <ng-icon name="phosphorCloudArrowDown" />
-                    Prix RNM en direct
+                    <ng-icon name="phosphorLeaf" />
+                    Prix bio
                   </app-badge>
                 } @else {
                   <app-badge type="outline" class="gap-1">
-                    <ng-icon name="phosphorInfo" />
-                    Prix de référence
+                    <ng-icon name="phosphorBasket" />
+                    Prix conventionnel
                   </app-badge>
                 }
                 <app-auth-menu />
@@ -157,7 +145,7 @@ export class AppComponent {
   protected readonly theme = inject(ThemeService);
   readonly #store = inject(HarvestStore);
   readonly #auth = inject(AuthService);
-  readonly #api = inject(ApiService);
+  readonly #users = inject(UserStore);
 
   protected readonly sidebarCollapsed = signal(false);
 
@@ -168,12 +156,12 @@ export class AppComponent {
     () => AUTH_GATE_ENABLED && this.#auth.ready() && !this.#auth.isAuthenticated(),
   );
 
-  protected readonly priceSourceLive = computed(() => this.#store.priceSource() === 'live');
   protected readonly priceModeBio = computed(() => this.#store.priceMode() === PRICE_MODE.bio);
 
   protected readonly navLinks = computed(() => {
     const current = this.currentPath();
-    return NAV_ITEMS.map(item => ({
+    const items = this.#users.isAdmin() ? [...NAV_ITEMS, ADMIN_NAV_ITEM] : NAV_ITEMS;
+    return items.map(item => ({
       ...item,
       active: isActivePath(item.path, current),
     }));
@@ -197,23 +185,7 @@ export class AppComponent {
     ];
   });
 
-  constructor() {
-    effect(() => {
-      if (this.#auth.isAuthenticated()) {
-        void this.#provisionAccount();
-      }
-    });
-  }
-
   protected onThemeChange(value: string): void {
     this.theme.set(value === THEME_VALUE.dark ? THEME_VALUE.dark : THEME_VALUE.light);
-  }
-
-  async #provisionAccount(): Promise<void> {
-    try {
-      await this.#api.me();
-    } catch {
-      return;
-    }
   }
 }

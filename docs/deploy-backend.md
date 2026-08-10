@@ -1,90 +1,135 @@
-# Déploiement du backend (Cloud Run)
+# Déployer le backend sur Cloud Run (guide débutant)
 
-Le workflow [`/.github/workflows/deploy-api.yml`](../.github/workflows/deploy-api.yml)
-construit une image Docker de `potager-api`, la pousse sur Artifact Registry et
-déploie sur Cloud Run :
+Objectif : mettre l'API `potager-api` en ligne pour qu'une URL `https://…`
+publique y réponde (au lieu de `localhost:3000`).
 
-- **push sur `master`** → déploiement sur la révision **live** (`potager-api`).
-- **pull request** → révision **taggée `pr-<n>`** sans trafic, avec une URL de
-  prévisualisation dédiée commentée sur la PR (comme les canaux Firebase).
+Tout le mécanisme (build de l'image Docker, envoi, déploiement) est **déjà
+automatisé** dans [`/.github/workflows/deploy-api.yml`](../.github/workflows/deploy-api.yml).
+Il se déclenche tout seul :
 
-Tant que les secrets GCP ne sont pas configurés, **le job reste vert et ne
-déploie rien** (garde identique au déploiement Firebase).
+- **push sur `master`** → l'API en ligne (version « live ») ;
+- **pull request** → une URL de prévisualisation dédiée, commentée sur la PR.
 
-## 1. Ressources GCP (une seule fois)
+Tant que les secrets ne sont pas configurés, **il ne fait rien et reste vert**.
+Ce guide couvre uniquement la config à faire **une seule fois**.
+
+> 💡 Pas besoin d'installer quoi que ce soit : utilise **Google Cloud Shell**,
+> le terminal dans le navigateur (bouton `>_` en haut à droite de la
+> [console Google Cloud](https://console.cloud.google.com)). Copie-colle les
+> blocs ci-dessous dedans.
+>
+> 💡 Ton projet Google existe déjà : c'est ton projet Firebase
+> `justin-croyable-story`. On le réutilise.
+
+---
+
+## Étape 1 — Préparer Google (à coller dans Cloud Shell)
 
 ```bash
-PROJECT_ID=mon-projet
+PROJECT_ID=justin-croyable-story
 REGION=europe-west1
-
 gcloud config set project "$PROJECT_ID"
 
+# Activer les services utilisés
 gcloud services enable \
   run.googleapis.com \
   artifactregistry.googleapis.com \
-  iamcredentials.googleapis.com \
   secretmanager.googleapis.com
 
-# Dépôt d'images Docker (nom attendu par le workflow : "potager")
+# Créer le dépôt d'images Docker (le workflow attend le nom "potager")
 gcloud artifacts repositories create potager \
   --repository-format=docker --location="$REGION"
 ```
 
-## 2. Secrets d'exécution (Secret Manager)
+## Étape 2 — Le « robot » de déploiement + sa clé
 
-Le service Cloud Run lit ces secrets via `--set-secrets` :
-
-```bash
-printf '%s' 'postgres://…'                 | gcloud secrets create DATABASE_URL --data-file=-
-printf '%s' "$PROJECT_ID"                  | gcloud secrets create FIREBASE_PROJECT_ID --data-file=-
-printf '%s' 'firebase-adminsdk-…@…'        | gcloud secrets create FIREBASE_CLIENT_EMAIL --data-file=-
-printf '%s' '-----BEGIN PRIVATE KEY----- …'| gcloud secrets create FIREBASE_PRIVATE_KEY --data-file=-
-```
-
-## 3. Compte de service de déploiement + Workload Identity Federation
+GitHub a besoin d'un compte de service Google (un « robot ») avec une clé pour
+déployer à ta place.
 
 ```bash
-# Compte de service utilisé par la CI
-gcloud iam service-accounts create gha-deployer --display-name="GitHub Actions deployer"
+gcloud iam service-accounts create gha-deployer \
+  --display-name="GitHub Actions deployer"
+
 SA="gha-deployer@${PROJECT_ID}.iam.gserviceaccount.com"
 
+# Droits nécessaires (déployer Cloud Run, pousser l'image, lire les secrets)
 for ROLE in roles/run.admin roles/artifactregistry.writer \
             roles/iam.serviceAccountUser roles/secretmanager.secretAccessor; do
-  gcloud projects add-iam-policy-binding "$PROJECT_ID" --member="serviceAccount:$SA" --role="$ROLE"
+  gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+    --member="serviceAccount:$SA" --role="$ROLE"
 done
 
-# Pool + provider WIF liés au dépôt GitHub
-gcloud iam workload-identity-pools create github --location=global
-gcloud iam workload-identity-pools providers create-oidc github-actions \
-  --location=global --workload-identity-pool=github \
-  --issuer-uri="https://token.actions.githubusercontent.com" \
-  --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository" \
-  --attribute-condition="assertion.repository=='theophane-girard/justin-croyable'"
-
-PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')
-gcloud iam service-accounts add-iam-policy-binding "$SA" \
-  --role=roles/iam.workloadIdentityUser \
-  --member="principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/github/attribute.repository/theophane-girard/justin-croyable"
+# Générer la clé JSON, puis l'afficher pour la copier
+gcloud iam service-accounts keys create gha-key.json --iam-account="$SA"
+echo "=== COPIE TOUT LE BLOC JSON CI-DESSOUS (secret GitHub GARDEN_HARVEST_GCP_SA_KEY) ==="
+cat gha-key.json
 ```
 
-## 4. Secrets GitHub Actions (Settings → Secrets → Actions)
+Copie **l'intégralité** du JSON affiché (des `{` au `}`). Tu le colleras à
+l'étape 4 dans le secret `GARDEN_HARVEST_GCP_SA_KEY`.
 
-| Secret | Valeur |
+## Étape 3 — Les 4 valeurs dont l'API a besoin pour tourner
+
+Ton API a besoin des mêmes valeurs qu'en local — **tu les as déjà** dans
+`packages/potager-api/.env`. On les met dans le coffre-fort de Google
+(« Secret Manager »).
+
+Le plus simple : la [console Secret Manager](https://console.cloud.google.com/security/secret-manager)
+→ **Create secret** → coller la valeur. Crée **exactement** ces 4 secrets
+(le nom doit être identique) :
+
+| Nom du secret | Valeur (depuis ton `.env`) |
 | --- | --- |
-| `GCP_PROJECT_ID` | l'ID du projet GCP |
-| `GCP_SERVICE_ACCOUNT` | `gha-deployer@<projet>.iam.gserviceaccount.com` |
-| `GCP_WORKLOAD_IDENTITY_PROVIDER` | `projects/<num>/locations/global/workloadIdentityPools/github/providers/github-actions` |
-| `API_CORS_ORIGIN` | origine autorisée (domaine du front) |
-| `DATABASE_URL` | *(optionnel)* si présent, la CI applique les migrations Drizzle avant déploiement |
+| `DATABASE_URL` | ta chaîne de connexion Supabase (`postgres://…`) |
+| `FIREBASE_PROJECT_ID` | `justin-croyable-story` |
+| `FIREBASE_CLIENT_EMAIL` | `firebase-adminsdk-…@….iam.gserviceaccount.com` |
+| `FIREBASE_PRIVATE_KEY` | la clé privée, **exactement** comme dans ton `.env` (avec les `\n`) |
 
-## 5. Base de données de prévisualisation
+Enfin, **autorise le compte qui exécute le conteneur** à lire ces secrets. Ce
+n'est pas le même compte que le « robot » de l'étape 2 : Cloud Run exécute le
+conteneur avec le *compte Compute par défaut* du projet. À coller dans Cloud
+Shell :
 
-Le backend a besoin d'un schéma migré. Deux options :
+```bash
+PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
+  --role="roles/secretmanager.secretAccessor"
+```
 
-- fournir le secret `DATABASE_URL` à la CI → migrations appliquées
-  automatiquement (`nx db-migrate potager-api`) avant chaque déploiement ;
-- ou appliquer les migrations manuellement une fois
-  (`DATABASE_URL=… npx nx db-migrate potager-api`).
+## Étape 4 — Les secrets côté GitHub
 
-Sur Neon, préférer une **branche de base dédiée** aux prévisualisations pour
-isoler les données ; sur Supabase, un projet de staging distinct de la prod.
+Dans GitHub : **Settings → Secrets and variables → Actions → New repository
+secret**. Crée :
+
+| Secret GitHub | Valeur |
+| --- | --- |
+| `GARDEN_HARVEST_GCP_PROJECT_ID` | `justin-croyable-story` |
+| `GARDEN_HARVEST_GCP_SA_KEY` | tout le JSON copié à l'étape 2 |
+| `GARDEN_HARVEST_API_CORS_ORIGIN` | l'URL de ton front (ex. `https://justin-croyable-potager.web.app`) |
+| `GARDEN_HARVEST_API_CORS_ORIGIN_REGEX` | `^https://justin-croyable-potager--[a-z0-9-]+\.web\.app$` (autorise les previews) |
+| `GARDEN_HARVEST_DATABASE_URL` | *(optionnel)* même valeur que `DATABASE_URL` → applique les migrations Drizzle avant chaque déploiement |
+
+## Étape 5 — Déclencher et récupérer l'URL
+
+Une fois les secrets en place, relance le workflow **Deploy API** (onglet
+Actions → Deploy API → *Re-run*), ou pousse un commit. À la fin :
+
+- version live : `gcloud run services describe potager-api --region europe-west1 --format='value(status.url)'` ;
+- prévisualisation : l'URL est **commentée automatiquement sur la PR**.
+
+Teste avec `curl https://TON-URL/api/health` → doit répondre `{"status":"ok"}`.
+
+Cette URL est celle à mettre dans le secret `GARDEN_HARVEST_STAGING_API_URL` pour le front
+(voir [deploy-frontend.md](./deploy-frontend.md)).
+
+---
+
+### En cas de souci
+
+- « permission denied » à la création d'un secret → l'API Secret Manager
+  n'est pas activée (refais l'étape 1).
+- Le job reste vert mais ne déploie rien → un secret `GARDEN_HARVEST_GCP_SA_KEY` ou
+  `GARDEN_HARVEST_GCP_PROJECT_ID` manque côté GitHub.
+- « already exists » sur un secret → il existe déjà ; ajoute une version :
+  `printf '%s' 'nouvelle-valeur' | gcloud secrets versions add NOM --data-file=-`.

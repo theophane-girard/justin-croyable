@@ -16,7 +16,13 @@
       },
       "configurations": {
         "production": {
-          "outputHashing": "all"
+          "outputHashing": "all",
+          "fileReplacements": [
+            {
+              "replace": "packages/potager-web/src/environments/environment.ts",
+              "with": "packages/potager-web/src/environments/environment.production.ts"
+            }
+          ]
         },
         "development": {
           "optimization": false,
