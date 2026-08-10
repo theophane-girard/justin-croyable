@@ -43,7 +43,7 @@ interface NatureOption {
   selector: 'app-stat-enhancer',
   imports: [NgIcon, ButtonComponent, SliderComponent, ...SelectImports],
   template: `
-    <button appButton type="button" variant="outline" size="sm" [full]="full()" (click)="open()">
+    <button appButton type="button" variant="outline" size="default" [full]="full()" (click)="open()">
       <ng-icon name="phosphorMagicWand" class="size-4" />
       Enhance
     </button>
