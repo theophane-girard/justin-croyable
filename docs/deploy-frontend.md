@@ -17,7 +17,7 @@ reste vert et ne déploie rien** (même garde que le déploiement backend).
 
 - dev / `nx serve` → `environment.ts` → `http://localhost:3000` ;
 - build `production` → `environment.production.ts`, dont l'URL est remplacée en
-  CI par le secret `STAGING_API_URL` (l'URL Cloud Run du backend).
+  CI par le secret `GARDEN_HARVEST_STAGING_API_URL` (l'URL Cloud Run du backend).
 
 Toutes les prévisualisations front pointent vers **la même API de staging**
 partagée (l'URL live Cloud Run), conformément au choix « base de staging
@@ -28,7 +28,7 @@ partagée ».
 | Secret | Valeur |
 | --- | --- |
 | `FIREBASE_SERVICE_ACCOUNT` | JSON d'un compte de service Firebase avec le rôle *Firebase Hosting Admin* (projet `justin-croyable-story`) |
-| `STAGING_API_URL` | URL publique de l'API Cloud Run (ex. `https://potager-api-xxxx-ew.a.run.app`) |
+| `GARDEN_HARVEST_STAGING_API_URL` | URL publique de l'API Cloud Run (ex. `https://potager-api-xxxx-ew.a.run.app`) |
 
 Créer le compte de service Firebase :
 

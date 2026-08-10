@@ -120,7 +120,7 @@ Actions → Deploy API → *Re-run*), ou pousse un commit. À la fin :
 
 Teste avec `curl https://TON-URL/api/health` → doit répondre `{"status":"ok"}`.
 
-Cette URL est celle à mettre dans le secret `STAGING_API_URL` pour le front
+Cette URL est celle à mettre dans le secret `GARDEN_HARVEST_STAGING_API_URL` pour le front
 (voir [deploy-frontend.md](./deploy-frontend.md)).
 
 ---
