@@ -1,6 +1,14 @@
 import { httpResource } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
+import { ActivatedRoute, type Params, Router, RouterLink } from '@angular/router';
 
 import {
   BadgeComponent,
@@ -41,8 +49,15 @@ import {
   statsTotal,
 } from '../../core/pokemon-stats';
 import { typeBarClass, typeLabels, typeTileClass } from '../../core/pokemon-type';
+import {
+  CONFIG_PARAM_PREFIX,
+  decodeEnhanceConfig,
+  encodeEnhanceConfig,
+} from '../enhance/enhance-url';
 import { StatEnhancerComponent } from '../enhance/stat-enhancer.component';
 import { PokemonMovesComponent } from './pokemon-moves.component';
+
+const ROUTE_ID_PARAM = 'id';
 
 const TAG_STAGE = 'border-transparent bg-sky-500/15 text-sky-700 dark:text-sky-300';
 const TAG_LEGENDARY = 'border-transparent bg-amber-500/20 text-amber-700 dark:text-amber-300';
@@ -286,8 +301,40 @@ function toDetail(pokemon: Pokemon, config: EnhanceConfig): DetailView {
 })
 export class PokemonDetailComponent {
   protected readonly store = inject(ComparatorStore);
+  readonly #router = inject(Router);
+  readonly #route = inject(ActivatedRoute);
 
   readonly id = input.required<string>();
+
+  constructor() {
+    this.#restoreFromUrl();
+    effect(() => this.#syncToUrl());
+  }
+
+  #restoreFromUrl(): void {
+    const raw = this.#route.snapshot.queryParamMap.get(CONFIG_PARAM_PREFIX);
+    if (!raw) {
+      return;
+    }
+    const config = decodeEnhanceConfig(raw);
+    const id = Number(this.#route.snapshot.paramMap.get(ROUTE_ID_PARAM));
+    if (config && Number.isInteger(id)) {
+      this.store.setEnhanceConfigs(new Map([[id, config]]));
+    }
+  }
+
+  #syncToUrl(): void {
+    const config = this.enhanceConfig();
+    const queryParams: Params = {
+      [CONFIG_PARAM_PREFIX]: config.level100 ? encodeEnhanceConfig(config) : null,
+    };
+    void this.#router.navigate([], {
+      relativeTo: this.#route,
+      queryParams,
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
 
   protected readonly pokedexLink = `/${APP_PATHS.pokedex}`;
   protected readonly selectedAbility = signal<PokemonAbility | undefined>(undefined);
