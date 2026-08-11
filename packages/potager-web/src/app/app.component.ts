@@ -10,6 +10,7 @@ import {
   type SegmentItem,
   SkeletonComponent,
   SkeletonOutletComponent,
+  SonnerComponent,
   ThemeService,
 } from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
@@ -53,10 +54,12 @@ const THEME_VALUE = { light: 'light', dark: 'dark' } as const;
     BadgeComponent,
     SkeletonComponent,
     SkeletonOutletComponent,
+    SonnerComponent,
     AuthMenuComponent,
     LoginComponent,
   ],
   template: `
+    <app-sonner />
     @if (showLogin()) {
       <app-login />
     } @else if (showSplash()) {
