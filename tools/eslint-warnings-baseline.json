@@ -1,0 +1,9 @@
+{
+  "libs/design-system": 53,
+  "libs/mobile-ds": 1,
+  "packages/pokemon-comparator-web": 0,
+  "packages/potager-api": 0,
+  "packages/potager-web": 0,
+  "packages/storybook-host": 0,
+  "packages/storybook-web": 40
+}
