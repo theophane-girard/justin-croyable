@@ -42,6 +42,8 @@ export class ComparatorStore {
 
   readonly selectedIdSet = computed<ReadonlySet<number>>(() => new Set(this.#selectedIds()));
 
+  readonly selectedIds = this.#selectedIds.asReadonly();
+
   readonly displayMode = this.#displayMode.asReadonly();
 
   readonly isFull = computed(() => this.#selectedIds().length >= MAX_SELECTION);
@@ -63,6 +65,10 @@ export class ComparatorStore {
 
   clear(): void {
     this.#selectedIds.set([]);
+  }
+
+  setSelection(ids: readonly number[]): void {
+    this.#selectedIds.set(ids.slice(0, MAX_SELECTION));
   }
 
   setDisplayMode(mode: DisplayMode): void {
