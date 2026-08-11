@@ -1,22 +1,22 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 import {
   ButtonComponent,
-  CardComponent,
-  DatePickerComponent,
   EmptyComponent,
-  InputDirective,
-  InputGroupComponent,
-  SelectImports,
+  FabButtonComponent,
+  FabContainerComponent,
+  FabListComponent,
   TableComponent,
 } from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
 import type { ColDef, GridOptions, RowSelectedEvent, ValueFormatterParams } from 'ag-grid-community';
 
-import { CROP_BY_ID, isVarietyId, VARIETIES, VARIETY_BY_ID } from '../../core/potager.model';
+import { isVarietyId, VARIETY_BY_ID } from '../../core/potager.model';
 import { PriceStore } from '../../core/price-store';
 import { UserStore } from '../../core/user-store';
 import { TagCellComponent } from '../../shared/tag-cell.component';
+import { ADMIN_PRICE_ADD_LINK } from '../../app.routes';
 
 type AdminPriceRow = {
   readonly id: string;
@@ -28,8 +28,6 @@ type AdminPriceRow = {
   readonly effectiveFrom: Date;
 };
 
-type VarietyOption = { readonly value: string; readonly label: string };
-
 const EUR_FORMATTER = new Intl.NumberFormat('fr-FR', {
   style: 'currency',
   currency: 'EUR',
@@ -40,21 +38,6 @@ const DATE_FORMATTER = new Intl.DateTimeFormat('fr-FR', {
   month: 'short',
   year: 'numeric',
 });
-
-const DEFAULT_SOURCE = 'manuel';
-
-const SOURCE_OPTIONS: readonly VarietyOption[] = [
-  { value: 'manuel', label: 'Manuel' },
-  { value: 'rnm', label: 'RNM' },
-  { value: 'reference', label: 'Référence' },
-];
-
-const VARIETY_OPTIONS: readonly VarietyOption[] = [...VARIETIES]
-  .map(variety => ({
-    value: variety.id,
-    label: `${CROP_BY_ID[variety.cropId].label} · ${variety.label}`,
-  }))
-  .sort((a, b) => a.label.localeCompare(b.label, 'fr'));
 
 function formatEurCell(params: ValueFormatterParams<AdminPriceRow, number>): string {
   return typeof params.value === 'number' ? EUR_FORMATTER.format(params.value) : '—';
@@ -107,15 +90,14 @@ const PRICE_GRID_OPTIONS: GridOptions<AdminPriceRow> = {
 @Component({
   selector: 'app-admin-prices',
   imports: [
+    RouterLink,
     NgIcon,
     ButtonComponent,
-    CardComponent,
-    DatePickerComponent,
     EmptyComponent,
-    InputDirective,
-    InputGroupComponent,
+    FabButtonComponent,
+    FabContainerComponent,
+    FabListComponent,
     TableComponent,
-    ...SelectImports,
   ],
   template: `
     @if (!isAdmin()) {
@@ -133,111 +115,37 @@ const PRICE_GRID_OPTIONS: GridOptions<AdminPriceRow> = {
               Prix par variété utilisés pour valoriser les récoltes.
             </p>
           </div>
-        </div>
-
-        <app-card>
-          <div class="flex flex-col gap-4">
-            <div class="flex items-center justify-between gap-2">
-              <h3 class="text-foreground text-sm font-semibold">
-                {{ isEditing() ? 'Modifier un prix' : 'Ajouter un prix' }}
-              </h3>
-              @if (isEditing()) {
-                <button appButton variant="ghost" size="sm" (click)="onReset()">
-                  <ng-icon name="phosphorPlus" class="size-4" />
-                  Nouveau
-                </button>
-              }
-            </div>
-
-            <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
-              <app-select
-                label="Variété"
-                placeholder="Sélectionner une variété…"
-                [required]="true"
-                [value]="varietyId()"
-                (valueChange)="onVarietyChange($event)"
+          @if (rows().length > 0) {
+            <div class="hidden items-center gap-2 sm:flex">
+              <button
+                appButton
+                variant="outline"
+                size="sm"
+                [buttonDisabled]="!selectedId()"
+                (click)="onDelete()"
               >
-                @for (option of varietyOptions; track option.value) {
-                  <app-select-item [value]="option.value">{{ option.label }}</app-select-item>
-                }
-              </app-select>
-
-              <app-select
-                label="Source"
-                [value]="source()"
-                (valueChange)="onSourceChange($event)"
-              >
-                @for (option of sourceOptions; track option.value) {
-                  <app-select-item [value]="option.value">{{ option.label }}</app-select-item>
-                }
-              </app-select>
-
-              <app-input-group label="Prix conventionnel" hint="En €/kg." [required]="true">
-                <input
-                  app-input
-                  type="number"
-                  inputmode="decimal"
-                  min="0"
-                  step="0.1"
-                  placeholder="0"
-                  [value]="conventionalInput()"
-                  (input)="onConventionalInput($event)"
-                />
-              </app-input-group>
-
-              <app-input-group label="Prix bio" hint="En €/kg, optionnel.">
-                <input
-                  app-input
-                  type="number"
-                  inputmode="decimal"
-                  min="0"
-                  step="0.1"
-                  placeholder="—"
-                  [value]="bioInput()"
-                  (input)="onBioInput($event)"
-                />
-              </app-input-group>
-
-              <div class="flex flex-col gap-2">
-                <label class="text-sm font-medium">Date effective</label>
-                <app-date-picker
-                  placeholder="Choisir une date"
-                  format="d MMMM yyyy"
-                  type="outline"
-                  [value]="effectiveFrom()"
-                  (valueChange)="effectiveFrom.set($event)"
-                />
-              </div>
-            </div>
-
-            <div class="flex items-center justify-end gap-2">
-              <button appButton [buttonDisabled]="!canSubmit()" (click)="onSave()">
-                <ng-icon name="phosphorFloppyDisk" class="size-4" />
-                {{ isEditing() ? 'Enregistrer les modifications' : 'Ajouter' }}
+                <ng-icon name="phosphorTrash" class="size-4" />
+                Supprimer la sélection
               </button>
+              <a appButton size="sm" [routerLink]="addLink">
+                <ng-icon name="phosphorPlus" class="size-4" />
+                Ajouter
+              </a>
             </div>
-          </div>
-        </app-card>
-
-        <div class="flex items-center justify-end gap-2">
-          <button
-            appButton
-            variant="outline"
-            size="sm"
-            [buttonDisabled]="!selectedId()"
-            (click)="onDelete()"
-          >
-            <ng-icon name="phosphorTrash" class="size-4" />
-            Supprimer la sélection
-          </button>
+          }
         </div>
 
         @if (rows().length === 0) {
           <app-empty
             icon="phosphorCoins"
             title="Aucun prix"
-            description="Ajoutez un prix ou lancez le seed de la base."
-          />
+            description="Ajoutez un premier prix par variété pour valoriser vos récoltes."
+          >
+            <a appButton [routerLink]="addLink">
+              <ng-icon name="phosphorPlus" class="size-4" />
+              Ajouter un prix
+            </a>
+          </app-empty>
         } @else {
           <app-table
             [rowData]="rows()"
@@ -248,6 +156,31 @@ const PRICE_GRID_OPTIONS: GridOptions<AdminPriceRow> = {
           />
         }
       </div>
+
+      @if (rows().length > 0) {
+        <app-fab
+          class="sm:hidden"
+          position="bottom-right"
+          triggerIcon="phosphorDotsThreeVertical"
+          triggerLabel="Actions sur les prix"
+        >
+          <app-fab-list>
+            <a appFabButton [routerLink]="addLink" aria-label="Ajouter un prix">
+              <ng-icon name="phosphorPlus" />
+            </a>
+            <button
+              appFabButton
+              type="button"
+              variant="secondary"
+              [buttonDisabled]="!selectedId()"
+              (click)="onDelete()"
+              aria-label="Supprimer la sélection"
+            >
+              <ng-icon name="phosphorTrash" />
+            </button>
+          </app-fab-list>
+        </app-fab>
+      }
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -257,21 +190,11 @@ export class AdminPricesComponent {
   readonly #users = inject(UserStore);
 
   protected readonly isAdmin = this.#users.isAdmin;
-
   protected readonly columns = PRICE_COLUMNS;
   protected readonly gridOptions = PRICE_GRID_OPTIONS;
-  protected readonly varietyOptions = VARIETY_OPTIONS;
-  protected readonly sourceOptions = SOURCE_OPTIONS;
+  protected readonly addLink = ADMIN_PRICE_ADD_LINK;
 
-  protected readonly varietyId = signal<string>('');
-  protected readonly conventionalInput = signal<string>('');
-  protected readonly bioInput = signal<string>('');
-  protected readonly source = signal<string>(DEFAULT_SOURCE);
-  protected readonly effectiveFrom = signal<Date | null>(new Date());
-  protected readonly editingId = signal<string | null>(null);
   protected readonly selectedId = signal<string | null>(null);
-
-  protected readonly isEditing = computed(() => this.editingId() !== null);
 
   protected readonly rows = computed<AdminPriceRow[]>(() =>
     this.#prices
@@ -284,72 +207,17 @@ export class AdminPricesComponent {
       ),
   );
 
-  readonly #conventional = computed(() => this.#parsePrice(this.conventionalInput()));
-  readonly #bio = computed(() => this.#parseOptionalPrice(this.bioInput()));
-
-  protected readonly canSubmit = computed(
-    () =>
-      isVarietyId(this.varietyId()) &&
-      this.#conventional() !== null &&
-      this.effectiveFrom() !== null,
-  );
-
-  protected onVarietyChange(value: string | string[] | null): void {
-    if (typeof value === 'string') {
-      this.varietyId.set(value);
-    }
-  }
-
-  protected onSourceChange(value: string | string[] | null): void {
-    if (typeof value === 'string') {
-      this.source.set(value);
-    }
-  }
-
-  protected onConventionalInput(event: Event): void {
-    this.conventionalInput.set((event.target as HTMLInputElement).value);
-  }
-
-  protected onBioInput(event: Event): void {
-    this.bioInput.set((event.target as HTMLInputElement).value);
-  }
-
-  protected onSave(): void {
-    const conventionalPricePerKg = this.#conventional();
-    const effectiveFrom = this.effectiveFrom();
-    const varietyId = this.varietyId();
-    if (conventionalPricePerKg === null || effectiveFrom === null || !isVarietyId(varietyId)) {
-      return;
-    }
-    const payload = {
-      varietyId,
-      conventionalPricePerKg,
-      bioPricePerKg: this.#bio(),
-      effectiveFrom: effectiveFrom.toISOString(),
-      source: this.source(),
-    };
-    const editingId = this.editingId();
-    const request = editingId
-      ? this.#prices.updatePrice(editingId, payload)
-      : this.#prices.createPrice(payload);
-    void request.then(succeeded => (succeeded ? this.#resetForm() : undefined));
-  }
-
-  protected onReset(): void {
-    this.#resetForm();
-  }
-
   protected onRowSelected(event: RowSelectedEvent<AdminPriceRow>): void {
     const row = event.data;
     if (!row) {
       return;
     }
     if (event.node.isSelected()) {
-      this.#loadRow(row);
+      this.selectedId.set(row.id);
       return;
     }
     if (this.selectedId() === row.id) {
-      this.#resetForm();
+      this.selectedId.set(null);
     }
   }
 
@@ -358,27 +226,7 @@ export class AdminPricesComponent {
     if (id === null) {
       return;
     }
-    void this.#prices.removePrice(id).then(succeeded => (succeeded ? this.#resetForm() : undefined));
-  }
-
-  #loadRow(row: AdminPriceRow): void {
-    this.varietyId.set(row.varietyId);
-    this.conventionalInput.set(String(row.conventionalPricePerKg));
-    this.bioInput.set(row.bioPricePerKg === null ? '' : String(row.bioPricePerKg));
-    this.source.set(row.source);
-    this.effectiveFrom.set(row.effectiveFrom);
-    this.editingId.set(row.id);
-    this.selectedId.set(row.id);
-  }
-
-  #resetForm(): void {
-    this.varietyId.set('');
-    this.conventionalInput.set('');
-    this.bioInput.set('');
-    this.source.set(DEFAULT_SOURCE);
-    this.effectiveFrom.set(new Date());
-    this.editingId.set(null);
-    this.selectedId.set(null);
+    void this.#prices.removePrice(id).then(succeeded => (succeeded ? this.selectedId.set(null) : undefined));
   }
 
   #toRow(price: {
@@ -400,14 +248,5 @@ export class AdminPricesComponent {
       source: price.source,
       effectiveFrom: new Date(price.effectiveFrom),
     };
-  }
-
-  #parsePrice(raw: string): number | null {
-    const parsed = Number.parseFloat(raw.replace(',', '.'));
-    return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
-  }
-
-  #parseOptionalPrice(raw: string): number | null {
-    return raw.trim() === '' ? null : this.#parsePrice(raw);
   }
 }
