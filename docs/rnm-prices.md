@@ -41,19 +41,39 @@ Interface admin → page **Administration des prix** → bouton
 **« Rafraîchir (RNM) »**. Appelle `POST /api/variety-prices/refresh`
 (réservé aux admins, garde Firebase + CASL).
 
-### Automatique (à mettre en place)
+### Automatique (Cloud Scheduler)
 
-L'endpoint étant protégé par l'authentification Firebase admin, Cloud Scheduler
-(jeton OIDC Google) ne peut pas l'appeler tel quel. Deux options pour un
-rafraîchissement quotidien :
+L'endpoint admin étant protégé par Firebase, un **second endpoint** est prévu
+pour la planification, hors Firebase, protégé par un **jeton secret** :
 
-1. **Endpoint dédié à secret** : ajouter une route non-Firebase protégée par un
-   en-tête secret (`X-Refresh-Token`), et configurer Cloud Scheduler pour l'appeler
-   quotidiennement avec ce secret.
-2. **Cloud Run Job** : exécuter le service d'ingestion en job planifié (pas
-   d'authentification HTTP), déclenché par Cloud Scheduler.
+`POST /api/variety-prices/refresh-cron` — en-tête `X-Refresh-Token: <secret>`.
 
-Rappel : la donnée détail RNM est **hebdomadaire** avec ~8 j de décalage. Un job
+Le secret est la variable d'environnement Cloud Run **`RNM_REFRESH_TOKEN`** ;
+si elle est absente, l'endpoint refuse tout (403). Le workflow `deploy-api.yml`
+l'injecte depuis le secret GitHub **`GARDEN_HARVEST_RNM_REFRESH_TOKEN`**.
+
+Mise en place (une fois) :
+
+```bash
+# 1. Choisir un secret et le déclarer côté GitHub
+#    Settings → Secrets → Actions → GARDEN_HARVEST_RNM_REFRESH_TOKEN = <secret>
+#    (le prochain déploiement backend le posera sur Cloud Run)
+
+# 2. Créer le job Cloud Scheduler (quotidien 06:00 Europe/Paris)
+API_URL=$(gcloud run services describe potager-api --region europe-west1 --format='value(status.url)')
+gcloud scheduler jobs create http rnm-refresh \
+  --location europe-west1 \
+  --schedule "0 6 * * *" \
+  --time-zone "Europe/Paris" \
+  --uri "${API_URL}/api/variety-prices/refresh-cron" \
+  --http-method POST \
+  --headers "X-Refresh-Token=<secret>" \
+  --attempt-deadline 300s
+```
+
+Coût : Cloud Scheduler offre 3 jobs gratuits/mois ; l'appel quotidien reste ~0 €.
+
+Rappel : la donnée détail RNM est **hebdomadaire** avec ~8 j de décalage. Le job
 quotidien ingère simplement dès qu'une nouvelle semaine paraît ; l'app affiche la
 date effective (`effective_from`), pas « aujourd'hui ».
 

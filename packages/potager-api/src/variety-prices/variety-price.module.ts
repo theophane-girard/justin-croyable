@@ -15,6 +15,8 @@ import { type Database, DRIZZLE } from '../db/drizzle';
 import { varietyPrices, type VarietyPriceRecord } from '../db/schema';
 
 import { RnmIngestionService } from './rnm/rnm-ingestion.service';
+import { RnmScheduleController } from './rnm/rnm-schedule.controller';
+import { RefreshTokenGuard } from './rnm/refresh-token.guard';
 
 const ADMIN_ONLY = { message: 'Action réservée aux administrateurs.' };
 
@@ -136,7 +138,7 @@ export class VarietyPriceController {
 }
 
 @Module({
-  controllers: [VarietyPriceController],
-  providers: [VarietyPriceService, RnmIngestionService],
+  controllers: [VarietyPriceController, RnmScheduleController],
+  providers: [VarietyPriceService, RnmIngestionService, RefreshTokenGuard],
 })
 export class VarietyPriceModule {}

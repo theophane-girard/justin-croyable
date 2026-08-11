@@ -113,7 +113,7 @@ jobs:
             --region "$REGION" \
             --platform managed \
             --allow-unauthenticated \
-            --set-env-vars "^@^NODE_ENV=production@CORS_ORIGIN=${{ secrets.GARDEN_HARVEST_API_CORS_ORIGIN }}@CORS_ORIGIN_REGEX=${{ secrets.GARDEN_HARVEST_API_CORS_ORIGIN_REGEX }}" \
+            --set-env-vars "^@^NODE_ENV=production@CORS_ORIGIN=${{ secrets.GARDEN_HARVEST_API_CORS_ORIGIN }}@CORS_ORIGIN_REGEX=${{ secrets.GARDEN_HARVEST_API_CORS_ORIGIN_REGEX }}@RNM_REFRESH_TOKEN=${{ secrets.GARDEN_HARVEST_RNM_REFRESH_TOKEN }}" \
             --set-secrets "DATABASE_URL=DATABASE_URL:latest,FIREBASE_PROJECT_ID=FIREBASE_PROJECT_ID:latest,FIREBASE_CLIENT_EMAIL=FIREBASE_CLIENT_EMAIL:latest,FIREBASE_PRIVATE_KEY=FIREBASE_PRIVATE_KEY:latest"
 
       - name: Déploiement prévisualisation (PR)
@@ -133,7 +133,7 @@ jobs:
             --allow-unauthenticated \
             --tag "$TAG" \
             $NO_TRAFFIC \
-            --set-env-vars "^@^NODE_ENV=production@CORS_ORIGIN=${{ secrets.GARDEN_HARVEST_API_CORS_ORIGIN }}@CORS_ORIGIN_REGEX=${{ secrets.GARDEN_HARVEST_API_CORS_ORIGIN_REGEX }}" \
+            --set-env-vars "^@^NODE_ENV=production@CORS_ORIGIN=${{ secrets.GARDEN_HARVEST_API_CORS_ORIGIN }}@CORS_ORIGIN_REGEX=${{ secrets.GARDEN_HARVEST_API_CORS_ORIGIN_REGEX }}@RNM_REFRESH_TOKEN=${{ secrets.GARDEN_HARVEST_RNM_REFRESH_TOKEN }}" \
             --set-secrets "DATABASE_URL=DATABASE_URL:latest,FIREBASE_PROJECT_ID=FIREBASE_PROJECT_ID:latest,FIREBASE_CLIENT_EMAIL=FIREBASE_CLIENT_EMAIL:latest,FIREBASE_PRIVATE_KEY=FIREBASE_PRIVATE_KEY:latest"
           URL=$(gcloud run services describe "$SERVICE" --region "$REGION" --format=json | jq -r --arg t "$TAG" '.status.traffic[] | select(.tag==$t) | .url')
           echo "url=$URL" >> "$GITHUB_OUTPUT"
