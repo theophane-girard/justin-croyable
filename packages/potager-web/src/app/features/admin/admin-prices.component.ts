@@ -133,7 +133,22 @@ const PRICE_GRID_OPTIONS: GridOptions<AdminPriceRow> = {
               Prix par variété utilisés pour valoriser les récoltes.
             </p>
           </div>
+          <button
+            appButton
+            variant="outline"
+            size="sm"
+            [loading]="refreshing()"
+            [buttonDisabled]="refreshing()"
+            (click)="onRefreshRnm()"
+          >
+            <ng-icon name="phosphorCloudArrowDown" class="size-4" />
+            Rafraîchir (RNM)
+          </button>
         </div>
+
+        @if (refreshError()) {
+          <p class="text-destructive text-sm">{{ refreshError() }}</p>
+        }
 
         <app-card>
           <div class="flex flex-col gap-4">
@@ -257,6 +272,8 @@ export class AdminPricesComponent {
   readonly #users = inject(UserStore);
 
   protected readonly isAdmin = this.#users.isAdmin;
+  protected readonly refreshing = signal(false);
+  protected readonly refreshError = signal<string | null>(null);
 
   protected readonly columns = PRICE_COLUMNS;
   protected readonly gridOptions = PRICE_GRID_OPTIONS;
@@ -359,6 +376,19 @@ export class AdminPricesComponent {
       return;
     }
     void this.#prices.removePrice(id).then(succeeded => (succeeded ? this.#resetForm() : undefined));
+  }
+
+  protected onRefreshRnm(): void {
+    this.refreshing.set(true);
+    this.refreshError.set(null);
+    void this.#prices
+      .refreshFromRnm()
+      .then(succeeded => {
+        if (!succeeded) {
+          this.refreshError.set("L'import RNM a échoué. Réessaie plus tard.");
+        }
+      })
+      .finally(() => this.refreshing.set(false));
   }
 
   #loadRow(row: AdminPriceRow): void {

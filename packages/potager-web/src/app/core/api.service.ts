@@ -100,4 +100,8 @@ export class ApiService {
   removeVarietyPrice(id: string) {
     return this.#client.varietyPrices.remove({ params: { id } });
   }
+
+  refreshVarietyPricesFromRnm() {
+    return this.#client.varietyPrices.refresh({ body: {} });
+  }
 }
