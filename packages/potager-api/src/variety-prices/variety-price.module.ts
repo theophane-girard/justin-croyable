@@ -14,6 +14,8 @@ import { FirebaseAuthGuard } from '../auth/firebase-auth.guard';
 import { type Database, DRIZZLE } from '../db/drizzle';
 import { varietyPrices, type VarietyPriceRecord } from '../db/schema';
 
+import { RnmIngestionService } from './rnm/rnm-ingestion.service';
+
 const ADMIN_ONLY = { message: 'Action réservée aux administrateurs.' };
 
 function toVarietyPrice(record: VarietyPriceRecord): VarietyPrice {
@@ -83,12 +85,26 @@ export class VarietyPriceService {
 @Controller()
 @UseGuards(FirebaseAuthGuard)
 export class VarietyPriceController {
-  constructor(private readonly prices: VarietyPriceService) {}
+  constructor(
+    private readonly prices: VarietyPriceService,
+    private readonly rnm: RnmIngestionService,
+  ) {}
 
   @TsRestHandler(varietyPriceContract)
   async handler(@CurrentAbility() ability: AppAbility) {
     return tsRestHandler(varietyPriceContract, {
       list: async () => ({ status: 200, body: await this.prices.list() }),
+      refresh: async () => {
+        if (ability.cannot(ACTION.create, SUBJECT.varietyPrice)) {
+          return { status: 403, body: ADMIN_ONLY };
+        }
+        try {
+          return { status: 200, body: await this.rnm.refresh() };
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Échec de l'import RNM.";
+          return { status: 502, body: { message } };
+        }
+      },
       create: async ({ body }) => {
         if (ability.cannot(ACTION.create, SUBJECT.varietyPrice)) {
           return { status: 403, body: ADMIN_ONLY };
@@ -119,5 +135,8 @@ export class VarietyPriceController {
   }
 }
 
-@Module({ controllers: [VarietyPriceController], providers: [VarietyPriceService] })
+@Module({
+  controllers: [VarietyPriceController],
+  providers: [VarietyPriceService, RnmIngestionService],
+})
 export class VarietyPriceModule {}

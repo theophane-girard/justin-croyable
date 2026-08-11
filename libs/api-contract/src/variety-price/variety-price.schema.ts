@@ -24,4 +24,13 @@ export type CreateVarietyPricePayload = z.infer<typeof createVarietyPriceSchema>
 
 export const updateVarietyPriceSchema = createVarietyPriceSchema.partial();
 
+export const rnmRefreshResultSchema = z.object({
+  source: z.string(),
+  updatedVarieties: z.number().int().nonnegative(),
+  detailRows: z.number().int().nonnegative(),
+  effectiveFrom: z.string().datetime(),
+});
+
+export type RnmRefreshResult = z.infer<typeof rnmRefreshResultSchema>;
+
 export type UpdateVarietyPricePayload = z.infer<typeof updateVarietyPriceSchema>;

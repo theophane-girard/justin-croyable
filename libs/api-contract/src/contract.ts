@@ -8,6 +8,7 @@ import { createPlantSchema, plantSchema, updatePlantSchema } from './plant/plant
 import { userContract } from './user/user.contract';
 import {
   createVarietyPriceSchema,
+  rnmRefreshResultSchema,
   updateVarietyPriceSchema,
   varietyPriceSchema,
 } from './variety-price/variety-price.schema';
@@ -100,6 +101,17 @@ export const varietyPriceContract = contract.router({
     method: 'GET',
     path: '/variety-prices',
     responses: { 200: z.array(varietyPriceSchema), 401: errorSchema },
+  },
+  refresh: {
+    method: 'POST',
+    path: '/variety-prices/refresh',
+    body: z.object({}),
+    responses: {
+      200: rnmRefreshResultSchema,
+      401: errorSchema,
+      403: errorSchema,
+      502: errorSchema,
+    },
   },
   create: {
     method: 'POST',
