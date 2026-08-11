@@ -3,6 +3,7 @@ import { computed, inject, Injectable, type Signal, signal } from '@angular/core
 import { type Ability } from './pokemon-ability';
 import { PokemonApiService } from './pokemon-api.service';
 import { type Pokemon } from './pokemon.model';
+import { DEFAULT_ENHANCE_CONFIG, type EnhanceConfig } from './pokemon-stats';
 
 export const DISPLAY_MODE = {
   bars: 'bars',
@@ -20,6 +21,7 @@ export class ComparatorStore {
 
   readonly #selectedIds = signal<readonly number[]>(DEFAULT_SELECTION);
   readonly #displayMode = signal<DisplayMode>(DISPLAY_MODE.bars);
+  readonly #enhanceById = signal<ReadonlyMap<number, EnhanceConfig>>(new Map());
 
   readonly #pokemonById = computed(
     () => new Map<number, Pokemon>(this.#api.pokemons().map(pokemon => [pokemon.id, pokemon])),
@@ -65,6 +67,22 @@ export class ComparatorStore {
 
   setDisplayMode(mode: DisplayMode): void {
     this.#displayMode.set(mode);
+  }
+
+  enhanceFor(id: number): EnhanceConfig {
+    return this.#enhanceById().get(id) ?? DEFAULT_ENHANCE_CONFIG;
+  }
+
+  setEnhanceConfigs(configs: ReadonlyMap<number, EnhanceConfig>): void {
+    const next = new Map(this.#enhanceById());
+    configs.forEach((config, id) => next.set(id, config));
+    this.#enhanceById.set(next);
+  }
+
+  resetEnhanceConfigs(ids: readonly number[]): void {
+    const next = new Map(this.#enhanceById());
+    ids.forEach(id => next.delete(id));
+    this.#enhanceById.set(next);
   }
 
   reload(): void {

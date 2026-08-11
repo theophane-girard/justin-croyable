@@ -29,9 +29,9 @@ import { ComparatorStore, DISPLAY_MODE } from '../../core/comparator-store';
 import { APP_PATHS } from '../../app.routes';
 import { PokedexGridComponent } from '../pokedex/pokedex-grid.component';
 import { StatEnhancerComponent } from '../enhance/stat-enhancer.component';
-import { injectEnhanceUrl } from '../enhance/enhance-url';
 import {
   LANG,
+  MAX_BASE_STAT,
   pokemonImageUrl,
   pokemonName,
   type Stat,
@@ -169,7 +169,7 @@ const DISPLAY_MODE_ITEMS: readonly SegmentItem[] = [
               <div class="flex flex-wrap items-center justify-between gap-3">
                 <h2 class="text-lg font-semibold">{{ statsHeading() }}</h2>
                 <div class="flex flex-wrap items-center gap-2">
-                  <app-stat-enhancer />
+                  <app-stat-enhancer [targets]="enhanceTargets()" />
                   <app-segment
                     variant="accent"
                     [items]="displayModeItems"
@@ -243,18 +243,36 @@ export class ComparatorComponent {
 
   protected readonly displayMode = this.store.displayMode;
 
-  protected readonly enhanceConfig = injectEnhanceUrl().config;
-
-  protected readonly statsHeading = computed(() =>
-    this.enhanceConfig().level100 ? 'Statistiques (niveau 100)' : 'Statistiques de base',
+  protected readonly enhanceTargets = computed<readonly { id: number; name: string }[]>(() =>
+    this.store.selected().map(pokemon => ({ id: pokemon.id, name: pokemonName(pokemon, LANG.fr) })),
   );
 
-  readonly #enhancedStatsById = computed<ReadonlyMap<number, Readonly<Record<Stat, number>>>>(() => {
-    const config = this.enhanceConfig();
-    return new Map(
-      this.store.selected().map(pokemon => [pokemon.id, applyEnhancedStats(pokemon.stats, config)]),
-    );
-  });
+  protected readonly statsHeading = computed(() =>
+    this.store.selected().some(pokemon => this.store.enhanceFor(pokemon.id).level100)
+      ? 'Statistiques (niveau 100)'
+      : 'Statistiques de base',
+  );
+
+  readonly #scaleMax = computed(() =>
+    this.store
+      .selected()
+      .reduce(
+        (max, pokemon) => Math.max(max, enhancedStatScaleMax(this.store.enhanceFor(pokemon.id))),
+        MAX_BASE_STAT,
+      ),
+  );
+
+  readonly #enhancedStatsById = computed<ReadonlyMap<number, Readonly<Record<Stat, number>>>>(
+    () =>
+      new Map(
+        this.store
+          .selected()
+          .map(pokemon => [
+            pokemon.id,
+            applyEnhancedStats(pokemon.stats, this.store.enhanceFor(pokemon.id)),
+          ]),
+      ),
+  );
 
   readonly #statValue = (id: number, stat: Stat): number =>
     this.#enhancedStatsById().get(id)?.[stat] ?? 0;
@@ -271,7 +289,7 @@ export class ComparatorComponent {
 
   protected readonly statGroups = computed<readonly StatGroup[]>(() => {
     const selected = this.store.selected();
-    const scaleMax = enhancedStatScaleMax(this.enhanceConfig());
+    const scaleMax = this.#scaleMax();
     return STAT_ORDER.map(stat => ({
       key: stat,
       label: STAT_META[stat].label,
@@ -291,7 +309,7 @@ export class ComparatorComponent {
   protected readonly radarOptions = computed<EChartsCoreOption>(() => {
     const palette = this.#palette.palette();
     const selected = this.store.selected();
-    const scaleMax = enhancedStatScaleMax(this.enhanceConfig());
+    const scaleMax = this.#scaleMax();
     return {
       tooltip: { trigger: 'item' },
       legend: { bottom: 0, type: 'scroll' },

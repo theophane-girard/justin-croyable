@@ -42,7 +42,6 @@ import {
 } from '../../core/pokemon-stats';
 import { typeBarClass, typeLabels, typeTileClass } from '../../core/pokemon-type';
 import { StatEnhancerComponent } from '../enhance/stat-enhancer.component';
-import { injectEnhanceUrl } from '../enhance/enhance-url';
 import { PokemonMovesComponent } from './pokemon-moves.component';
 
 const TAG_STAGE = 'border-transparent bg-sky-500/15 text-sky-700 dark:text-sky-300';
@@ -219,7 +218,7 @@ function toDetail(pokemon: Pokemon, config: EnhanceConfig): DetailView {
                       <h3 class="text-foreground text-sm font-semibold">{{ statsHeading() }}</h3>
                       <div class="flex items-center gap-3">
                         <span class="text-muted-foreground text-sm">Total {{ view.total }}</span>
-                        <app-stat-enhancer />
+                        <app-stat-enhancer [targets]="enhanceTargets()" />
                       </div>
                     </div>
                     <div class="flex flex-col gap-2">
@@ -292,17 +291,26 @@ export class PokemonDetailComponent {
 
   protected readonly pokedexLink = `/${APP_PATHS.pokedex}`;
   protected readonly selectedAbility = signal<PokemonAbility | undefined>(undefined);
-  protected readonly enhanceConfig = injectEnhanceUrl().config;
+
+  readonly #numericId = computed(() => Number(this.id()));
+
+  readonly #pokemon = computed(() =>
+    this.store.pokemons().find(entry => entry.id === this.#numericId()),
+  );
+
+  protected readonly enhanceConfig = computed(() => this.store.enhanceFor(this.#numericId()));
+
+  protected readonly enhanceTargets = computed<readonly { id: number; name: string }[]>(() => {
+    const pokemon = this.#pokemon();
+    return pokemon ? [{ id: pokemon.id, name: pokemonName(pokemon, LANG.fr) }] : [];
+  });
 
   protected readonly statsHeading = computed(() =>
     this.enhanceConfig().level100 ? 'Statistiques (niveau 100)' : 'Statistiques de base',
   );
 
-  readonly #numericId = computed(() => Number(this.id()));
-
   protected readonly detail = computed<DetailView | undefined>(() => {
-    const id = this.#numericId();
-    const pokemon = this.store.pokemons().find(entry => entry.id === id);
+    const pokemon = this.#pokemon();
     return pokemon ? toDetail(pokemon, this.enhanceConfig()) : undefined;
   });
 
