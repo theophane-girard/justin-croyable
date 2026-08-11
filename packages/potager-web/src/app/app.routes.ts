@@ -25,6 +25,7 @@ export const GARDEN_LINK = `/${APP_PATHS.garden}`;
 export const GARDEN_ADD_LINK = `/${APP_PATHS.garden}/${APP_PATHS.add}`;
 export const PRICES_LINK = `/${APP_PATHS.prices}`;
 export const ADMIN_PRICES_LINK = `/${APP_PATHS.adminPrices}`;
+export const ADMIN_PRICE_ADD_LINK = `/${APP_PATHS.adminPrices}/${APP_PATHS.add}`;
 
 export const APP_ROUTES: Route[] = [
   {
@@ -107,11 +108,24 @@ export const APP_ROUTES: Route[] = [
   },
   {
     path: APP_PATHS.adminPrices,
-    loadComponent: () =>
-      import('./features/admin/admin-prices.component').then(m => m.AdminPricesComponent),
-    title: 'Administration des prix — Potager',
-    data: { skeleton: SKELETON_KIND.list },
-    resolve: { simulatedLoad: simulatedLoadResolver },
+    children: [
+      {
+        path: '',
+        loadComponent: () =>
+          import('./features/admin/admin-prices.component').then(m => m.AdminPricesComponent),
+        title: 'Administration des prix — Potager',
+        data: { skeleton: SKELETON_KIND.list },
+        resolve: { simulatedLoad: simulatedLoadResolver },
+      },
+      {
+        path: APP_PATHS.add,
+        loadComponent: () =>
+          import('./features/admin/add-price.component').then(m => m.AddPriceComponent),
+        title: 'Ajouter un prix — Potager',
+        data: { skeleton: SKELETON_KIND.form },
+        resolve: { simulatedLoad: simulatedLoadResolver },
+      },
+    ],
   },
   {
     path: '**',

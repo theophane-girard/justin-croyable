@@ -22,8 +22,9 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-      # Requis par l'authentification GCP par Workload Identity Federation.
-      id-token: write
+      # nrwl/nx-set-shas interroge l'API Actions sur un push master pour
+      # trouver le dernier run réussi (base du diff affected).
+      actions: read
 
     steps:
       # Tant que les secrets GCP ne sont pas configurés, tout est ignoré : le job
