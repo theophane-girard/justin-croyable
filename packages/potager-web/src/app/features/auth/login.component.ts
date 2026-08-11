@@ -1,9 +1,31 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { FirebaseError } from 'firebase/app';
 
-import { ButtonComponent, CardComponent } from '@justin-croyable/design-system';
+import { ButtonComponent, CardComponent, SonnerService } from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
 
 import { AuthService } from '../../core/auth.service';
+
+const AUTH_ERROR_CODE = {
+  unauthorizedDomain: 'auth/unauthorized-domain',
+  popupBlocked: 'auth/popup-blocked',
+  popupClosed: 'auth/popup-closed-by-user',
+  cancelledPopup: 'auth/cancelled-popup-request',
+  networkFailed: 'auth/network-request-failed',
+} as const;
+
+const AUTH_ERROR_MESSAGE: Record<string, string> = {
+  [AUTH_ERROR_CODE.unauthorizedDomain]: "Ce domaine n'est pas autorisé pour la connexion Google.",
+  [AUTH_ERROR_CODE.popupBlocked]: 'La fenêtre de connexion a été bloquée par le navigateur.',
+  [AUTH_ERROR_CODE.networkFailed]: 'Connexion impossible : vérifie ta connexion internet.',
+};
+
+const DEFAULT_AUTH_ERROR_MESSAGE = 'La connexion a échoué. Réessaie.';
+
+const SILENT_AUTH_ERROR_CODES: readonly string[] = [
+  AUTH_ERROR_CODE.popupClosed,
+  AUTH_ERROR_CODE.cancelledPopup,
+];
 
 @Component({
   selector: 'app-login',
@@ -19,7 +41,13 @@ import { AuthService } from '../../core/auth.service';
             <h1 class="text-xl font-semibold">Mon Potager</h1>
             <p class="text-muted-foreground text-sm">Connecte-toi pour accéder à ton potager.</p>
           </div>
-          <button appButton class="w-full" (click)="onSignIn()">
+          <button
+            appButton
+            class="w-full"
+            [loading]="signingIn()"
+            [buttonDisabled]="signingIn()"
+            (click)="onSignIn()"
+          >
             <ng-icon name="phosphorGoogleLogo" class="size-4" />
             Se connecter avec Google
           </button>
@@ -31,8 +59,23 @@ import { AuthService } from '../../core/auth.service';
 })
 export class LoginComponent {
   readonly #auth = inject(AuthService);
+  readonly #sonner = inject(SonnerService);
+
+  protected readonly signingIn = signal(false);
 
   protected onSignIn(): void {
-    this.#auth.signInWithGoogle().catch(() => undefined);
+    this.signingIn.set(true);
+    this.#auth
+      .signInWithGoogle()
+      .catch((error: unknown) => this.#notifyError(error))
+      .finally(() => this.signingIn.set(false));
+  }
+
+  #notifyError(error: unknown): void {
+    const code = error instanceof FirebaseError ? error.code : '';
+    if (SILENT_AUTH_ERROR_CODES.includes(code)) {
+      return;
+    }
+    this.#sonner.error(AUTH_ERROR_MESSAGE[code] ?? DEFAULT_AUTH_ERROR_MESSAGE);
   }
 }
