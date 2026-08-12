@@ -88,9 +88,9 @@ Seulement deux champs :
 
 ```
 varieties
-├─ id                  uuid    PK      -- identité stable
+├─ id                  uuid    PK      -- identité stable, pour TOUTES les lignes
 ├─ user_id             uuid    NULL    -- NULL = référence globale ; sinon = custom du user
-├─ slug                text            -- id lisible ; = ancien varietyId pour les lignes de référence
+├─ slug                text    NULL    -- réservé au référentiel (= ancien varietyId) ; NULL pour le custom
 ├─ crop_id             text    NOT NULL-- culture parente (déduite de la référence pour le custom)
 ├─ label               text    NOT NULL
 ├─ reference_variety_id uuid   NULL    -- NULL pour une référence ; l'id de la réf RNM pour un custom
@@ -102,9 +102,25 @@ varieties
 - `user_id` renseigné → variété custom.
 - `reference_variety_id` → uniquement pour le custom, pointe vers une ligne
   `user_id IS NULL`.
-- `slug` conserve les identifiants historiques (`tomate-coeur-de-boeuf`) pour la
-  compatibilité avec les données existantes (voir § 4). Unicité :
-  `(user_id, slug)` — un user ne peut pas avoir deux variétés au même slug.
+- **L'identité est toujours l'`id` (uuid)**, y compris pour le custom.
+
+#### Slug : réservé au référentiel, pas au custom
+
+- `slug` n'est renseigné que pour les **variétés de référence** (`user_id IS
+  NULL`), où il conserve les identifiants historiques (`tomate-coeur-de-boeuf`)
+  pour la compatibilité avec les données existantes (voir § 4).
+- Les **variétés custom n'ont pas de slug** (`slug = NULL`). Décision actée :
+  un slug custom serait purement cosmétique et n'apporte rien de fonctionnel —
+  prix et rollups passent par `reference_variety_id` et `crop_id`, jamais par le
+  slug. Le `label` suffit à l'affichage, l'`id` à l'identité.
+- Ne **pas** dériver de slug du libellé custom : le libellé est éditable (un
+  rename casserait un slug-clé) et non unique. On pourra ajouter un slug custom
+  plus tard **uniquement** si un besoin lisible concret apparaît (page détail
+  partageable, export utilisateur), et il serait alors **figé à la création**,
+  jamais recalculé au rename.
+- Unicité du référentiel : `slug` unique là où `user_id IS NULL`. Pour éviter
+  qu'un user crée deux fois la même variété, on contraint plutôt sur le **libellé
+  normalisé** : unicité `(user_id, lower(trim(label)))`.
 
 ### Cultures (`crops`)
 
@@ -114,9 +130,17 @@ labels et catégories.
 ### Impact sur les tables existantes
 
 `harvests.variety_id`, `plants.variety_id`, `variety_prices.variety_id` restent
-en `text` et continuent de stocker le **slug**. On ne met pas (encore) de clé
-étrangère uuid pour limiter le blast radius de la migration (voir § 4). Une
-seconde étape pourra les convertir en `uuid` référençant `varieties.id`.
+en `text` (pas de FK uuid tout de suite, pour limiter le blast radius — voir § 4).
+La colonne devient **hétérogène** :
+
+- lignes rattachées à une variété de **référence** → stockent le **slug**
+  (`tomate-coeur-de-boeuf`), comme aujourd'hui ;
+- lignes rattachées à une variété **custom** → stockent l'**uuid** de la variété
+  (le custom n'a pas de slug).
+
+La résolution se fait donc en matchant `variety_id` contre `varieties.slug`
+**OU** `varieties.id` (le `CatalogStore` / l'API indexe les variétés sur les deux
+clés). Une seconde étape pourra homogénéiser en `uuid` + FK (§ 4, point 4).
 
 ---
 
@@ -130,13 +154,18 @@ Les lignes actuelles (`harvests`, `plants`, `variety_prices`) stockent des
 2. **Seed des variétés de référence** : une ligne par entrée du catalogue en dur,
    `user_id = NULL`, `slug = ancien varietyId`, `crop_id`, `label`. Fait dans le
    script de seed ([`db/seed.ts`](../packages/potager-api/src/db/seed.ts)).
-3. **Pas de réécriture immédiate** des `variety_id` existants : ils restent des
-   slugs et matchent `varieties.slug`. Rien à migrer sur les données transac.
+3. **Pas de réécriture des `variety_id` existants** : les lignes de référence
+   restent des slugs et matchent `varieties.slug`. Rien à migrer sur les données
+   transac. Les futures lignes **custom** stockeront directement l'`uuid` de la
+   variété (le custom n'a pas de slug).
 4. (Optionnel, plus tard) Bascule des colonnes `variety_id` en `uuid` + FK vers
-   `varieties.id`, avec une migration qui mappe `slug → id`.
+   `varieties.id`, avec une migration qui mappe `slug → id` pour les lignes de
+   référence (les lignes custom sont déjà en uuid).
 
-> Garder le slug comme pivot évite une migration de données risquée dès la Phase 1
-> et préserve la compatibilité avec `variety_prices` (indexée sur slug).
+> Garder le slug comme pivot pour la référence évite une migration de données
+> risquée dès la Phase 1 et préserve la compatibilité avec `variety_prices`
+> (indexée sur slug). Le custom, lui, part directement sur l'uuid : pas de dette
+> à rembourser côté données custom lors de la bascule.
 
 ---
 
@@ -193,9 +222,11 @@ function pricingVarietyId(v: Variety): string {
 ```
 
 Dans `price-store`, `#resolve()` / `currentFor()` / `latestFor()` cherchent
-l'index de prix sur `pricingVarietyId(v)` au lieu de `v.id`. Le repli existant
-« variété par défaut de la culture » (`cropFallbackVarietyId`) reste en dernier
-filet si la référence n'a pas de prix ou a disparu du catalogue.
+l'index de prix sur `pricingVarietyId(v)` au lieu de `v.id`. L'index `variety_prices`
+étant clé par **slug**, la variété visée par `pricingVarietyId` est toujours une
+variété de **référence** (donc dotée d'un slug) — la résolution reste homogène.
+Le repli existant « variété par défaut de la culture » (`cropFallbackVarietyId`)
+reste en dernier filet si la référence n'a pas de prix ou a disparu du catalogue.
 
 Effets induits, **sans code supplémentaire** :
 
@@ -221,7 +252,11 @@ Dans `add-plant` et `add-harvest` (et éventuellement `prices`), un point d'entr
    culture parente (filet existant). Pas de prix figé.
 3. Suppression d'une variété custom : bloquée (ou avertie) si des récoltes/plants
    la référencent, pour ne pas créer de lignes orphelines.
-4. Unicité `(user_id, slug)` pour éviter les collisions de sélecteur.
+4. Identité = `id` (uuid) pour toutes les variétés ; **le custom n'a pas de
+   slug** (§ 3). Pas de dérivation de slug depuis le libellé.
+5. Unicité côté custom sur le **libellé normalisé** (`(user_id,
+   lower(trim(label)))`), pas sur un slug, pour éviter qu'un user crée deux fois
+   la même variété.
 
 ---
 
