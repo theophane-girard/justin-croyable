@@ -136,17 +136,35 @@ complet (invitations, UI, expiration) mérite son propre doc de design dédié.
 - **`garden_members`** — appartenance `(garden_id, user_id, role, expires_at?)`.
 - **Rôles** (du plus au moins capable) :
 
-  | Rôle | Contenu (plants/récoltes/dépenses/variétés custom) | Membres | Suppression jardin |
-  | --- | --- | --- | --- |
-  | `owner` (propriétaire) | CRUD complet | gère | oui |
-  | `co_owner` (co-propriétaire) | CRUD complet | gère | non |
-  | `editor` (éditeur temporaire) | CRUD, borné par `expires_at` | non | non |
-  | `viewer` (invité simple) | lecture seule | non | non |
+  | Rôle | Contenu (plants/récoltes/dépenses/variétés custom) | Gère les membres | Supprime le jardin | À l'expiration (`expires_at`) |
+  | --- | --- | --- | --- | --- |
+  | `owner` (créateur) | CRUD complet | oui | **oui (seul)** | — (permanent) |
+  | `co_owner` (co-propriétaire) | CRUD complet | oui | non | — (permanent) |
+  | `temp_editor_viewer` (éditeur temporaire → invité) | CRUD tant que non expiré | non | non | **retombe en `viewer`** (lecture) |
+  | `temp_editor_revoked` (éditeur temporaire → révoqué) | CRUD tant que non expiré | non | non | **plus aucun accès** |
+  | `viewer` (invité simple) | lecture seule | non | non | — (permanent) |
+
+  Décisions ratifiées : **seul le `owner` (créateur) supprime le jardin** ; l'éditeur
+  temporaire existe en **deux variantes** distinctes selon le comportement voulu à
+  l'expiration (repli lecture vs. accès coupé).
 
 - **Toutes** les ressources migrent de `user_id` vers `garden_id` (ownership), la
-  permission effective venant du rôle du membre. CASL est étendu pour construire
-  l'ability à partir des appartenances (`garden_id ∈ mes jardins` + rôle
-  suffisant), au lieu du seul rôle global.
+  permission effective venant du rôle **effectif** du membre (rôle brut recalculé
+  selon `expires_at` pour les deux rôles temporaires). CASL est étendu pour
+  construire l'ability à partir des appartenances (`garden_id ∈ mes jardins` +
+  rôle effectif), au lieu du seul rôle global.
+
+- **Invitation par e-mail.** Un membre est invité via l'e-mail de son compte.
+  L'accès n'est accordé que si l'e-mail du compte authentifié **correspond** à
+  l'e-mail invité ; sinon **on bloque** (pas de rattachement silencieux à un autre
+  compte). `garden_members` porte donc l'`email` invité ; `user_id` est résolu au
+  premier accès, sous réserve que l'e-mail corresponde.
+
+- **Un seul jardin pour l'instant.** Chaque user a **un** jardin personnel
+  (auto-créé). Pas de sélecteur ni de liste multi-jardins en Phase 0 : le « jardin
+  courant » est toujours le jardin personnel. La navigation multi-jardins (lister,
+  basculer) est remise à plus tard. Le schéma `garden_members` est néanmoins posé
+  dès maintenant pour ne pas remigrer ensuite.
 
 ### Portée dans ce doc
 
@@ -356,12 +374,14 @@ Dans `add-plant` et `add-harvest` (et éventuellement `prices`), un point d'entr
 
 ### Phase 0 — Fondations jardin (prérequis, § 2 bis)
 
-- Tables `gardens` + `garden_members` (rôles `owner` / `co_owner` / `editor` avec
-  `expires_at` / `viewer`).
-- Backfill : un jardin personnel par user + `garden_id` sur plants/récoltes/dépenses.
-- Extension CASL : ability construite depuis les appartenances (jardin + rôle).
-- Cadre pour le partage complet (invitations, expiration, UI) → **doc dédié à
-  rédiger**, hors périmètre de ce document.
+- Tables `gardens` + `garden_members`, rôles `owner` / `co_owner` /
+  `temp_editor_viewer` / `temp_editor_revoked` / `viewer` (+ `email`, `expires_at`).
+- Backfill : un jardin personnel par user (membre `owner`) + `garden_id` sur
+  plants/récoltes/dépenses. Auto-création du jardin personnel à la création d'un user.
+- Extension CASL : ability construite depuis les appartenances (jardin + rôle
+  effectif, en tenant compte de `expires_at`).
+- **Un seul jardin courant** (le personnel) ; navigation/liste multi-jardins et
+  flux d'invitation UX → plus tard (schéma posé dès maintenant).
 
 ### Phase 1 — Socle variétés (aucun changement visible pour l'utilisateur)
 
@@ -397,16 +417,20 @@ Dans `add-plant` et `add-harvest` (et éventuellement `prices`), un point d'entr
   membre les voit. Ownership par `garden_id`.
 - ~~Bascule uuid + FK~~ → **oui, dès la Phase 1** (pas de texte durable).
 
-**Nouvelles questions ouvertes par le partage de jardins** (à préciser dans le doc
-dédié « jardins partagés ») :
+**Partage de jardins — tranché** :
 
-- **Matrice de permissions** exacte par rôle (au-delà de CRUD contenu) : qui gère
-  les membres, qui peut supprimer un jardin, un `co_owner` peut-il inviter ?
-- **Éditeur temporaire** : sémantique de `expires_at` — accès en lecture après
-  expiration (rétrogradé en `viewer`) ou plus d'accès du tout ?
-- **Flux d'invitation** : par e-mail / lien ? acceptation explicite ? un user
-  peut-il appartenir à plusieurs jardins et lequel est « courant » à la création
-  d'une variété/plant ?
-- **Multi-jardins** : besoin d'un sélecteur de jardin courant dans l'app dès la
-  Phase 0, ou un seul jardin par user au départ ?
+- **Suppression du jardin** → réservée au `owner` (créateur) uniquement.
+- **Éditeur temporaire** → **deux rôles distincts** : `temp_editor_viewer` (repli
+  en `viewer` à l'expiration) et `temp_editor_revoked` (accès coupé à l'expiration).
+- **Invitation** → par **e-mail** ; si l'e-mail du compte authentifié ne correspond
+  pas à l'e-mail invité, **on bloque**.
+- **Multi-jardins** → **un seul jardin** (personnel) pour l'instant ; lister /
+  basculer entre jardins remis à plus tard.
+
+**Restent à préciser (plus tard, non bloquant)** :
+
+- Sémantique fine de « gérer les membres » pour un `co_owner` (peut-il inviter /
+  changer les rôles, ou seulement voir ?).
+- Flux d'acceptation d'invitation (lien e-mail, écran d'acceptation) — la Phase 0
+  pose le schéma, l'UX d'invitation viendra avec la navigation multi-jardins.
 - **Promotion** d'une variété custom en référentiel global (par un admin) : utile ?
