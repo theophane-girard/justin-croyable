@@ -3,8 +3,10 @@ import { z } from 'zod';
 
 import { deletedSchema, errorSchema, idParamSchema } from './crud';
 import { createExpenseSchema, expenseSchema, updateExpenseSchema } from './expense/expense.schema';
+import { gardenSchema } from './garden/garden.schema';
 import { createHarvestSchema, harvestSchema, updateHarvestSchema } from './harvest/harvest.schema';
 import { createPlantSchema, plantSchema, updatePlantSchema } from './plant/plant.schema';
+import { createVarietySchema, varietySchema } from './variety/variety.schema';
 import { userContract } from './user/user.contract';
 import {
   createVarietyPriceSchema,
@@ -122,10 +124,40 @@ export const varietyPriceContract = contract.router({
   },
 });
 
+export const gardenContract = contract.router({
+  current: {
+    method: 'GET',
+    path: '/gardens/current',
+    responses: { 200: gardenSchema, 401: errorSchema },
+  },
+});
+
+export const varietyContract = contract.router({
+  list: {
+    method: 'GET',
+    path: '/varieties',
+    responses: { 200: z.array(varietySchema), 401: errorSchema },
+  },
+  create: {
+    method: 'POST',
+    path: '/varieties',
+    body: createVarietySchema,
+    responses: { 201: varietySchema, 400: errorSchema, 401: errorSchema, 403: errorSchema },
+  },
+  remove: {
+    method: 'DELETE',
+    path: '/varieties/:id',
+    pathParams: idParamSchema,
+    responses: { 200: deletedSchema, 401: errorSchema, 403: errorSchema, 404: errorSchema },
+  },
+});
+
 export const apiContract = contract.router({
   users: userContract,
   harvests: harvestContract,
   plants: plantContract,
   expenses: expenseContract,
   varietyPrices: varietyPriceContract,
+  gardens: gardenContract,
+  varieties: varietyContract,
 });
