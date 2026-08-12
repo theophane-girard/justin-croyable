@@ -1,6 +1,14 @@
 import { httpResource } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
+import { ActivatedRoute, type Params, Router, RouterLink } from '@angular/router';
 
 import {
   BadgeComponent,
@@ -41,9 +49,15 @@ import {
   statsTotal,
 } from '../../core/pokemon-stats';
 import { typeBarClass, typeLabels, typeTileClass } from '../../core/pokemon-type';
+import {
+  CONFIG_PARAM_PREFIX,
+  decodeEnhanceConfig,
+  encodeEnhanceConfig,
+} from '../enhance/enhance-url';
 import { StatEnhancerComponent } from '../enhance/stat-enhancer.component';
-import { injectEnhanceUrl } from '../enhance/enhance-url';
 import { PokemonMovesComponent } from './pokemon-moves.component';
+
+const ROUTE_ID_PARAM = 'id';
 
 const TAG_STAGE = 'border-transparent bg-sky-500/15 text-sky-700 dark:text-sky-300';
 const TAG_LEGENDARY = 'border-transparent bg-amber-500/20 text-amber-700 dark:text-amber-300';
@@ -219,7 +233,7 @@ function toDetail(pokemon: Pokemon, config: EnhanceConfig): DetailView {
                       <h3 class="text-foreground text-sm font-semibold">{{ statsHeading() }}</h3>
                       <div class="flex items-center gap-3">
                         <span class="text-muted-foreground text-sm">Total {{ view.total }}</span>
-                        <app-stat-enhancer />
+                        <app-stat-enhancer [targets]="enhanceTargets()" />
                       </div>
                     </div>
                     <div class="flex flex-col gap-2">
@@ -287,22 +301,63 @@ function toDetail(pokemon: Pokemon, config: EnhanceConfig): DetailView {
 })
 export class PokemonDetailComponent {
   protected readonly store = inject(ComparatorStore);
+  readonly #router = inject(Router);
+  readonly #route = inject(ActivatedRoute);
 
   readonly id = input.required<string>();
 
+  constructor() {
+    this.#restoreFromUrl();
+    effect(() => this.#syncToUrl());
+  }
+
+  #restoreFromUrl(): void {
+    const raw = this.#route.snapshot.queryParamMap.get(CONFIG_PARAM_PREFIX);
+    if (!raw) {
+      return;
+    }
+    const config = decodeEnhanceConfig(raw);
+    const id = Number(this.#route.snapshot.paramMap.get(ROUTE_ID_PARAM));
+    if (config && Number.isInteger(id)) {
+      this.store.setEnhanceConfigs(new Map([[id, config]]));
+    }
+  }
+
+  #syncToUrl(): void {
+    const config = this.enhanceConfig();
+    const queryParams: Params = {
+      [CONFIG_PARAM_PREFIX]: config.level100 ? encodeEnhanceConfig(config) : null,
+    };
+    void this.#router.navigate([], {
+      relativeTo: this.#route,
+      queryParams,
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
+
   protected readonly pokedexLink = `/${APP_PATHS.pokedex}`;
   protected readonly selectedAbility = signal<PokemonAbility | undefined>(undefined);
-  protected readonly enhanceConfig = injectEnhanceUrl().config;
+
+  readonly #numericId = computed(() => Number(this.id()));
+
+  readonly #pokemon = computed(() =>
+    this.store.pokemons().find(entry => entry.id === this.#numericId()),
+  );
+
+  protected readonly enhanceConfig = computed(() => this.store.enhanceFor(this.#numericId()));
+
+  protected readonly enhanceTargets = computed<readonly { id: number; name: string }[]>(() => {
+    const pokemon = this.#pokemon();
+    return pokemon ? [{ id: pokemon.id, name: pokemonName(pokemon, LANG.fr) }] : [];
+  });
 
   protected readonly statsHeading = computed(() =>
     this.enhanceConfig().level100 ? 'Statistiques (niveau 100)' : 'Statistiques de base',
   );
 
-  readonly #numericId = computed(() => Number(this.id()));
-
   protected readonly detail = computed<DetailView | undefined>(() => {
-    const id = this.#numericId();
-    const pokemon = this.store.pokemons().find(entry => entry.id === id);
+    const pokemon = this.#pokemon();
     return pokemon ? toDetail(pokemon, this.enhanceConfig()) : undefined;
   });
 

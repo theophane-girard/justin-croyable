@@ -37,8 +37,6 @@ export const NATURES: readonly Nature[] = [
   { id: 'quirky', label: 'Bizarre', increased: null, decreased: null },
 ];
 
-export const NATURE_IDS: readonly string[] = NATURES.map(nature => nature.id);
-
 const NATURE_BY_ID = new Map<string, Nature>(NATURES.map(nature => [nature.id, nature]));
 
 export function natureById(id: string): Nature {

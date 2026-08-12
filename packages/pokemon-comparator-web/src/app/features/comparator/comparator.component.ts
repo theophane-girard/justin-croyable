@@ -2,12 +2,13 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   inject,
   type TemplateRef,
   ViewContainerRef,
   viewChild,
 } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, type Params, Router } from '@angular/router';
 
 import {
   ButtonComponent,
@@ -29,16 +30,29 @@ import { ComparatorStore, DISPLAY_MODE } from '../../core/comparator-store';
 import { APP_PATHS } from '../../app.routes';
 import { PokedexGridComponent } from '../pokedex/pokedex-grid.component';
 import { StatEnhancerComponent } from '../enhance/stat-enhancer.component';
-import { injectEnhanceUrl } from '../enhance/enhance-url';
 import {
   LANG,
+  MAX_BASE_STAT,
   pokemonImageUrl,
   pokemonName,
   type Stat,
   STAT_META,
   STAT_ORDER,
 } from '../../core/pokemon.model';
-import { applyEnhancedStats, enhancedStatScaleMax, statsTotal } from '../../core/pokemon-stats';
+import {
+  applyEnhancedStats,
+  type EnhanceConfig,
+  enhancedStatScaleMax,
+  statsTotal,
+} from '../../core/pokemon-stats';
+import {
+  CONFIG_PARAM_PREFIX,
+  decodeEnhanceConfig,
+  decodeSelection,
+  encodeEnhanceConfig,
+  encodeSelection,
+  SELECTION_PARAM,
+} from '../enhance/enhance-url';
 
 interface SelectedView {
   readonly id: number;
@@ -169,7 +183,7 @@ const DISPLAY_MODE_ITEMS: readonly SegmentItem[] = [
               <div class="flex flex-wrap items-center justify-between gap-3">
                 <h2 class="text-lg font-semibold">{{ statsHeading() }}</h2>
                 <div class="flex flex-wrap items-center gap-2">
-                  <app-stat-enhancer />
+                  <app-stat-enhancer [targets]="enhanceTargets()" />
                   <app-segment
                     variant="accent"
                     [items]="displayModeItems"
@@ -235,26 +249,93 @@ export class ComparatorComponent {
   readonly #sheet = inject(SheetService);
   readonly #viewContainerRef = inject(ViewContainerRef);
   readonly #router = inject(Router);
+  readonly #route = inject(ActivatedRoute);
 
   private readonly pokedexTemplate = viewChild.required<TemplateRef<unknown>>('pokedexSheet');
+
+  constructor() {
+    this.#restoreFromUrl();
+    effect(() => this.#syncToUrl());
+  }
+
+  #restoreFromUrl(): void {
+    const params = this.#route.snapshot.queryParamMap;
+    const selection = params.get(SELECTION_PARAM);
+    if (selection) {
+      const ids = decodeSelection(selection);
+      if (ids.length > 0) {
+        this.store.setSelection(ids);
+      }
+    }
+    const configs = new Map<number, EnhanceConfig>();
+    params.keys
+      .filter(key => key.startsWith(CONFIG_PARAM_PREFIX) && /^\d+$/.test(key.slice(1)))
+      .forEach(key => {
+        const raw = params.get(key);
+        const config = raw ? decodeEnhanceConfig(raw) : null;
+        if (config) {
+          configs.set(Number(key.slice(CONFIG_PARAM_PREFIX.length)), config);
+        }
+      });
+    if (configs.size > 0) {
+      this.store.setEnhanceConfigs(configs);
+    }
+  }
+
+  #syncToUrl(): void {
+    const ids = this.store.selectedIds();
+    const queryParams: Params = {};
+    if (ids.length > 0) {
+      queryParams[SELECTION_PARAM] = encodeSelection(ids);
+    }
+    ids.forEach(id => {
+      const config = this.store.enhanceFor(id);
+      if (config.level100) {
+        queryParams[`${CONFIG_PARAM_PREFIX}${id}`] = encodeEnhanceConfig(config);
+      }
+    });
+    void this.#router.navigate([], {
+      relativeTo: this.#route,
+      queryParams,
+      replaceUrl: true,
+    });
+  }
 
   protected readonly displayModeItems = DISPLAY_MODE_ITEMS;
   protected readonly displayModeBars = DISPLAY_MODE.bars;
 
   protected readonly displayMode = this.store.displayMode;
 
-  protected readonly enhanceConfig = injectEnhanceUrl().config;
-
-  protected readonly statsHeading = computed(() =>
-    this.enhanceConfig().level100 ? 'Statistiques (niveau 100)' : 'Statistiques de base',
+  protected readonly enhanceTargets = computed<readonly { id: number; name: string }[]>(() =>
+    this.store.selected().map(pokemon => ({ id: pokemon.id, name: pokemonName(pokemon, LANG.fr) })),
   );
 
-  readonly #enhancedStatsById = computed<ReadonlyMap<number, Readonly<Record<Stat, number>>>>(() => {
-    const config = this.enhanceConfig();
-    return new Map(
-      this.store.selected().map(pokemon => [pokemon.id, applyEnhancedStats(pokemon.stats, config)]),
-    );
-  });
+  protected readonly statsHeading = computed(() =>
+    this.store.selected().some(pokemon => this.store.enhanceFor(pokemon.id).level100)
+      ? 'Statistiques (niveau 100)'
+      : 'Statistiques de base',
+  );
+
+  readonly #scaleMax = computed(() =>
+    this.store
+      .selected()
+      .reduce(
+        (max, pokemon) => Math.max(max, enhancedStatScaleMax(this.store.enhanceFor(pokemon.id))),
+        MAX_BASE_STAT,
+      ),
+  );
+
+  readonly #enhancedStatsById = computed<ReadonlyMap<number, Readonly<Record<Stat, number>>>>(
+    () =>
+      new Map(
+        this.store
+          .selected()
+          .map(pokemon => [
+            pokemon.id,
+            applyEnhancedStats(pokemon.stats, this.store.enhanceFor(pokemon.id)),
+          ]),
+      ),
+  );
 
   readonly #statValue = (id: number, stat: Stat): number =>
     this.#enhancedStatsById().get(id)?.[stat] ?? 0;
@@ -271,7 +352,7 @@ export class ComparatorComponent {
 
   protected readonly statGroups = computed<readonly StatGroup[]>(() => {
     const selected = this.store.selected();
-    const scaleMax = enhancedStatScaleMax(this.enhanceConfig());
+    const scaleMax = this.#scaleMax();
     return STAT_ORDER.map(stat => ({
       key: stat,
       label: STAT_META[stat].label,
@@ -291,7 +372,7 @@ export class ComparatorComponent {
   protected readonly radarOptions = computed<EChartsCoreOption>(() => {
     const palette = this.#palette.palette();
     const selected = this.store.selected();
-    const scaleMax = enhancedStatScaleMax(this.enhanceConfig());
+    const scaleMax = this.#scaleMax();
     return {
       tooltip: { trigger: 'item' },
       legend: { bottom: 0, type: 'scroll' },

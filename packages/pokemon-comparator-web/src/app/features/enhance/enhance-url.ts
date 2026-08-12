@@ -1,56 +1,37 @@
-import { computed, type Signal } from '@angular/core';
+import { type Stat, STAT_ORDER } from '../../core/pokemon.model';
+import { type EnhanceConfig, natureById } from '../../core/pokemon-stats';
 
-import {
-  booleanFilter,
-  enumFilter,
-  injectQueryFilters,
-  numberFilter,
-} from '@justin-croyable/design-system';
+const FIELD_SEPARATOR = '.';
+const ID_SEPARATOR = ',';
 
-import { STAT } from '../../core/pokemon.model';
-import { type EnhanceConfig, NATURE_IDS, NEUTRAL_NATURE_ID } from '../../core/pokemon-stats';
+export const SELECTION_PARAM = 'sel';
+export const CONFIG_PARAM_PREFIX = 'e';
 
-export interface EnhanceUrl {
-  readonly config: Signal<EnhanceConfig>;
-  patch(config: EnhanceConfig): void;
+export function encodeSelection(ids: readonly number[]): string {
+  return ids.join(ID_SEPARATOR);
 }
 
-export function injectEnhanceUrl(): EnhanceUrl {
-  const url = injectQueryFilters({
-    sim: booleanFilter(false),
-    nature: enumFilter(NATURE_IDS, NEUTRAL_NATURE_ID),
-    evHp: numberFilter(0),
-    evAtk: numberFilter(0),
-    evDef: numberFilter(0),
-    evSpa: numberFilter(0),
-    evSpd: numberFilter(0),
-    evSpe: numberFilter(0),
-  });
+export function decodeSelection(raw: string): number[] {
+  return raw
+    .split(ID_SEPARATOR)
+    .map(Number)
+    .filter(id => Number.isInteger(id) && id > 0);
+}
 
-  const config = computed<EnhanceConfig>(() => ({
-    level100: url.sim(),
-    nature: url.nature(),
-    evs: {
-      [STAT.hp]: url.evHp(),
-      [STAT.attack]: url.evAtk(),
-      [STAT.defense]: url.evDef(),
-      [STAT.specialAttack]: url.evSpa(),
-      [STAT.specialDefense]: url.evSpd(),
-      [STAT.speed]: url.evSpe(),
-    },
-  }));
+export function encodeEnhanceConfig(config: EnhanceConfig): string {
+  return [config.nature, ...STAT_ORDER.map(stat => config.evs[stat])].join(FIELD_SEPARATOR);
+}
 
-  const patch = (value: EnhanceConfig): void =>
-    url.patch({
-      sim: value.level100,
-      nature: value.nature,
-      evHp: value.evs[STAT.hp],
-      evAtk: value.evs[STAT.attack],
-      evDef: value.evs[STAT.defense],
-      evSpa: value.evs[STAT.specialAttack],
-      evSpd: value.evs[STAT.specialDefense],
-      evSpe: value.evs[STAT.speed],
-    });
-
-  return { config, patch };
+export function decodeEnhanceConfig(raw: string): EnhanceConfig | null {
+  const parts = raw.split(FIELD_SEPARATOR);
+  if (parts.length !== STAT_ORDER.length + 1) {
+    return null;
+  }
+  const nature = natureById(parts[0]).id;
+  const evs = STAT_ORDER.reduce((accumulator, stat, index) => {
+    const value = Number(parts[index + 1]);
+    accumulator[stat] = Number.isFinite(value) ? Math.max(0, Math.round(value)) : 0;
+    return accumulator;
+  }, {} as Record<Stat, number>);
+  return { level100: true, nature, evs };
 }
