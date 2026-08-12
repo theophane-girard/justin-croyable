@@ -86,6 +86,15 @@ export class PriceStore {
     return false;
   }
 
+  async refreshFromRnm(): Promise<boolean> {
+    const response = await this.#api.refreshVarietyPricesFromRnm();
+    if (response.status === 200) {
+      await this.reload();
+      return true;
+    }
+    return false;
+  }
+
   conventionalPriceFor(varietyId: VarietyId, atDate: Date): number {
     return this.#resolve(varietyId, atDate)?.conventionalPricePerKg ?? 0;
   }

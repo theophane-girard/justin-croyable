@@ -115,25 +115,42 @@ const PRICE_GRID_OPTIONS: GridOptions<AdminPriceRow> = {
               Prix par variété utilisés pour valoriser les récoltes.
             </p>
           </div>
-          @if (rows().length > 0) {
-            <div class="hidden items-center gap-2 sm:flex">
-              <button
-                appButton
-                variant="outline"
-                size="sm"
-                [buttonDisabled]="!selectedId()"
-                (click)="onDelete()"
-              >
-                <ng-icon name="phosphorTrash" class="size-4" />
-                Supprimer la sélection
-              </button>
-              <a appButton size="sm" [routerLink]="addLink">
-                <ng-icon name="phosphorPlus" class="size-4" />
-                Ajouter
-              </a>
-            </div>
-          }
+          <div class="flex items-center gap-2">
+            <button
+              appButton
+              variant="outline"
+              size="sm"
+              [loading]="refreshing()"
+              [buttonDisabled]="refreshing()"
+              (click)="onRefreshRnm()"
+            >
+              <ng-icon name="phosphorCloudArrowDown" class="size-4" />
+              Rafraîchir (RNM)
+            </button>
+            @if (rows().length > 0) {
+              <div class="hidden items-center gap-2 sm:flex">
+                <button
+                  appButton
+                  variant="outline"
+                  size="sm"
+                  [buttonDisabled]="!selectedId()"
+                  (click)="onDelete()"
+                >
+                  <ng-icon name="phosphorTrash" class="size-4" />
+                  Supprimer la sélection
+                </button>
+                <a appButton size="sm" [routerLink]="addLink">
+                  <ng-icon name="phosphorPlus" class="size-4" />
+                  Ajouter
+                </a>
+              </div>
+            }
+          </div>
         </div>
+
+        @if (refreshError()) {
+          <p class="text-destructive text-sm">{{ refreshError() }}</p>
+        }
 
         @if (rows().length === 0) {
           <app-empty
@@ -190,6 +207,8 @@ export class AdminPricesComponent {
   readonly #users = inject(UserStore);
 
   protected readonly isAdmin = this.#users.isAdmin;
+  protected readonly refreshing = signal(false);
+  protected readonly refreshError = signal<string | null>(null);
   protected readonly columns = PRICE_COLUMNS;
   protected readonly gridOptions = PRICE_GRID_OPTIONS;
   protected readonly addLink = ADMIN_PRICE_ADD_LINK;
@@ -227,6 +246,19 @@ export class AdminPricesComponent {
       return;
     }
     void this.#prices.removePrice(id).then(succeeded => (succeeded ? this.selectedId.set(null) : undefined));
+  }
+
+  protected onRefreshRnm(): void {
+    this.refreshing.set(true);
+    this.refreshError.set(null);
+    void this.#prices
+      .refreshFromRnm()
+      .then(succeeded => {
+        if (!succeeded) {
+          this.refreshError.set("L'import RNM a échoué. Réessaie plus tard.");
+        }
+      })
+      .finally(() => this.refreshing.set(false));
   }
 
   #toRow(price: {

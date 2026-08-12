@@ -14,6 +14,10 @@ import { FirebaseAuthGuard } from '../auth/firebase-auth.guard';
 import { type Database, DRIZZLE } from '../db/drizzle';
 import { varietyPrices, type VarietyPriceRecord } from '../db/schema';
 
+import { RnmController } from './rnm/rnm.controller';
+import { RnmIngestionService } from './rnm/rnm-ingestion.service';
+import { RefreshTokenGuard } from './rnm/refresh-token.guard';
+
 const ADMIN_ONLY = { message: 'Action réservée aux administrateurs.' };
 
 function toVarietyPrice(record: VarietyPriceRecord): VarietyPrice {
@@ -119,5 +123,8 @@ export class VarietyPriceController {
   }
 }
 
-@Module({ controllers: [VarietyPriceController], providers: [VarietyPriceService] })
+@Module({
+  controllers: [VarietyPriceController, RnmController],
+  providers: [VarietyPriceService, RnmIngestionService, RefreshTokenGuard],
+})
 export class VarietyPriceModule {}

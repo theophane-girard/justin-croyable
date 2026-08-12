@@ -43,7 +43,9 @@ export {
   varietyPriceSchema,
   createVarietyPriceSchema,
   updateVarietyPriceSchema,
+  rnmRefreshResultSchema,
   type VarietyPrice,
   type CreateVarietyPricePayload,
   type UpdateVarietyPricePayload,
+  type RnmRefreshResult,
 } from './variety-price/variety-price.schema';
