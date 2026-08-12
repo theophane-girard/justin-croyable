@@ -68,19 +68,17 @@ jobs:
             echo "pokemon=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Typecheck et lint
-        run: npx nx affected -t typecheck lint
+      - name: Typecheck
+        run: npx nx affected -t typecheck
 
-      # Les règles de style ESLint sont taguées `warn` pour ne pas bloquer le
-      # lint ci-dessus. Ce garde-fou compte l'ensemble des warnings du monorepo
-      # (tous les projets, pas seulement les affectés, car le plafond est
-      # global) et échoue au-delà du seuil, empêchant l'ajout de nouveaux
-      # warnings. Cible : faire redescendre le plafond au fil des corrections.
-      - name: Plafond de warnings ESLint
-        env:
-          ESLINT_MAX_WARNINGS: 94
+      # Les règles de style ESLint sont taguées `warn` (elles ne bloquent pas le
+      # lint), ce garde-fou empêche donc d'en ajouter de nouveaux. Contrôle
+      # incrémental : on ne linte que les projets affectés et on compare, projet
+      # par projet, au budget figé dans tools/eslint-warnings-baseline.json.
+      # `--format json` sert au comptage ; eslint échoue déjà seul sur une erreur.
+      - name: Lint et budget de warnings
         run: |
-          npx nx run-many -t lint --all -- --format json --output-file eslint-report.json
+          npx nx affected -t lint -- --format json --output-file eslint-report.json
           node tools/check-eslint-warnings.mjs
 
       # Le binaire du navigateur est mis en cache entre les runs. Les

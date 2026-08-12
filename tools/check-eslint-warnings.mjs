@@ -1,68 +1,64 @@
 import { globSync, readFileSync } from 'node:fs';
 
-// Plafond de warnings ESLint toléré sur l'ensemble du monorepo. Les règles de
-// style sont taguées `warn` (elles ne bloquent pas le lint), ce garde-fou
-// empêche donc d'en accumuler de nouveaux. Objectif : faire redescendre ce
-// seuil au fil des corrections (cible visée : 40).
-const DEFAULT_MAX_WARNINGS = 94;
+// Contrôle incrémental des warnings ESLint. Les règles de style sont taguées
+// `warn` (elles ne bloquent pas le lint) ; ce garde-fou empêche d'en ajouter de
+// nouveaux, projet par projet, sans relinter tout le monorepo. On ne lit que les
+// rapports présents (ceux des projets affectés lintés par la CI) et on compare
+// chaque projet au budget figé dans eslint-warnings-baseline.json. Corriger un
+// warning existant sans toucher au budget reste vert ; en ajouter un échoue.
+const BASELINE_PATH = new URL('./eslint-warnings-baseline.json', import.meta.url);
 
 const REPORT_PATTERNS = ['libs/*/eslint-report.json', 'packages/*/eslint-report.json'];
-
-const parseMaxWarnings = () => {
-  const fromArg = Number(process.argv[2]);
-  const fromEnv = Number(process.env['ESLINT_MAX_WARNINGS']);
-  const candidate = [fromArg, fromEnv].find(value => Number.isInteger(value) && value >= 0);
-  return candidate ?? DEFAULT_MAX_WARNINGS;
-};
 
 const readReport = path => JSON.parse(readFileSync(path, 'utf8'));
 
 const sumField = (results, field) =>
   results.reduce((total, result) => total + (result[field] ?? 0), 0);
 
+const baseline = readReport(BASELINE_PATH);
+
 const reportPaths = REPORT_PATTERNS.flatMap(pattern => globSync(pattern)).sort();
 
 if (reportPaths.length === 0) {
-  console.error(
-    'Aucun rapport eslint-report.json trouvé. Lancer d’abord :\n' +
-      '  npx nx run-many -t lint --all -- --format json --output-file eslint-report.json',
-  );
-  process.exit(1);
+  console.log('Aucun rapport ESLint : aucun projet affecté à vérifier.');
+  process.exit(0);
 }
 
-const maxWarnings = parseMaxWarnings();
-
-const perReport = reportPaths.map(path => {
+const projects = reportPaths.map(path => {
+  const project = path.replace(/\/eslint-report\.json$/, '');
   const results = readReport(path);
   return {
-    path,
+    project,
     warnings: sumField(results, 'warningCount'),
     errors: sumField(results, 'errorCount'),
+    budget: baseline[project] ?? 0,
   };
 });
 
-const totalWarnings = sumField(perReport, 'warnings');
-const totalErrors = sumField(perReport, 'errors');
-
-perReport
-  .filter(report => report.warnings > 0 || report.errors > 0)
-  .forEach(report =>
-    console.log(`  ${report.path} : ${report.warnings} warning(s), ${report.errors} erreur(s)`),
+projects
+  .filter(({ warnings, errors }) => warnings > 0 || errors > 0)
+  .forEach(({ project, warnings, budget, errors }) =>
+    console.log(`  ${project} : ${warnings}/${budget} warning(s), ${errors} erreur(s)`),
   );
 
-console.log(`\nTotal : ${totalWarnings} warning(s), ${totalErrors} erreur(s) (plafond : ${maxWarnings}).`);
+const withErrors = projects.filter(({ errors }) => errors > 0);
+const overBudget = projects.filter(({ warnings, budget }) => warnings > budget);
 
-if (totalErrors > 0) {
-  console.error(`\n❌ ${totalErrors} erreur(s) ESLint détectée(s).`);
+if (withErrors.length > 0) {
+  console.error(`\n❌ ${sumField(withErrors, 'errors')} erreur(s) ESLint détectée(s).`);
   process.exit(1);
 }
 
-if (totalWarnings > maxWarnings) {
+if (overBudget.length > 0) {
+  console.error('\n❌ Warnings ESLint au-dessus du budget du projet :');
+  overBudget.forEach(({ project, warnings, budget }) =>
+    console.error(`  ${project} : ${warnings} > ${budget} (+${warnings - budget})`),
+  );
   console.error(
-    `\n❌ ${totalWarnings} warnings ESLint > plafond de ${maxWarnings}.\n` +
-      'Corriger les nouveaux warnings, ou les justifier, avant de fusionner.',
+    '\nCorriger les nouveaux warnings, ou ajuster le budget dans ' +
+      'tools/eslint-warnings-baseline.json si la hausse est justifiée.',
   );
   process.exit(1);
 }
 
-console.log(`\n✅ Sous le plafond de ${maxWarnings} warnings.`);
+console.log('\n✅ Chaque projet affecté respecte son budget de warnings.');
