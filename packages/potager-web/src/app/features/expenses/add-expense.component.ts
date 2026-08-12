@@ -117,7 +117,7 @@ import { EXPENSES_LINK } from '../../app.routes';
               >
                 @for (plant of plants(); track plant.id) {
                   <app-select-item [value]="plant.id">
-                    {{ plant.cropLabel }} ({{ plant.quantity }})
+                    {{ plant.label }} ({{ plant.quantity }})
                   </app-select-item>
                 }
               </app-select>

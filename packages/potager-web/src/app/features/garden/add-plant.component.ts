@@ -10,7 +10,7 @@ import {
 } from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
 
-import { CROPS, isCropId } from '../../core/potager.model';
+import { CROPS, isCropId, isVarietyId, VARIETIES_BY_CROP } from '../../core/potager.model';
 import { GardenStore } from '../../core/garden-store';
 import { GARDEN_LINK } from '../../app.routes';
 
@@ -30,7 +30,9 @@ import { GARDEN_LINK } from '../../app.routes';
       <div class="flex items-center justify-between gap-2">
         <div class="flex flex-col">
           <h2 class="text-foreground text-lg font-semibold">Ajouter un plant</h2>
-          <p class="text-muted-foreground text-sm">Renseignez la culture et le nombre de plants.</p>
+          <p class="text-muted-foreground text-sm">
+            Renseignez la culture, la variété et le nombre de plants.
+          </p>
         </div>
         <div class="flex items-center gap-2">
           <a appButton variant="outline" [routerLink]="gardenLink">Annuler</a>
@@ -52,6 +54,19 @@ import { GARDEN_LINK } from '../../app.routes';
           >
             @for (crop of crops; track crop.id) {
               <app-select-item [value]="crop.id">{{ crop.label }}</app-select-item>
+            }
+          </app-select>
+
+          <app-select
+            label="Variété"
+            placeholder="Sélectionner une variété…"
+            [required]="true"
+            [disabled]="varieties().length === 0"
+            [value]="varietyId()"
+            (valueChange)="onVarietyChange($event)"
+          >
+            @for (variety of varieties(); track variety.id) {
+              <app-select-item [value]="variety.id">{{ variety.label }}</app-select-item>
             }
           </app-select>
 
@@ -81,7 +96,13 @@ export class AddPlantComponent {
   protected readonly gardenLink = GARDEN_LINK;
 
   protected readonly cropId = signal<string>('');
+  protected readonly varietyId = signal<string>('');
   protected readonly quantityInput = signal<string>('');
+
+  protected readonly varieties = computed(() => {
+    const cropId = this.cropId();
+    return isCropId(cropId) ? VARIETIES_BY_CROP[cropId] : [];
+  });
 
   protected readonly quantity = computed(() => {
     const parsed = Number.parseInt(this.quantityInput(), 10);
@@ -89,7 +110,7 @@ export class AddPlantComponent {
   });
 
   protected readonly canSubmit = computed(
-    () => isCropId(this.cropId()) && this.quantity() !== null,
+    () => isCropId(this.cropId()) && isVarietyId(this.varietyId()) && this.quantity() !== null,
   );
 
   protected onCropChange(value: string | string[] | null): void {
@@ -97,6 +118,14 @@ export class AddPlantComponent {
       return;
     }
     this.cropId.set(value);
+    const varieties = isCropId(value) ? VARIETIES_BY_CROP[value] : [];
+    this.varietyId.set(varieties.length === 1 ? varieties[0].id : '');
+  }
+
+  protected onVarietyChange(value: string | string[] | null): void {
+    if (typeof value === 'string') {
+      this.varietyId.set(value);
+    }
   }
 
   protected onQuantityInput(event: Event): void {
@@ -105,11 +134,12 @@ export class AddPlantComponent {
 
   protected onSave(): void {
     const cropId = this.cropId();
+    const varietyId = this.varietyId();
     const quantity = this.quantity();
-    if (!isCropId(cropId) || quantity === null) {
+    if (!isCropId(cropId) || !isVarietyId(varietyId) || quantity === null) {
       return;
     }
-    this.store.add({ cropId, quantity });
+    this.store.add({ cropId, varietyId, quantity });
     this.#router.navigateByUrl(GARDEN_LINK);
   }
 }

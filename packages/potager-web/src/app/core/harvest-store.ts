@@ -117,6 +117,24 @@ export class HarvestStore extends ApiEntityStore<Harvest> {
     }, {}),
   );
 
+  readonly periodWeightByVarietyId = computed<Partial<Record<VarietyId, number>>>(() =>
+    this.#periodRows().reduce<Partial<Record<VarietyId, number>>>((accumulator, row) => {
+      accumulator[row.varietyId] = this.#roundToCents(
+        (accumulator[row.varietyId] ?? 0) + row.weightKg,
+      );
+      return accumulator;
+    }, {}),
+  );
+
+  readonly periodValueByVarietyId = computed<Partial<Record<VarietyId, number>>>(() =>
+    this.#periodRows().reduce<Partial<Record<VarietyId, number>>>((accumulator, row) => {
+      accumulator[row.varietyId] = this.#roundToCents(
+        (accumulator[row.varietyId] ?? 0) + row.savingsEur,
+      );
+      return accumulator;
+    }, {}),
+  );
+
   readonly monthlyWeights = computed(() =>
     this.#bucketByMonth(this.#periodRows(), row => row.weightKg),
   );

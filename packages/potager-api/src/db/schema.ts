@@ -31,6 +31,7 @@ export const plants = pgTable('plants', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: ownerId(),
   cropId: text('crop_id').notNull(),
+  varietyId: text('variety_id'),
   quantity: integer('quantity').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

@@ -169,7 +169,9 @@ export const VARIETY_BY_ID: Readonly<Record<VarietyId, Variety>> = VARIETIES.red
 export const VARIETIES_BY_CROP: Readonly<Record<CropId, readonly Variety[]>> = VARIETIES.reduce(
   (accumulator, variety) => ({
     ...accumulator,
-    [variety.cropId]: [...(accumulator[variety.cropId] ?? []), variety],
+    [variety.cropId]: [...(accumulator[variety.cropId] ?? []), variety].sort((first, second) =>
+      first.label.localeCompare(second.label, 'fr'),
+    ),
   }),
   {} as Record<CropId, readonly Variety[]>,
 );
@@ -254,6 +256,7 @@ export type ExpenseRow = {
 
 export type PlantDraft = {
   readonly cropId: CropId;
+  readonly varietyId: VarietyId;
   readonly quantity: number;
 };
 
@@ -262,6 +265,8 @@ export type PlantRow = {
   readonly cropId: CropId;
   readonly cropLabel: string;
   readonly cropIcon: string;
+  readonly varietyId: VarietyId | null;
+  readonly label: string;
   readonly categoryLabel: string;
   readonly quantity: number;
   readonly harvestedKg: number;
