@@ -39,7 +39,7 @@ le parsing échoue, ou si le fichier contient trop peu de cotations détail.
 
 Interface admin → page **Administration des prix** → bouton
 **« Rafraîchir (RNM) »**. Appelle `POST /api/variety-prices/refresh`
-(réservé aux admins, garde Firebase + CASL).
+(réservé aux admins : FirebaseAuthGuard + AdminGuard).
 
 ### Automatique (Cloud Scheduler)
 

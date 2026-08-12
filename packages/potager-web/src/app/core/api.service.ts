@@ -101,7 +101,12 @@ export class ApiService {
     return this.#client.varietyPrices.remove({ params: { id } });
   }
 
-  refreshVarietyPricesFromRnm() {
-    return this.#client.varietyPrices.refresh({ body: {} });
+  async refreshVarietyPricesFromRnm(): Promise<{ readonly status: number }> {
+    const token = await this.#auth.idToken();
+    const response = await fetch(`${API_BASE_URL}/api/variety-prices/refresh`, {
+      method: 'POST',
+      headers: token ? { authorization: `Bearer ${token}` } : {},
+    });
+    return { status: response.status };
   }
 }
