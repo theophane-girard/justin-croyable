@@ -17,11 +17,7 @@ import { type ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { NgIcon, type IconName } from '@ng-icons/core';
 import type { ClassValue } from 'clsx';
 
-import {
-  toggleVariants,
-  type ToggleSizeVariants,
-  type ToggleTypeVariants,
-} from '../toggle/toggle.variants';
+import { toggleVariants, type ToggleSizeVariants } from '../toggle/toggle.variants';
 import { mergeClasses } from '../../utils/merge-classes';
 
 import { toggleGroupItemVariants, toggleGroupVariants } from './toggle-group.variants';
@@ -46,7 +42,7 @@ type OnChangeType = (value: string | string[]) => void;
       role="group"
       data-slot="toggle-group"
       [class]="classes()"
-      [attr.data-variant]="type()"
+      data-variant="outline"
       [attr.data-size]="size()"
       [attr.data-orientation]="orientation()"
       [attr.data-horizontal]="orientation() === 'horizontal' || null"
@@ -58,7 +54,7 @@ type OnChangeType = (value: string | string[]) => void;
         <button
           type="button"
           data-slot="toggle-group-item"
-          [attr.data-variant]="type()"
+          data-variant="outline"
           [attr.data-size]="size()"
           [attr.data-spacing]="spacing()"
           [attr.aria-pressed]="isItemPressed(item.value)"
@@ -105,7 +101,6 @@ export class ToggleGroupComponent implements ControlValueAccessor {
   readonly orientation = input<'horizontal' | 'vertical'>('horizontal');
   readonly size = input<ToggleSizeVariants>('default');
   readonly spacing = input(0);
-  readonly type = input<ToggleTypeVariants>('default');
   readonly value = input<string | string[]>();
 
   readonly valueChange = output<string | string[]>();
@@ -119,7 +114,7 @@ export class ToggleGroupComponent implements ControlValueAccessor {
     mergeClasses(
       toggleGroupItemVariants(),
       toggleVariants({
-        type: this.type(),
+        type: 'outline',
         size: this.size(),
       }),
       this.itemClass(),

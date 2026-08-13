@@ -1,7 +1,4 @@
-import {
-  type ToggleSizeVariants,
-  type ToggleTypeVariants,
-} from '@justin-croyable/design-system/components/toggle';
+import { type ToggleSizeVariants } from '@justin-croyable/design-system/components/toggle';
 import {
   ToggleGroupComponent,
   type ToggleGroupItem,
@@ -13,7 +10,6 @@ type ToggleGroupArgs = {
   items: ToggleGroupItem[];
   mode: 'single' | 'multiple';
   orientation: 'horizontal' | 'vertical';
-  type: ToggleTypeVariants;
   size: ToggleSizeVariants;
   disabled: boolean;
   spacing: number;
@@ -43,7 +39,6 @@ const meta: Meta<ToggleGroupArgs> = {
     items: { control: 'object' },
     mode: { control: 'inline-radio', options: ['single', 'multiple'] },
     orientation: { control: 'inline-radio', options: ['horizontal', 'vertical'] },
-    type: { control: 'inline-radio', options: ['default', 'outline'] },
     size: { control: 'inline-radio', options: ['sm', 'default', 'lg'] },
     disabled: { control: 'boolean' },
     spacing: { control: { type: 'number', min: 0, max: 8 } },
@@ -53,7 +48,6 @@ const meta: Meta<ToggleGroupArgs> = {
     items: alignement,
     mode: 'single',
     orientation: 'horizontal',
-    type: 'default',
     size: 'default',
     disabled: false,
     spacing: 0,
@@ -66,7 +60,6 @@ const meta: Meta<ToggleGroupArgs> = {
         [items]="items"
         [mode]="mode"
         [orientation]="orientation"
-        [type]="type"
         [size]="size"
         [disabled]="disabled"
         [spacing]="spacing"
@@ -116,7 +109,7 @@ export const Multiple: Story = {
   },
 };
 
-export const Outline: Story = { args: { type: 'outline', spacing: 2 } };
+export const Espace: Story = { args: { spacing: 2 } };
 
 export const Vertical: Story = { args: { orientation: 'vertical' } };
 
