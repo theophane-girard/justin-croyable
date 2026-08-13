@@ -116,6 +116,9 @@ jobs:
             --allow-unauthenticated \
             --set-env-vars "^@^NODE_ENV=production@CORS_ORIGIN=${{ secrets.GARDEN_HARVEST_API_CORS_ORIGIN }}@CORS_ORIGIN_REGEX=${{ secrets.GARDEN_HARVEST_API_CORS_ORIGIN_REGEX }}@RNM_REFRESH_TOKEN=${{ secrets.GARDEN_HARVEST_RNM_REFRESH_TOKEN }}" \
             --set-secrets "DATABASE_URL=DATABASE_URL:latest,FIREBASE_PROJECT_ID=FIREBASE_PROJECT_ID:latest,FIREBASE_CLIENT_EMAIL=FIREBASE_CLIENT_EMAIL:latest,FIREBASE_PRIVATE_KEY=FIREBASE_PRIVATE_KEY:latest"
+          # Les déploiements de preview (--no-traffic --tag) épinglent le trafic ;
+          # on force donc la dernière révision à servir 100 % du trafic en live.
+          gcloud run services update-traffic "$SERVICE" --region "$REGION" --to-latest
 
       - name: Déploiement prévisualisation (PR)
         id: preview
