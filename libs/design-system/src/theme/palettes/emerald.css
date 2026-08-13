@@ -39,7 +39,9 @@
   --color-bg: var(--gray-50);
   --color-text: oklch(0.33 0.008 160);
   --color-muted: oklch(0.545 0 160);
+  --color-muted-bg: var(--gray-100);
   --color-border: var(--gray-200);
+  --color-input: var(--color-border);
   --color-action: oklch(0.53 0.16 160);
   --color-action-text: oklch(1 0 0);
 
@@ -56,7 +58,12 @@
   --color-bg: oklch(0.22 0.012 160);
   --color-text: var(--gray-50);
   --color-muted: var(--gray-400);
-  --color-border: var(--gray-800);
+  /* En dark, fond « muted » sombre et distinct des bordures, et bordures en
+     hairline translucide, pour un contraste discret plutôt que le gris plein
+     de l'échelle. */
+  --color-muted-bg: oklch(0.27 0.006 160);
+  --color-border: oklch(1 0 0 / 10%);
+  --color-input: oklch(1 0 0 / 15%);
   --color-action: var(--primary-400);
   --color-action-text: var(--gray-900);
 }
