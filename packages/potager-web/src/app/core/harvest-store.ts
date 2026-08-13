@@ -5,8 +5,12 @@ import {
   CROP_BY_ID,
   CATEGORY_META,
   type CropId,
+  cropUnit,
+  formatQuantityByUnit,
   type HarvestDraft,
   type HarvestRow,
+  HARVEST_UNIT,
+  type HarvestUnit,
   matchesSeason,
   matchesYear,
   PRICE_MODE,
@@ -91,8 +95,19 @@ export class HarvestStore extends ApiEntityStore<Harvest> {
 
   readonly entryCount = computed(() => this.entries().length);
 
-  readonly totalWeightKg = computed(() =>
-    this.#roundToCents(this.#periodRows().reduce((total, row) => total + row.weightKg, 0)),
+  readonly harvestQuantityByUnit = computed<Record<HarvestUnit, number>>(() =>
+    this.#periodRows().reduce<Record<HarvestUnit, number>>(
+      (accumulator, row) => {
+        const unit = cropUnit(row.cropId);
+        accumulator[unit] = this.#roundToCents(accumulator[unit] + row.weightKg);
+        return accumulator;
+      },
+      { [HARVEST_UNIT.kilogram]: 0, [HARVEST_UNIT.piece]: 0 },
+    ),
+  );
+
+  readonly totalHarvestLabel = computed(() =>
+    formatQuantityByUnit(this.harvestQuantityByUnit()),
   );
 
   readonly totalSavingsEur = computed(() =>

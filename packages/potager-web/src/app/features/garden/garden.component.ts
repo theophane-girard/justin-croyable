@@ -27,6 +27,9 @@ import { NgIcon } from '@ng-icons/core';
 import type { ColDef, GridOptions, RowSelectedEvent, ValueFormatterParams } from 'ag-grid-community';
 
 import {
+  cropUnit,
+  formatQuantity,
+  HARVEST_UNIT_META,
   isSeasonFilter,
   type PlantRow,
   SEASON,
@@ -43,7 +46,6 @@ import { CATEGORY_TAG_COLOR } from '../../shared/table-badges';
 import { GARDEN_ADD_LINK } from '../../app.routes';
 
 const NUMBER_FORMATTER = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
-const KG_FORMATTER = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 });
 const EUR_FORMATTER = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
 const YIELD_FORMATTER = new Intl.NumberFormat('fr-FR', {
   minimumFractionDigits: 2,
@@ -54,8 +56,10 @@ function formatCountCell(params: ValueFormatterParams<PlantRow, number>): string
   return typeof params.value === 'number' ? NUMBER_FORMATTER.format(params.value) : '';
 }
 
-function formatKgCell(params: ValueFormatterParams<PlantRow, number>): string {
-  return typeof params.value === 'number' ? KG_FORMATTER.format(params.value) : '';
+function formatHarvestedCell(params: ValueFormatterParams<PlantRow, number>): string {
+  return typeof params.value === 'number' && params.data
+    ? formatQuantity(params.value, cropUnit(params.data.cropId))
+    : '';
 }
 
 function formatEurCell(params: ValueFormatterParams<PlantRow, number>): string {
@@ -63,7 +67,9 @@ function formatEurCell(params: ValueFormatterParams<PlantRow, number>): string {
 }
 
 function formatYieldCell(params: ValueFormatterParams<PlantRow, number>): string {
-  return typeof params.value === 'number' ? `${YIELD_FORMATTER.format(params.value)} kg/plant` : '';
+  return typeof params.value === 'number' && params.data
+    ? `${YIELD_FORMATTER.format(params.value)} ${HARVEST_UNIT_META[cropUnit(params.data.cropId)].quantitySuffix}/plant`
+    : '';
 }
 
 const PLANT_COLUMNS: ColDef<PlantRow>[] = [
@@ -83,7 +89,7 @@ const PLANT_COLUMNS: ColDef<PlantRow>[] = [
     cellRendererParams: { color: CATEGORY_TAG_COLOR },
   },
   { field: 'quantity', headerName: 'Plants', type: 'numericColumn', valueFormatter: formatCountCell },
-  { field: 'harvestedKg', headerName: 'Récolté (kg)', type: 'numericColumn', valueFormatter: formatKgCell },
+  { field: 'harvestedKg', headerName: 'Récolté', type: 'numericColumn', valueFormatter: formatHarvestedCell },
   {
     field: 'yieldPerPlantKg',
     headerName: 'Rendement / plant',

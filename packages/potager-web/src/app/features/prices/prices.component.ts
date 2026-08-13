@@ -30,6 +30,8 @@ import {
   type CategoryId,
   CROP_BY_ID,
   type CropId,
+  cropUnit,
+  HARVEST_UNIT_META,
   PRICE_ORIGIN,
   type PriceOrigin,
   type PriceRow,
@@ -46,10 +48,9 @@ import { type CurrentPrice, PriceStore } from '../../core/price-store';
 import { TagCellComponent } from '../../shared/tag-cell.component';
 import { CATEGORY_TAG_COLOR, priceOriginTagColor } from '../../shared/table-badges';
 
-const EUR_FORMATTER = new Intl.NumberFormat('fr-FR', {
-  style: 'currency',
-  currency: 'EUR',
+const PRICE_NUMBER_FORMATTER = new Intl.NumberFormat('fr-FR', {
   minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
 });
 const PERCENT_FORMATTER = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
 const DATE_FORMATTER = new Intl.DateTimeFormat('fr-FR', {
@@ -58,8 +59,10 @@ const DATE_FORMATTER = new Intl.DateTimeFormat('fr-FR', {
   year: 'numeric',
 });
 
-function formatEurCell(params: ValueFormatterParams<PriceRow, number>): string {
-  return typeof params.value === 'number' ? EUR_FORMATTER.format(params.value) : '';
+function formatPriceCell(params: ValueFormatterParams<PriceRow, number>): string {
+  return typeof params.value === 'number' && params.data
+    ? `${PRICE_NUMBER_FORMATTER.format(params.value)} ${HARVEST_UNIT_META[cropUnit(params.data.cropId)].priceSuffix}`
+    : '';
 }
 
 function formatPremiumCell(params: ValueFormatterParams<PriceRow, number>): string {
@@ -96,10 +99,10 @@ const PRICE_COLUMNS: ColDef<PriceRow>[] = [
   },
   {
     field: 'conventionalPricePerKg',
-    headerName: 'Prix conv. (€/kg)',
+    headerName: 'Prix conv.',
     type: 'numericColumn',
     minWidth: 140,
-    valueFormatter: formatEurCell,
+    valueFormatter: formatPriceCell,
   },
   {
     field: 'conventionalSourceLabel',
@@ -113,10 +116,10 @@ const PRICE_COLUMNS: ColDef<PriceRow>[] = [
   },
   {
     field: 'bioPricePerKg',
-    headerName: 'Prix bio (€/kg)',
+    headerName: 'Prix bio',
     type: 'numericColumn',
     minWidth: 130,
-    valueFormatter: formatEurCell,
+    valueFormatter: formatPriceCell,
   },
   {
     field: 'bioSourceLabel',

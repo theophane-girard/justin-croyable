@@ -12,6 +12,12 @@ import {
 import { NgIcon } from '@ng-icons/core';
 import type { ColDef, GridOptions, RowSelectedEvent, ValueFormatterParams } from 'ag-grid-community';
 
+import {
+  cropUnit,
+  HARVEST_UNIT,
+  HARVEST_UNIT_META,
+  type HarvestUnit,
+} from '../../core/potager.model';
 import { CatalogStore } from '../../core/catalog-store';
 import { PriceStore } from '../../core/price-store';
 import { UserStore } from '../../core/user-store';
@@ -22,16 +28,16 @@ type AdminPriceRow = {
   readonly id: string;
   readonly varietyId: string;
   readonly varietyLabel: string;
+  readonly unit: HarvestUnit;
   readonly conventionalPricePerKg: number;
   readonly bioPricePerKg: number | null;
   readonly source: string;
   readonly effectiveFrom: Date;
 };
 
-const EUR_FORMATTER = new Intl.NumberFormat('fr-FR', {
-  style: 'currency',
-  currency: 'EUR',
+const PRICE_NUMBER_FORMATTER = new Intl.NumberFormat('fr-FR', {
   minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
 });
 const DATE_FORMATTER = new Intl.DateTimeFormat('fr-FR', {
   day: '2-digit',
@@ -39,8 +45,10 @@ const DATE_FORMATTER = new Intl.DateTimeFormat('fr-FR', {
   year: 'numeric',
 });
 
-function formatEurCell(params: ValueFormatterParams<AdminPriceRow, number>): string {
-  return typeof params.value === 'number' ? EUR_FORMATTER.format(params.value) : '—';
+function formatPriceCell(params: ValueFormatterParams<AdminPriceRow, number>): string {
+  return typeof params.value === 'number' && params.data
+    ? `${PRICE_NUMBER_FORMATTER.format(params.value)} ${HARVEST_UNIT_META[params.data.unit].priceSuffix}`
+    : '—';
 }
 
 function formatDateCell(params: ValueFormatterParams<AdminPriceRow, Date>): string {
@@ -58,17 +66,17 @@ const PRICE_COLUMNS: ColDef<AdminPriceRow>[] = [
   },
   {
     field: 'conventionalPricePerKg',
-    headerName: 'Prix conv. (€/kg)',
+    headerName: 'Prix conv.',
     type: 'numericColumn',
     minWidth: 150,
-    valueFormatter: formatEurCell,
+    valueFormatter: formatPriceCell,
   },
   {
     field: 'bioPricePerKg',
-    headerName: 'Prix bio (€/kg)',
+    headerName: 'Prix bio',
     type: 'numericColumn',
     minWidth: 140,
-    valueFormatter: formatEurCell,
+    valueFormatter: formatPriceCell,
   },
   {
     field: 'source',
@@ -270,10 +278,12 @@ export class AdminPricesComponent {
     readonly source: string;
     readonly effectiveFrom: string;
   }): AdminPriceRow {
+    const cropId = this.#catalog.byId().get(price.varietyId)?.cropId;
     return {
       id: price.id,
       varietyId: price.varietyId,
       varietyLabel: this.#catalog.labelFor(price.varietyId) ?? price.varietyId,
+      unit: cropId ? cropUnit(cropId) : HARVEST_UNIT.kilogram,
       conventionalPricePerKg: price.conventionalPricePerKg,
       bioPricePerKg: price.bioPricePerKg,
       source: price.source,

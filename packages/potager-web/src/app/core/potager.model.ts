@@ -12,6 +12,59 @@ export const PRICE_MODE = {
 
 export type PriceMode = (typeof PRICE_MODE)[keyof typeof PRICE_MODE];
 
+export const HARVEST_UNIT = {
+  kilogram: 'kg',
+  piece: 'piece',
+} as const;
+
+export type HarvestUnit = (typeof HARVEST_UNIT)[keyof typeof HARVEST_UNIT];
+
+type HarvestUnitMeta = {
+  readonly quantityLabel: string;
+  readonly quantityHint: string;
+  readonly quantitySuffix: string;
+  readonly priceSuffix: string;
+  readonly inputMode: 'decimal' | 'numeric';
+  readonly step: string;
+  readonly integerOnly: boolean;
+};
+
+export const HARVEST_UNIT_META = {
+  kg: {
+    quantityLabel: 'Poids récolté',
+    quantityHint: 'En kilogrammes.',
+    quantitySuffix: 'kg',
+    priceSuffix: '€/kg',
+    inputMode: 'decimal',
+    step: '0.1',
+    integerOnly: false,
+  },
+  piece: {
+    quantityLabel: 'Quantité récoltée',
+    quantityHint: 'En nombre de pièces.',
+    quantitySuffix: 'u.',
+    priceSuffix: '€/pièce',
+    inputMode: 'numeric',
+    step: '1',
+    integerOnly: true,
+  },
+} as const satisfies Record<HarvestUnit, HarvestUnitMeta>;
+
+const QUANTITY_FORMATTER = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 });
+
+const HARVEST_UNITS: readonly HarvestUnit[] = [HARVEST_UNIT.kilogram, HARVEST_UNIT.piece];
+
+export function formatQuantity(value: number, unit: HarvestUnit): string {
+  return `${QUANTITY_FORMATTER.format(value)} ${HARVEST_UNIT_META[unit].quantitySuffix}`;
+}
+
+export function formatQuantityByUnit(byUnit: Record<HarvestUnit, number>): string {
+  const parts = HARVEST_UNITS.filter(unit => byUnit[unit] > 0).map(unit =>
+    formatQuantity(byUnit[unit], unit),
+  );
+  return parts.length > 0 ? parts.join(' · ') : formatQuantity(0, HARVEST_UNIT.kilogram);
+}
+
 export const SEASON = {
   summer: 'summer',
   winter: 'winter',
@@ -83,11 +136,11 @@ export const CROPS = [
   { id: 'courgette', label: 'Courgette', category: 'legume', icon: 'phosphorLeaf', referencePricePerKg: 2.7, referenceBioPricePerKg: 4.8 },
   { id: 'carotte', label: 'Carotte', category: 'legume', icon: 'phosphorLeaf', referencePricePerKg: 1.7, referenceBioPricePerKg: 2.8 },
   { id: 'pomme-de-terre', label: 'Pomme de terre', category: 'legume', icon: 'phosphorLeaf', referencePricePerKg: 1.7, referenceBioPricePerKg: 3 },
-  { id: 'salade', label: 'Salade', category: 'legume', icon: 'phosphorLeaf', referencePricePerKg: 3, referenceBioPricePerKg: 4.5 },
+  { id: 'salade', label: 'Salade', category: 'legume', icon: 'phosphorLeaf', referencePricePerKg: 1.2, referenceBioPricePerKg: 1.8 },
   { id: 'haricot-vert', label: 'Haricot vert', category: 'legume', icon: 'phosphorLeaf', referencePricePerKg: 8, referenceBioPricePerKg: 14.5 },
   { id: 'poivron', label: 'Poivron', category: 'legume', icon: 'phosphorLeaf', referencePricePerKg: 4.8, referenceBioPricePerKg: 6.6 },
   { id: 'aubergine', label: 'Aubergine', category: 'legume', icon: 'phosphorLeaf', referencePricePerKg: 3.6, referenceBioPricePerKg: 5.9 },
-  { id: 'concombre', label: 'Concombre', category: 'legume', icon: 'phosphorLeaf', referencePricePerKg: 2.2, referenceBioPricePerKg: 3.8 },
+  { id: 'concombre', label: 'Concombre', category: 'legume', icon: 'phosphorLeaf', referencePricePerKg: 0.9, referenceBioPricePerKg: 1.5 },
   { id: 'radis', label: 'Radis', category: 'legume', icon: 'phosphorLeaf', referencePricePerKg: 2.5, referenceBioPricePerKg: 3.6 },
   { id: 'oignon', label: 'Oignon', category: 'legume', icon: 'phosphorLeaf', referencePricePerKg: 2.4, referenceBioPricePerKg: 3.2 },
   { id: 'poireau', label: 'Poireau', category: 'legume', icon: 'phosphorLeaf', referencePricePerKg: 2.2, referenceBioPricePerKg: 4.3 },
@@ -111,6 +164,12 @@ export const CROP_BY_ID: Readonly<Record<CropId, Crop>> = CROPS.reduce(
   (accumulator, crop) => ({ ...accumulator, [crop.id]: crop }),
   {} as Record<CropId, Crop>,
 );
+
+const PIECE_CROP_IDS: ReadonlySet<CropId> = new Set<CropId>(['salade', 'concombre']);
+
+export function cropUnit(cropId: CropId): HarvestUnit {
+  return PIECE_CROP_IDS.has(cropId) ? HARVEST_UNIT.piece : HARVEST_UNIT.kilogram;
+}
 
 export type VarietyId = string;
 

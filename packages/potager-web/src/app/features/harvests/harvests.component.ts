@@ -25,7 +25,14 @@ import {
 import { NgIcon } from '@ng-icons/core';
 import type { ColDef, GridOptions, RowSelectedEvent, ValueFormatterParams } from 'ag-grid-community';
 
-import { CATEGORY_META, type CategoryId, type HarvestRow } from '../../core/potager.model';
+import {
+  CATEGORY_META,
+  type CategoryId,
+  cropUnit,
+  formatQuantity,
+  HARVEST_UNIT_META,
+  type HarvestRow,
+} from '../../core/potager.model';
 import {
   CULTURE_FILTER_ALL,
   CULTURE_FILTER_OPTIONS,
@@ -50,8 +57,16 @@ function formatDateCell(params: ValueFormatterParams<HarvestRow, Date>): string 
   return params.value instanceof Date ? DATE_FORMATTER.format(params.value) : '';
 }
 
-function formatKgCell(params: ValueFormatterParams<HarvestRow, number>): string {
-  return typeof params.value === 'number' ? KG_FORMATTER.format(params.value) : '';
+function formatQuantityCell(params: ValueFormatterParams<HarvestRow, number>): string {
+  return typeof params.value === 'number' && params.data
+    ? formatQuantity(params.value, cropUnit(params.data.cropId))
+    : '';
+}
+
+function formatPriceCell(params: ValueFormatterParams<HarvestRow, number>): string {
+  return typeof params.value === 'number' && params.data
+    ? `${KG_FORMATTER.format(params.value)} ${HARVEST_UNIT_META[cropUnit(params.data.cropId)].priceSuffix}`
+    : '';
 }
 
 function formatEurCell(params: ValueFormatterParams<HarvestRow, number>): string {
@@ -83,18 +98,18 @@ const HARVEST_COLUMNS: ColDef<HarvestRow>[] = [
     cellRenderer: TagCellComponent,
     cellRendererParams: { color: CATEGORY_TAG_COLOR },
   },
-  { field: 'weightKg', headerName: 'Poids (kg)', type: 'numericColumn', valueFormatter: formatKgCell },
+  { field: 'weightKg', headerName: 'Quantité', type: 'numericColumn', valueFormatter: formatQuantityCell },
   {
     field: 'conventionalPricePerKg',
-    headerName: 'Prix conventionnel (€/kg)',
+    headerName: 'Prix conventionnel',
     type: 'numericColumn',
-    valueFormatter: formatEurCell,
+    valueFormatter: formatPriceCell,
   },
   {
     field: 'bioPricePerKg',
-    headerName: 'Prix bio (€/kg)',
+    headerName: 'Prix bio',
     type: 'numericColumn',
-    valueFormatter: formatEurCell,
+    valueFormatter: formatPriceCell,
   },
   { field: 'savingsEur', headerName: 'Économie', type: 'numericColumn', valueFormatter: formatEurCell },
 ];
@@ -119,7 +134,7 @@ type ChipId = (typeof CHIP_ID)[keyof typeof CHIP_ID];
 
 const FIELD_LABEL: Readonly<Record<SortField, string>> = {
   [SORT_FIELD.date]: 'Date',
-  [SORT_FIELD.weight]: 'Poids',
+  [SORT_FIELD.weight]: 'Quantité',
   [SORT_FIELD.savings]: 'Économie',
 };
 
@@ -131,7 +146,7 @@ const CATEGORY_ITEMS: SegmentItem[] = [
 
 const SORT_FIELD_ITEMS: SegmentItem[] = [
   { value: SORT_FIELD.date, label: 'Date' },
-  { value: SORT_FIELD.weight, label: 'Poids' },
+  { value: SORT_FIELD.weight, label: 'Quantité' },
   { value: SORT_FIELD.savings, label: 'Économie' },
 ];
 

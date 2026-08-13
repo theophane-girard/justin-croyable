@@ -216,7 +216,7 @@ const SAVINGS_GROUP_TITLE: Readonly<Record<SavingsGroup, string>> = {
               <div class="flex flex-col gap-1">
                 <span class="text-muted-foreground text-sm">Total récolté</span>
                 <span class="text-foreground text-3xl font-bold tabular-nums">
-                  <span appCountUp>{{ store.totalWeightKg() }}</span> kg
+                  {{ store.totalHarvestLabel() }}
                 </span>
               </div>
               <div class="bg-secondary text-secondary-foreground flex size-10 items-center justify-center rounded-lg">

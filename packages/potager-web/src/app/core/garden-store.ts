@@ -5,6 +5,8 @@ import {
   CATEGORY_META,
   CROP_BY_ID,
   type CropId,
+  cropUnit,
+  HARVEST_UNIT,
   isCropId,
   type PlantDraft,
   type PlantRow,
@@ -75,11 +77,12 @@ export class GardenStore extends ApiEntityStore<Plant> {
   readonly cropCount = computed(() => new Set(this.entries().map(entry => entry.cropId)).size);
 
   readonly averageYieldPerPlantKg = computed(() => {
-    const plants = this.plantCount();
+    const kilogramRows = this.rows().filter(row => cropUnit(row.cropId) === HARVEST_UNIT.kilogram);
+    const plants = kilogramRows.reduce((total, row) => total + row.quantity, 0);
     if (plants === 0) {
       return 0;
     }
-    const totalHarvested = this.rows().reduce((total, row) => total + row.harvestedKg, 0);
+    const totalHarvested = kilogramRows.reduce((total, row) => total + row.harvestedKg, 0);
     return this.#roundToCents(totalHarvested / plants);
   });
 

@@ -8,16 +8,24 @@ import {
   RNM_DETAIL_MARKETS,
   type RnmMarketKind,
   RNM_STAGE_DETAIL,
-  RNM_UNIT_PER_KG,
+  RNM_SUPPORTED_UNITS,
+  type RnmUnit,
 } from './rnm.constants';
 
 export type RnmObservation = {
   readonly product: string;
   readonly marketKind: RnmMarketKind;
   readonly isOrganic: boolean;
-  readonly pricePerKg: number;
+  readonly unit: RnmUnit;
+  readonly price: number;
   readonly observedOn: Date;
 };
+
+const SUPPORTED_UNIT_VALUES: readonly RnmUnit[] = Object.values(RNM_SUPPORTED_UNITS);
+
+function toSupportedUnit(raw: string): RnmUnit | null {
+  return SUPPORTED_UNIT_VALUES.find(unit => unit === raw) ?? null;
+}
 
 export const COLUMN = {
   date: 0,
@@ -75,18 +83,19 @@ function toObservation(row: readonly string[]): RnmObservation | null {
   if ((row[COLUMN.stage] ?? '').trim().toLowerCase() !== RNM_STAGE_DETAIL) {
     return null;
   }
-  if ((row[COLUMN.unit] ?? '').trim() !== RNM_UNIT_PER_KG) {
+  const unit = toSupportedUnit((row[COLUMN.unit] ?? '').trim());
+  if (unit === null) {
     return null;
   }
-  const pricePerKg = parsePrice((row[COLUMN.value] ?? '').trim());
+  const price = parsePrice((row[COLUMN.value] ?? '').trim());
   const observedOn = parseFrenchDate((row[COLUMN.date] ?? '').trim());
-  if (pricePerKg === null || observedOn === null) {
+  if (price === null || observedOn === null) {
     return null;
   }
   const product = (row[COLUMN.product] ?? '').trim();
   const isOrganic =
     marketKind !== 'gms' || product.toLowerCase().includes(ORGANIC_LABEL);
-  return { product, marketKind, isOrganic, pricePerKg, observedOn };
+  return { product, marketKind, isOrganic, unit, price, observedOn };
 }
 
 export function readRnmRows(zip: Uint8Array): string[][] {
