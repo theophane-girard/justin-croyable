@@ -88,7 +88,7 @@ export class PriceStore {
 
   async refreshFromRnm(): Promise<boolean> {
     const response = await this.#api.refreshVarietyPricesFromRnm();
-    if (response.status === 200) {
+    if (response.ok) {
       await this.reload();
       return true;
     }

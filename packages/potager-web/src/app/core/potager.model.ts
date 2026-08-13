@@ -79,7 +79,7 @@ export type Crop = {
 };
 
 export const CROPS = [
-  { id: 'tomate', label: 'Tomate', category: 'legume', icon: 'phosphorLeaf', referencePricePerKg: 2.8, referenceBioPricePerKg: 5.2, fallbackVarietyId: 'tomate-coeur-de-boeuf' },
+  { id: 'tomate', label: 'Tomate', category: 'legume', icon: 'phosphorLeaf', referencePricePerKg: 2.8, referenceBioPricePerKg: 5.2, fallbackVarietyId: 'tomate-ronde' },
   { id: 'courgette', label: 'Courgette', category: 'legume', icon: 'phosphorLeaf', referencePricePerKg: 2.7, referenceBioPricePerKg: 4.8 },
   { id: 'carotte', label: 'Carotte', category: 'legume', icon: 'phosphorLeaf', referencePricePerKg: 1.7, referenceBioPricePerKg: 2.8 },
   { id: 'pomme-de-terre', label: 'Pomme de terre', category: 'legume', icon: 'phosphorLeaf', referencePricePerKg: 1.7, referenceBioPricePerKg: 3 },
