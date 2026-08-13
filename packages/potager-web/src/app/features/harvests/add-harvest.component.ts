@@ -11,6 +11,7 @@ import {
 } from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
 
+import { cropUnit, HARVEST_UNIT, HARVEST_UNIT_META } from '../../core/potager.model';
 import { CatalogStore } from '../../core/catalog-store';
 import { HarvestStore } from '../../core/harvest-store';
 import { HARVESTS_LINK } from '../../app.routes';
@@ -33,7 +34,7 @@ import { HARVESTS_LINK } from '../../app.routes';
         <div class="flex flex-col">
           <h2 class="text-foreground text-lg font-semibold">Nouvelle récolte</h2>
           <p class="text-muted-foreground text-sm">
-            Renseignez la variété, le poids et la date.
+            Renseignez la variété, la quantité et la date.
           </p>
         </div>
         <div class="flex items-center gap-2">
@@ -104,14 +105,18 @@ import { HARVESTS_LINK } from '../../app.routes';
             }
           </div>
 
-          <app-input-group label="Poids récolté" hint="En kilogrammes." [required]="true">
+          <app-input-group
+            [label]="unitMeta().quantityLabel"
+            [hint]="unitMeta().quantityHint"
+            [required]="true"
+          >
             <input
               app-input
               type="number"
-              inputmode="decimal"
               min="0"
-              step="0.1"
               placeholder="0"
+              [attr.inputmode]="unitMeta().inputMode"
+              [attr.step]="unitMeta().step"
               [value]="weightInput()"
               (input)="onWeightInput($event)"
             />
@@ -154,9 +159,21 @@ export class AddHarvestComponent {
     () => this.customLabel().trim().length > 0 && this.#catalog.isKnown(this.customReferenceId()),
   );
 
+  protected readonly unitMeta = computed(() => {
+    const variety = this.#catalog.byId().get(this.varietyId());
+    const unit = variety ? cropUnit(variety.cropId) : HARVEST_UNIT.kilogram;
+    return HARVEST_UNIT_META[unit];
+  });
+
   protected readonly weightKg = computed(() => {
     const parsed = Number.parseFloat(this.weightInput().replace(',', '.'));
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      return null;
+    }
+    if (this.unitMeta().integerOnly && !Number.isInteger(parsed)) {
+      return null;
+    }
+    return parsed;
   });
 
   protected readonly canSubmit = computed(

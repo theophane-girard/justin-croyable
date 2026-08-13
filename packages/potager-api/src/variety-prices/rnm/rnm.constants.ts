@@ -2,7 +2,13 @@ export const RNM_SOURCE = 'rnm';
 
 export const RNM_STAGE_DETAIL = 'détail';
 
-export const RNM_UNIT_PER_KG = 'le kg';
+export const RNM_SUPPORTED_UNITS = {
+  perKilogram: 'le kg',
+  perPiece: 'la pièce',
+  perBunch: 'la botte',
+} as const;
+
+export type RnmUnit = (typeof RNM_SUPPORTED_UNITS)[keyof typeof RNM_SUPPORTED_UNITS];
 
 export const RNM_MARKET_KIND = { gms: 'gms', specialisedBio: 'specialised-bio' } as const;
 

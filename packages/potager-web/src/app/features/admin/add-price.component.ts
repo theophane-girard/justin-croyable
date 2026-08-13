@@ -13,7 +13,7 @@ import {
 } from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
 
-import { CROP_BY_ID } from '../../core/potager.model';
+import { CROP_BY_ID, cropUnit, HARVEST_UNIT, HARVEST_UNIT_META } from '../../core/potager.model';
 import { CatalogStore } from '../../core/catalog-store';
 import { PriceStore } from '../../core/price-store';
 import { UserStore } from '../../core/user-store';
@@ -92,7 +92,7 @@ function parsePrice(raw: string): number | null {
               }
             </app-select>
 
-            <app-input-group label="Prix conventionnel" hint="En €/kg." [required]="true">
+            <app-input-group label="Prix conventionnel" [hint]="conventionalHint()" [required]="true">
               <input
                 app-input
                 type="number"
@@ -105,7 +105,7 @@ function parsePrice(raw: string): number | null {
               />
             </app-input-group>
 
-            <app-input-group label="Prix bio" hint="En €/kg, optionnel.">
+            <app-input-group label="Prix bio" [hint]="bioHint()">
               <input
                 app-input
                 type="number"
@@ -158,6 +158,15 @@ export class AddPriceComponent {
   protected readonly bioInput = signal<string>('');
   protected readonly source = signal<string>(DEFAULT_SOURCE);
   protected readonly effectiveFrom = signal<Date | null>(new Date());
+
+  protected readonly priceSuffix = computed(() => {
+    const variety = this.#catalog.byId().get(this.varietyId());
+    const unit = variety ? cropUnit(variety.cropId) : HARVEST_UNIT.kilogram;
+    return HARVEST_UNIT_META[unit].priceSuffix;
+  });
+
+  protected readonly conventionalHint = computed(() => `En ${this.priceSuffix()}.`);
+  protected readonly bioHint = computed(() => `En ${this.priceSuffix()}, optionnel.`);
 
   readonly #conventional = computed(() => parsePrice(this.conventionalInput()));
   readonly #bio = computed(() =>
