@@ -7,11 +7,43 @@ variété custom **emprunte dynamiquement** le prix et la culture parente de cet
 référence.
 
 Ce document décrit l'architecture cible et un plan de mise en œuvre phasé
-(Phase 0 fondations jardin → Phase 1 socle variétés → Phase 2 création custom). Il
-ne contient pas encore de code de production : c'est la base à valider avant
-d'implémenter. La visibilité des variétés custom étant pilotée par le **partage de
-jardins** (décision ratifiée #2), ce doc pose les fondations jardin nécessaires ;
-le partage complet (invitations, UI, expiration) fera l'objet d'un doc dédié.
+(Phase 0 fondations jardin → Phase 1 socle variétés → Phase 2 création custom). La
+visibilité des variétés custom étant pilotée par le **partage de jardins**
+(décision ratifiée #2), ce doc pose les fondations jardin nécessaires ; le partage
+complet (invitations, UI, expiration) fera l'objet d'un doc dédié.
+
+---
+
+## 0. État d'implémentation
+
+> **Statut : Phases 0/1/2 implémentées** sur la branche
+> `claude/plants-varieties-dashboard-fixes-9pyjpu`
+> (commits « socle backend » + « catalogue en base + variétés custom + bascule uuid »).
+
+**✅ Fait**
+- Tables `gardens`, `garden_members` (rôles + `email` + `expires_at`), `varieties`
+  (migration `0005`). `GardenService` (jardin personnel lazy, rôle effectif avec
+  expiration, jardins accessibles) et `VarietyService` (`GET`/`POST`/`DELETE
+  /varieties`, visibilité par jardins accessibles, garde-fous référence/rôle/usage).
+- Front : `CatalogStore` (signals) alimenté par `GET /varieties` remplace le
+  catalogue en dur ; `VarietyId` devient `string` (uuid) ; indirection
+  `pricingVarietyId` (custom → référence) avec repli culture.
+- UI « + Nouvelle variété » (libellé + référence RNM) dans add-harvest et add-plant.
+- **Bascule uuid + FK** de `harvests.variety_id`, `plants.variety_id`,
+  `variety_prices.variety_id` (slug texte → uuid) : migration `0006` avec snapshot
+  drizzle-kit et corps SQL édité pour un transfert de données sûr (insertion
+  idempotente des références puis mapping `slug → uuid`). Seed adapté.
+
+**⚠️ À valider en environnement réel** (non exécuté ici, faute de base)
+- Jouer `0005` puis `0006` + `db-seed`, vérifier que récoltes/plants/prix existants
+  résolvent après le mapping `slug → uuid`.
+- Smoke test création variété custom → récolte/plant → remontée dans les charts
+  sous la culture parente + héritage du prix.
+
+**⏳ Différé (épopée « jardins partagés » dédiée)**
+- Flux d'invitation par e-mail, UI multi-jardins, expiration côté UI.
+- Migration de l'ownership de `plants`/`harvests`/`expenses` de `user_id` vers un
+  scoping `garden_id` (aujourd'hui encore scoping `user_id`).
 
 ---
 
