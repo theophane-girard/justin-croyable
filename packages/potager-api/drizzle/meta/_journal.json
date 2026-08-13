@@ -43,6 +43,13 @@
       "when": 1786571409089,
       "tag": "0005_neat_jackpot",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1786600223640,
+      "tag": "0006_amused_living_mummy",
+      "breakpoints": true
     }
   ]
 }

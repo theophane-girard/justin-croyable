@@ -13,7 +13,8 @@ import {
 } from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
 
-import { CROP_BY_ID, isVarietyId, VARIETIES } from '../../core/potager.model';
+import { CROP_BY_ID } from '../../core/potager.model';
+import { CatalogStore } from '../../core/catalog-store';
 import { PriceStore } from '../../core/price-store';
 import { UserStore } from '../../core/user-store';
 import { ADMIN_PRICES_LINK } from '../../app.routes';
@@ -27,13 +28,6 @@ const SOURCE_OPTIONS: readonly PriceOption[] = [
   { value: 'rnm', label: 'RNM' },
   { value: 'reference', label: 'Référence' },
 ];
-
-const VARIETY_OPTIONS: readonly PriceOption[] = [...VARIETIES]
-  .map(variety => ({
-    value: variety.id,
-    label: `${CROP_BY_ID[variety.cropId].label} · ${variety.label}`,
-  }))
-  .sort((a, b) => a.label.localeCompare(b.label, 'fr'));
 
 function parsePrice(raw: string): number | null {
   const parsed = Number.parseFloat(raw.replace(',', '.'));
@@ -87,7 +81,7 @@ function parsePrice(raw: string): number | null {
               [value]="varietyId()"
               (valueChange)="onVarietyChange($event)"
             >
-              @for (option of varietyOptions; track option.value) {
+              @for (option of varietyOptions(); track option.value) {
                 <app-select-item [value]="option.value">{{ option.label }}</app-select-item>
               }
             </app-select>
@@ -143,12 +137,20 @@ function parsePrice(raw: string): number | null {
 })
 export class AddPriceComponent {
   readonly #prices = inject(PriceStore);
+  readonly #catalog = inject(CatalogStore);
   readonly #users = inject(UserStore);
   readonly #router = inject(Router);
 
   protected readonly isAdmin = this.#users.isAdmin;
   protected readonly pricesLink = ADMIN_PRICES_LINK;
-  protected readonly varietyOptions = VARIETY_OPTIONS;
+  protected readonly varietyOptions = computed<readonly PriceOption[]>(() =>
+    [...this.#catalog.references()]
+      .map(variety => ({
+        value: variety.id,
+        label: `${CROP_BY_ID[variety.cropId].label} · ${variety.label}`,
+      }))
+      .sort((first, second) => first.label.localeCompare(second.label, 'fr')),
+  );
   protected readonly sourceOptions = SOURCE_OPTIONS;
 
   protected readonly varietyId = signal<string>('');
@@ -164,7 +166,7 @@ export class AddPriceComponent {
 
   protected readonly canSubmit = computed(
     () =>
-      isVarietyId(this.varietyId()) &&
+      this.#catalog.isKnown(this.varietyId()) &&
       this.#conventional() !== null &&
       this.effectiveFrom() !== null,
   );
@@ -193,7 +195,7 @@ export class AddPriceComponent {
     const conventionalPricePerKg = this.#conventional();
     const effectiveFrom = this.effectiveFrom();
     const varietyId = this.varietyId();
-    if (conventionalPricePerKg === null || effectiveFrom === null || !isVarietyId(varietyId)) {
+    if (conventionalPricePerKg === null || effectiveFrom === null || !this.#catalog.isKnown(varietyId)) {
       return;
     }
     const payload: CreateVarietyPricePayload = {

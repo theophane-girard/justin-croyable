@@ -30,13 +30,10 @@ import {
   type CategoryId,
   CROP_BY_ID,
   type CropId,
-  cropFallbackVarietyId,
   PRICE_ORIGIN,
   type PriceOrigin,
   type PriceRow,
-  VARIETIES,
-  VARIETY_BY_ID,
-  type VarietyId,
+  type Variety,
 } from '../../core/potager.model';
 import {
   CULTURE_FILTER_ALL,
@@ -44,6 +41,7 @@ import {
   VARIETY_FILTER_ALL,
   varietyFilterOptions,
 } from '../../core/catalog-filter';
+import { CatalogStore } from '../../core/catalog-store';
 import { type CurrentPrice, PriceStore } from '../../core/price-store';
 import { TagCellComponent } from '../../shared/tag-cell.component';
 import { CATEGORY_TAG_COLOR, priceOriginTagColor } from '../../shared/table-badges';
@@ -252,6 +250,7 @@ function sourceLabel(source: string): string {
 })
 export class PricesComponent {
   readonly #prices = inject(PriceStore);
+  readonly #catalog = inject(CatalogStore);
   readonly #sheet = inject(SheetService);
 
   private readonly filterSheetTemplate = viewChild.required<TemplateRef<unknown>>('filterSheet');
@@ -266,12 +265,15 @@ export class PricesComponent {
   protected readonly varietyFilter = signal<string>(VARIETY_FILTER_ALL);
 
   protected readonly categoryValue = computed(() => this.categoryFilter() ?? CATEGORY_ALL);
-  protected readonly varietyOptions = computed(() => varietyFilterOptions(this.cultureFilter()));
+  protected readonly varietyOptions = computed(() =>
+    varietyFilterOptions(this.cultureFilter(), this.#catalog.varieties()),
+  );
 
   protected readonly rows = computed<PriceRow[]>(() =>
-    VARIETIES.map(variety => this.#toRow(variety.id as VarietyId)).sort((a, b) =>
-      a.cropLabel.localeCompare(b.cropLabel, 'fr'),
-    ),
+    this.#catalog
+      .varieties()
+      .map(variety => this.#toRow(variety))
+      .sort((a, b) => a.cropLabel.localeCompare(b.cropLabel, 'fr')),
   );
 
   protected readonly displayedRows = computed<PriceRow[]>(() => {
@@ -321,8 +323,8 @@ export class PricesComponent {
     }
   }
 
-  #toRow(varietyId: VarietyId): PriceRow {
-    const variety = VARIETY_BY_ID[varietyId];
+  #toRow(variety: Variety): PriceRow {
+    const varietyId = variety.id;
     const crop = CROP_BY_ID[variety.cropId];
     const current = this.#prices.currentFor(varietyId);
     const conventionalPricePerKg = current?.price.conventionalPricePerKg ?? 0;
@@ -361,8 +363,9 @@ export class PricesComponent {
       return '—';
     }
     if (current.viaFallback) {
-      const fallbackLabel = VARIETY_BY_ID[cropFallbackVarietyId(cropId)].label;
-      return `${sourceLabel(current.price.source)} · via ${fallbackLabel}`;
+      const fallbackId = this.#catalog.cropFallbackVarietyId(cropId);
+      const fallbackLabel = fallbackId ? this.#catalog.labelFor(fallbackId) : null;
+      return `${sourceLabel(current.price.source)} · via ${fallbackLabel ?? 'référence'}`;
     }
     return sourceLabel(current.price.source);
   }

@@ -71,7 +71,7 @@ export const plants = pgTable('plants', {
   userId: ownerId(),
   gardenId: gardenRef(),
   cropId: text('crop_id').notNull(),
-  varietyId: text('variety_id'),
+  varietyId: uuid('variety_id').references(() => varieties.id, { onDelete: 'set null' }),
   quantity: integer('quantity').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -81,7 +81,9 @@ export const harvests = pgTable('harvests', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: ownerId(),
   gardenId: gardenRef(),
-  varietyId: text('variety_id').notNull(),
+  varietyId: uuid('variety_id')
+    .notNull()
+    .references(() => varieties.id),
   weightKg: doublePrecision('weight_kg').notNull(),
   harvestedOn: timestamp('harvested_on', { withTimezone: true }).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -90,7 +92,9 @@ export const harvests = pgTable('harvests', {
 
 export const varietyPrices = pgTable('variety_prices', {
   id: uuid('id').primaryKey().defaultRandom(),
-  varietyId: text('variety_id').notNull(),
+  varietyId: uuid('variety_id')
+    .notNull()
+    .references(() => varieties.id, { onDelete: 'cascade' }),
   conventionalPricePerKg: doublePrecision('conventional_price_per_kg').notNull(),
   bioPricePerKg: doublePrecision('bio_price_per_kg'),
   effectiveFrom: timestamp('effective_from', { withTimezone: true }).notNull(),

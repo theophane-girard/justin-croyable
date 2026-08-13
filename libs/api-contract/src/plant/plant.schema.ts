@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const plantSchema = z.object({
   id: z.string().uuid(),
   cropId: z.string().min(1),
-  varietyId: z.string().min(1).nullable(),
+  varietyId: z.string().uuid().nullable(),
   quantity: z.number().int().positive(),
   createdAt: z.string().datetime(),
 });
@@ -12,7 +12,7 @@ export type Plant = z.infer<typeof plantSchema>;
 
 export const createPlantSchema = z.object({
   cropId: z.string().min(1),
-  varietyId: z.string().min(1).optional(),
+  varietyId: z.string().uuid().optional(),
   quantity: z.number().int().positive(),
 });
 

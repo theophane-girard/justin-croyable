@@ -6,13 +6,12 @@ import {
   CROP_BY_ID,
   type CropId,
   isCropId,
-  isVarietyId,
   type PlantDraft,
   type PlantRow,
-  VARIETY_BY_ID,
   type VarietyId,
 } from './potager.model';
 import { ApiEntityStore } from './api-entity-store';
+import { CatalogStore } from './catalog-store';
 import { HarvestStore } from './harvest-store';
 import { ExpenseStore } from './expense-store';
 
@@ -20,6 +19,7 @@ import { ExpenseStore } from './expense-store';
 export class GardenStore extends ApiEntityStore<Plant> {
   readonly #harvests = inject(HarvestStore);
   readonly #expenses = inject(ExpenseStore);
+  readonly #catalog = inject(CatalogStore);
 
   readonly #expenseByPlantId = computed<Record<string, number>>(() => {
     const plantIds = this.entries().map(entry => entry.id);
@@ -45,11 +45,12 @@ export class GardenStore extends ApiEntityStore<Plant> {
     const harvestedByVariety = this.#harvests.periodWeightByVarietyId();
     const valueByVariety = this.#harvests.periodValueByVarietyId();
     const expenseByPlant = this.#expenseByPlantId();
+    const byId = this.#catalog.byId();
     return this.entries()
       .filter(entry => isCropId(entry.cropId))
       .map(entry => {
         const varietyId =
-          entry.varietyId !== null && isVarietyId(entry.varietyId) ? entry.varietyId : null;
+          entry.varietyId !== null && byId.has(entry.varietyId) ? entry.varietyId : null;
         const harvestedKg = varietyId
           ? harvestedByVariety[varietyId] ?? 0
           : harvestedByCrop[entry.cropId as CropId] ?? 0;
@@ -129,7 +130,7 @@ export class GardenStore extends ApiEntityStore<Plant> {
       cropLabel: crop.label,
       cropIcon: crop.icon,
       varietyId,
-      label: varietyId ? VARIETY_BY_ID[varietyId].label : crop.label,
+      label: varietyId ? this.#catalog.labelFor(varietyId) ?? crop.label : crop.label,
       categoryLabel: CATEGORY_META[crop.category].label,
       quantity: entry.quantity,
       harvestedKg: this.#roundToCents(harvestedKg),

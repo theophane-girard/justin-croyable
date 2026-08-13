@@ -1,0 +1,121 @@
+import { computed, effect, inject, Injectable, signal } from '@angular/core';
+import { type Variety as ApiVariety } from '@justin-croyable/api-contract';
+
+import { ApiService } from './api.service';
+import { AuthService } from './auth.service';
+import { CROP_BY_ID, type CropId, isCropId, type Variety, type VarietyId } from './potager.model';
+
+function toVariety(row: ApiVariety): Variety {
+  return {
+    id: row.id,
+    cropId: row.cropId as CropId,
+    label: row.label,
+    slug: row.slug,
+    gardenId: row.gardenId,
+    referenceVarietyId: row.referenceVarietyId,
+    isCustom: row.gardenId !== null,
+    pricingVarietyId: row.referenceVarietyId ?? row.id,
+  };
+}
+
+@Injectable({ providedIn: 'root' })
+export class CatalogStore {
+  readonly #api = inject(ApiService);
+  readonly #auth = inject(AuthService);
+
+  readonly #varieties = signal<readonly Variety[]>([]);
+  readonly #loaded = signal(false);
+
+  readonly varieties = this.#varieties.asReadonly();
+  readonly loaded = this.#loaded.asReadonly();
+
+  readonly byId = computed<ReadonlyMap<VarietyId, Variety>>(
+    () => new Map(this.#varieties().map(variety => [variety.id, variety])),
+  );
+
+  readonly byCrop = computed<ReadonlyMap<CropId, readonly Variety[]>>(() => {
+    const grouped = this.#varieties().reduce<Map<CropId, Variety[]>>((accumulator, variety) => {
+      const list = accumulator.get(variety.cropId) ?? [];
+      list.push(variety);
+      accumulator.set(variety.cropId, list);
+      return accumulator;
+    }, new Map());
+    grouped.forEach(list =>
+      list.sort((first, second) => first.label.localeCompare(second.label, 'fr')),
+    );
+    return grouped;
+  });
+
+  readonly references = computed<readonly Variety[]>(() =>
+    this.#varieties().filter(variety => !variety.isCustom),
+  );
+
+  readonly #referenceIdBySlug = computed<ReadonlyMap<string, VarietyId>>(
+    () =>
+      new Map(
+        this.references()
+          .filter(variety => variety.slug !== null)
+          .map(variety => [variety.slug as string, variety.id]),
+      ),
+  );
+
+  constructor() {
+    effect(() => {
+      if (this.#auth.isAuthenticated()) {
+        void this.reload();
+      }
+    });
+  }
+
+  async reload(): Promise<void> {
+    const response = await this.#api.listVarieties();
+    if (response.status === 200) {
+      this.#varieties.set(response.body.map(toVariety));
+      this.#loaded.set(true);
+    }
+  }
+
+  async createCustom(label: string, referenceVarietyId: VarietyId): Promise<Variety | null> {
+    const response = await this.#api.createVariety({ label, referenceVarietyId });
+    if (response.status !== 201) {
+      return null;
+    }
+    await this.reload();
+    return this.byId().get(response.body.id) ?? null;
+  }
+
+  async removeCustom(id: VarietyId): Promise<boolean> {
+    const response = await this.#api.removeVariety(id);
+    if (response.status !== 200) {
+      return false;
+    }
+    await this.reload();
+    return true;
+  }
+
+  varietiesForCrop(cropId: string): readonly Variety[] {
+    return isCropId(cropId) ? this.byCrop().get(cropId) ?? [] : [];
+  }
+
+  isKnown(id: string): boolean {
+    return this.byId().has(id);
+  }
+
+  labelFor(id: VarietyId): string | null {
+    return this.byId().get(id)?.label ?? null;
+  }
+
+  pricingVarietyIdFor(id: VarietyId): VarietyId | null {
+    return this.byId().get(id)?.pricingVarietyId ?? null;
+  }
+
+  cropFallbackVarietyId(cropId: CropId): VarietyId | null {
+    const slug = CROP_BY_ID[cropId].fallbackVarietyId;
+    const bySlug = slug !== undefined ? this.#referenceIdBySlug().get(slug) : undefined;
+    if (bySlug !== undefined) {
+      return bySlug;
+    }
+    const references = this.references().filter(variety => variety.cropId === cropId);
+    return references[0]?.id ?? null;
+  }
+}

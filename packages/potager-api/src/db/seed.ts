@@ -88,22 +88,39 @@ const REFERENCE_PRICES: readonly SeedPrice[] = [
   { varietyId: 'rhubarbe', conventionalPricePerKg: 3.5, bioPricePerKg: 5.5 },
 ];
 
+async function referenceIdBySlug(db: Database): Promise<Map<string, string>> {
+  const rows = await db
+    .select({ id: varieties.id, slug: varieties.slug })
+    .from(varieties)
+    .where(isNull(varieties.gardenId));
+  return new Map(
+    rows.filter(row => row.slug !== null).map(row => [row.slug as string, row.id]),
+  );
+}
+
 async function seedPrices(db: Database): Promise<void> {
+  const idBySlug = await referenceIdBySlug(db);
   const existing = await db
     .select({ varietyId: varietyPrices.varietyId })
     .from(varietyPrices)
     .where(eq(varietyPrices.source, SOURCE));
   const existingIds = new Set(existing.map(row => row.varietyId));
-  const toInsert = REFERENCE_PRICES.filter(price => !existingIds.has(price.varietyId));
+  const toInsert = REFERENCE_PRICES.map(price => ({
+    price,
+    varietyId: idBySlug.get(price.varietyId),
+  })).filter(
+    (entry): entry is { price: SeedPrice; varietyId: string } =>
+      entry.varietyId !== undefined && !existingIds.has(entry.varietyId),
+  );
   if (toInsert.length === 0) {
     console.log('Seed variety_prices : rien à insérer (prix de référence déjà présents).');
     return;
   }
   await db.insert(varietyPrices).values(
-    toInsert.map(price => ({
-      varietyId: price.varietyId,
-      conventionalPricePerKg: price.conventionalPricePerKg,
-      bioPricePerKg: price.bioPricePerKg,
+    toInsert.map(entry => ({
+      varietyId: entry.varietyId,
+      conventionalPricePerKg: entry.price.conventionalPricePerKg,
+      bioPricePerKg: entry.price.bioPricePerKg,
       effectiveFrom: EFFECTIVE_FROM,
       source: SOURCE,
     })),
@@ -140,8 +157,8 @@ async function seed(): Promise<void> {
     throw new Error('DATABASE_URL requis pour le seed.');
   }
   const db = createDatabase(connectionString);
-  await seedPrices(db);
   await seedVarieties(db);
+  await seedPrices(db);
 }
 
 seed()

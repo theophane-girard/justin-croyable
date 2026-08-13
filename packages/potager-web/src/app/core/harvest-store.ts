@@ -7,18 +7,18 @@ import {
   type CropId,
   type HarvestDraft,
   type HarvestRow,
-  isVarietyId,
   matchesSeason,
   matchesYear,
   PRICE_MODE,
   type PriceMode,
   seasonForDate,
-  VARIETY_BY_ID,
+  type Variety,
   type VarietyId,
   YEAR_ALL,
   type YearFilter,
 } from './potager.model';
 import { ApiEntityStore } from './api-entity-store';
+import { CatalogStore } from './catalog-store';
 import { PriceStore } from './price-store';
 import { SeasonStore } from './season-store';
 
@@ -44,6 +44,7 @@ type NamedValue = { readonly label: string; readonly value: number };
 @Injectable({ providedIn: 'root' })
 export class HarvestStore extends ApiEntityStore<Harvest> {
   readonly #prices = inject(PriceStore);
+  readonly #catalog = inject(CatalogStore);
   readonly #seasonStore = inject(SeasonStore);
   readonly #season = this.#seasonStore.season;
 
@@ -52,9 +53,13 @@ export class HarvestStore extends ApiEntityStore<Harvest> {
 
   readonly rows = computed<HarvestRow[]>(() => {
     const mode = this.#priceMode();
+    const byId = this.#catalog.byId();
     return this.entries()
-      .filter(entry => isVarietyId(entry.varietyId))
-      .map(entry => this.#toRow(entry, mode))
+      .map(entry => {
+        const variety = byId.get(entry.varietyId);
+        return variety ? this.#toRow(entry, variety, mode) : null;
+      })
+      .filter((row): row is HarvestRow => row !== null)
       .sort((a, b) => b.harvestedOn.getTime() - a.harvestedOn.getTime());
   });
 
@@ -94,14 +99,14 @@ export class HarvestStore extends ApiEntityStore<Harvest> {
     this.#roundToCents(this.#periodRows().reduce((total, row) => total + row.savingsEur, 0)),
   );
 
-  readonly cropCount = computed(
-    () =>
-      new Set(
-        this.entries()
-          .filter(entry => isVarietyId(entry.varietyId))
-          .map(entry => VARIETY_BY_ID[entry.varietyId as VarietyId].cropId),
-      ).size,
-  );
+  readonly cropCount = computed(() => {
+    const byId = this.#catalog.byId();
+    return new Set(
+      this.entries()
+        .map(entry => byId.get(entry.varietyId)?.cropId)
+        .filter((cropId): cropId is CropId => cropId !== undefined),
+    ).size;
+  });
 
   readonly periodWeightByCropId = computed<Partial<Record<CropId, number>>>(() =>
     this.#periodRows().reduce<Partial<Record<CropId, number>>>((accumulator, row) => {
@@ -177,9 +182,8 @@ export class HarvestStore extends ApiEntityStore<Harvest> {
     return this.api.listHarvests();
   }
 
-  #toRow(entry: Harvest, mode: PriceMode): HarvestRow {
-    const varietyId = entry.varietyId as VarietyId;
-    const variety = VARIETY_BY_ID[varietyId];
+  #toRow(entry: Harvest, variety: Variety, mode: PriceMode): HarvestRow {
+    const varietyId = variety.id;
     const crop = CROP_BY_ID[variety.cropId];
     const harvestedOn = new Date(entry.harvestedOn);
     const conventionalPricePerKg = this.#prices.conventionalPriceFor(varietyId, harvestedOn);
