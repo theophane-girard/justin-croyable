@@ -1,5 +1,5 @@
 import { type RnmRefreshResult } from '@justin-croyable/api-contract';
-import { BadGatewayException, Controller, Post, UseGuards } from '@nestjs/common';
+import { BadGatewayException, Controller, HttpCode, Post, UseGuards } from '@nestjs/common';
 
 import { ACTION, SUBJECT } from '../../auth/ability';
 import { FirebaseAuthGuard } from '../../auth/firebase-auth.guard';
@@ -14,6 +14,7 @@ export class RnmController {
   constructor(private readonly rnm: RnmIngestionService) {}
 
   @Post('variety-prices/refresh')
+  @HttpCode(200)
   @UseGuards(FirebaseAuthGuard, PoliciesGuard)
   @RequirePermission(ACTION.create, SUBJECT.varietyPrice)
   refresh(): Promise<RnmRefreshResult> {
@@ -21,6 +22,7 @@ export class RnmController {
   }
 
   @Post('variety-prices/refresh-cron')
+  @HttpCode(200)
   @UseGuards(RefreshTokenGuard)
   refreshCron(): Promise<RnmRefreshResult> {
     return this.#run();
