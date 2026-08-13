@@ -7,6 +7,8 @@ import {
   FabButtonComponent,
   FabContainerComponent,
   FabListComponent,
+  SegmentComponent,
+  type SegmentItem,
   TableComponent,
 } from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
@@ -95,6 +97,14 @@ const PRICE_GRID_OPTIONS: GridOptions<AdminPriceRow> = {
   paginationPageSizeSelector: [10, 20, 50],
 };
 
+const PRICE_SCOPE = { latest: 'latest', all: 'all' } as const;
+type PriceScope = (typeof PRICE_SCOPE)[keyof typeof PRICE_SCOPE];
+
+const SCOPE_ITEMS: SegmentItem[] = [
+  { value: PRICE_SCOPE.latest, label: 'Derniers prix' },
+  { value: PRICE_SCOPE.all, label: 'Tous les prix' },
+];
+
 @Component({
   selector: 'app-admin-prices',
   imports: [
@@ -105,6 +115,7 @@ const PRICE_GRID_OPTIONS: GridOptions<AdminPriceRow> = {
     FabButtonComponent,
     FabContainerComponent,
     FabListComponent,
+    SegmentComponent,
     TableComponent,
   ],
   template: `
@@ -158,6 +169,16 @@ const PRICE_GRID_OPTIONS: GridOptions<AdminPriceRow> = {
 
         @if (refreshError()) {
           <p class="text-destructive text-sm">{{ refreshError() }}</p>
+        }
+
+        @if (totalCount() > 0) {
+          <app-segment
+            class="self-start"
+            variant="accent"
+            [items]="scopeItems"
+            [value]="scope()"
+            (valueChange)="onScopeChange($event)"
+          />
         }
 
         @if (rows().length === 0) {
@@ -223,8 +244,10 @@ export class AdminPricesComponent {
   protected readonly addLink = ADMIN_PRICE_ADD_LINK;
 
   protected readonly selectedId = signal<string | null>(null);
+  protected readonly scope = signal<PriceScope>(PRICE_SCOPE.latest);
+  protected readonly scopeItems = SCOPE_ITEMS;
 
-  protected readonly rows = computed<AdminPriceRow[]>(() =>
+  readonly #allRows = computed<AdminPriceRow[]>(() =>
     this.#prices
       .prices()
       .map(price => this.#toRow(price))
@@ -234,6 +257,29 @@ export class AdminPricesComponent {
           b.effectiveFrom.getTime() - a.effectiveFrom.getTime(),
       ),
   );
+
+  protected readonly totalCount = computed(() => this.#allRows().length);
+
+  protected readonly rows = computed<AdminPriceRow[]>(() => {
+    const all = this.#allRows();
+    if (this.scope() === PRICE_SCOPE.all) {
+      return all;
+    }
+    const seen = new Set<string>();
+    return all.filter(row => {
+      if (seen.has(row.varietyId)) {
+        return false;
+      }
+      seen.add(row.varietyId);
+      return true;
+    });
+  });
+
+  protected onScopeChange(value: string | null): void {
+    if (value === PRICE_SCOPE.latest || value === PRICE_SCOPE.all) {
+      this.scope.set(value);
+    }
+  }
 
   protected onRowSelected(event: RowSelectedEvent<AdminPriceRow>): void {
     const row = event.data;
