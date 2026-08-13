@@ -11,7 +11,6 @@ import {
 } from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
 
-import { CROPS } from '../../core/potager.model';
 import { CatalogStore } from '../../core/catalog-store';
 import { HarvestStore } from '../../core/harvest-store';
 import { HARVESTS_LINK } from '../../app.routes';
@@ -34,7 +33,7 @@ import { HARVESTS_LINK } from '../../app.routes';
         <div class="flex flex-col">
           <h2 class="text-foreground text-lg font-semibold">Nouvelle récolte</h2>
           <p class="text-muted-foreground text-sm">
-            Renseignez la culture, la variété, le poids et la date.
+            Renseignez la variété, le poids et la date.
           </p>
         </div>
         <div class="flex items-center gap-2">
@@ -48,37 +47,27 @@ import { HARVESTS_LINK } from '../../app.routes';
 
       <app-card>
         <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
-          <app-select
-            label="Culture"
-            placeholder="Sélectionner une culture…"
-            [required]="true"
-            [value]="cropId()"
-            (valueChange)="onCropChange($event)"
-          >
-            @for (crop of crops; track crop.id) {
-              <app-select-item [value]="crop.id">{{ crop.label }}</app-select-item>
-            }
-          </app-select>
-
-          <app-select
-            label="Variété"
-            placeholder="Sélectionner une variété…"
-            [required]="true"
-            [disabled]="varieties().length === 0"
-            [value]="varietyId()"
-            (valueChange)="onVarietyChange($event)"
-          >
-            @for (variety of varieties(); track variety.id) {
-              <app-select-item [value]="variety.id">{{ variety.label }}</app-select-item>
-            }
-          </app-select>
+          <div class="md:col-span-2">
+            <app-select
+              label="Culture & variété"
+              placeholder="Sélectionner une variété…"
+              [required]="true"
+              [disabled]="varietyOptions().length === 0"
+              [value]="varietyId()"
+              (valueChange)="onVarietyChange($event)"
+            >
+              @for (option of varietyOptions(); track option.id) {
+                <app-select-item [value]="option.id">{{ option.label }}</app-select-item>
+              }
+            </app-select>
+          </div>
 
           <div class="flex flex-col gap-2 md:col-span-2">
             @if (!showCustomForm()) {
               <button
                 type="button"
                 class="text-primary self-start text-sm font-medium hover:underline disabled:opacity-50"
-                [disabled]="referenceVarieties().length === 0"
+                [disabled]="referenceOptions().length === 0"
                 (click)="showCustomForm.set(true)"
               >
                 + Nouvelle variété
@@ -101,8 +90,8 @@ import { HARVESTS_LINK } from '../../app.routes';
                   [value]="customReferenceId()"
                   (valueChange)="onCustomReferenceChange($event)"
                 >
-                  @for (reference of referenceVarieties(); track reference.id) {
-                    <app-select-item [value]="reference.id">{{ reference.label }}</app-select-item>
+                  @for (option of referenceOptions(); track option.id) {
+                    <app-select-item [value]="option.id">{{ option.label }}</app-select-item>
                   }
                 </app-select>
                 <div class="flex items-center justify-end gap-2">
@@ -149,18 +138,13 @@ export class AddHarvestComponent {
   readonly #catalog = inject(CatalogStore);
   readonly #router = inject(Router);
 
-  protected readonly crops = CROPS;
   protected readonly harvestsLink = HARVESTS_LINK;
+  protected readonly varietyOptions = this.#catalog.varietyOptions;
+  protected readonly referenceOptions = this.#catalog.referenceOptions;
 
-  protected readonly cropId = signal<string>('');
   protected readonly varietyId = signal<string>('');
   protected readonly weightInput = signal<string>('');
   protected readonly date = signal<Date | null>(new Date());
-
-  protected readonly varieties = computed(() => this.#catalog.varietiesForCrop(this.cropId()));
-  protected readonly referenceVarieties = computed(() =>
-    this.varieties().filter(variety => !variety.isCustom),
-  );
 
   protected readonly showCustomForm = signal(false);
   protected readonly customLabel = signal<string>('');
@@ -178,15 +162,6 @@ export class AddHarvestComponent {
   protected readonly canSubmit = computed(
     () => this.#catalog.isKnown(this.varietyId()) && this.weightKg() !== null && this.date() !== null,
   );
-
-  protected onCropChange(value: string | string[] | null): void {
-    if (typeof value !== 'string') {
-      return;
-    }
-    this.cropId.set(value);
-    const varieties = this.#catalog.varietiesForCrop(value);
-    this.varietyId.set(varieties.length === 1 ? varieties[0].id : '');
-  }
 
   protected onVarietyChange(value: string | string[] | null): void {
     if (typeof value !== 'string') {
@@ -221,7 +196,6 @@ export class AddHarvestComponent {
     if (!created) {
       return;
     }
-    this.cropId.set(created.cropId);
     this.varietyId.set(created.id);
     this.cancelCustom();
   }

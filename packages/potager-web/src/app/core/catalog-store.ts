@@ -5,6 +5,17 @@ import { ApiService } from './api.service';
 import { AuthService } from './auth.service';
 import { CROP_BY_ID, type CropId, isCropId, type Variety, type VarietyId } from './potager.model';
 
+export type CatalogOption = { readonly id: VarietyId; readonly label: string };
+
+function toOptions(varieties: readonly Variety[]): readonly CatalogOption[] {
+  return varieties
+    .map(variety => ({
+      id: variety.id,
+      label: `${CROP_BY_ID[variety.cropId].label} · ${variety.label}`,
+    }))
+    .sort((first, second) => first.label.localeCompare(second.label, 'fr'));
+}
+
 function toVariety(row: ApiVariety): Variety {
   return {
     id: row.id,
@@ -48,6 +59,14 @@ export class CatalogStore {
 
   readonly references = computed<readonly Variety[]>(() =>
     this.#varieties().filter(variety => !variety.isCustom),
+  );
+
+  readonly varietyOptions = computed<readonly CatalogOption[]>(() =>
+    toOptions(this.#varieties()),
+  );
+
+  readonly referenceOptions = computed<readonly CatalogOption[]>(() =>
+    toOptions(this.references()),
   );
 
   readonly #referenceIdBySlug = computed<ReadonlyMap<string, VarietyId>>(
