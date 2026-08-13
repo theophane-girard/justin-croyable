@@ -19,7 +19,7 @@ export type RnmObservation = {
   readonly observedOn: Date;
 };
 
-const COLUMN = {
+export const COLUMN = {
   date: 0,
   week: 1,
   market: 2,
@@ -89,16 +89,19 @@ function toObservation(row: readonly string[]): RnmObservation | null {
   return { product, marketKind, isOrganic, pricePerKg, observedOn };
 }
 
-export function parseRnmCsv(zip: Uint8Array): RnmObservation[] {
+export function readRnmRows(zip: Uint8Array): string[][] {
   const csvText = iconv.decode(Buffer.from(extractCsvBytes(zip)), 'ISO-8859-1');
-  const rows = parse(csvText, {
+  return parse(csvText, {
     delimiter: ';',
     quote: false,
     from_line: 2,
     relax_column_count: true,
     skip_empty_lines: true,
   }) as string[][];
-  return rows
+}
+
+export function parseRnmCsv(zip: Uint8Array): RnmObservation[] {
+  return readRnmRows(zip)
     .map(row => toObservation(row))
     .filter((observation): observation is RnmObservation => observation !== null);
 }
