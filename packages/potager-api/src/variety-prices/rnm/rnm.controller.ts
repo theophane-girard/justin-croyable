@@ -1,5 +1,5 @@
 import { type RnmRefreshResult } from '@justin-croyable/api-contract';
-import { Controller, Post, UseGuards } from '@nestjs/common';
+import { BadGatewayException, Controller, Post, UseGuards } from '@nestjs/common';
 
 import { ACTION, SUBJECT } from '../../auth/ability';
 import { FirebaseAuthGuard } from '../../auth/firebase-auth.guard';
@@ -17,12 +17,21 @@ export class RnmController {
   @UseGuards(FirebaseAuthGuard, PoliciesGuard)
   @RequirePermission(ACTION.create, SUBJECT.varietyPrice)
   refresh(): Promise<RnmRefreshResult> {
-    return this.rnm.refresh();
+    return this.#run();
   }
 
   @Post('variety-prices/refresh-cron')
   @UseGuards(RefreshTokenGuard)
   refreshCron(): Promise<RnmRefreshResult> {
-    return this.rnm.refresh();
+    return this.#run();
+  }
+
+  async #run(): Promise<RnmRefreshResult> {
+    try {
+      return await this.rnm.refresh();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Échec de l'import RNM.";
+      throw new BadGatewayException(message);
+    }
   }
 }
