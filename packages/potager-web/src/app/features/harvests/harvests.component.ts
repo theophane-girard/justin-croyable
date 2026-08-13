@@ -32,6 +32,7 @@ import {
   VARIETY_FILTER_ALL,
   varietyFilterOptions,
 } from '../../core/catalog-filter';
+import { CatalogStore } from '../../core/catalog-store';
 import { HarvestStore } from '../../core/harvest-store';
 import { TagCellComponent } from '../../shared/tag-cell.component';
 import { CATEGORY_TAG_COLOR } from '../../shared/table-badges';
@@ -303,6 +304,7 @@ const BOTTOM_SHEET_SIDE = 'bottom';
 })
 export class HarvestsComponent {
   protected readonly store = inject(HarvestStore);
+  readonly #catalog = inject(CatalogStore);
   readonly #sheet = inject(SheetService);
 
   private readonly filterSheetTemplate = viewChild.required<TemplateRef<unknown>>('filterSheet');
@@ -324,7 +326,9 @@ export class HarvestsComponent {
   protected readonly sortDir = signal<SortDir>(SORT_DIR.desc);
 
   protected readonly categoryValue = computed(() => this.categoryFilter() ?? CATEGORY_ALL);
-  protected readonly varietyOptions = computed(() => varietyFilterOptions(this.cultureFilter()));
+  protected readonly varietyOptions = computed(() =>
+    varietyFilterOptions(this.cultureFilter(), this.#catalog.varieties()),
+  );
 
   protected readonly displayedRows = computed(() => {
     const category = this.categoryFilter();

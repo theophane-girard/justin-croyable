@@ -8,8 +8,10 @@ import {
   isCropId,
   type PlantDraft,
   type PlantRow,
+  type VarietyId,
 } from './potager.model';
 import { ApiEntityStore } from './api-entity-store';
+import { CatalogStore } from './catalog-store';
 import { HarvestStore } from './harvest-store';
 import { ExpenseStore } from './expense-store';
 
@@ -17,6 +19,7 @@ import { ExpenseStore } from './expense-store';
 export class GardenStore extends ApiEntityStore<Plant> {
   readonly #harvests = inject(HarvestStore);
   readonly #expenses = inject(ExpenseStore);
+  readonly #catalog = inject(CatalogStore);
 
   readonly #expenseByPlantId = computed<Record<string, number>>(() => {
     const plantIds = this.entries().map(entry => entry.id);
@@ -39,17 +42,29 @@ export class GardenStore extends ApiEntityStore<Plant> {
   readonly rows = computed<PlantRow[]>(() => {
     const harvestedByCrop = this.#harvests.periodWeightByCropId();
     const valueByCrop = this.#harvests.periodValueByCropId();
+    const harvestedByVariety = this.#harvests.periodWeightByVarietyId();
+    const valueByVariety = this.#harvests.periodValueByVarietyId();
     const expenseByPlant = this.#expenseByPlantId();
+    const byId = this.#catalog.byId();
     return this.entries()
       .filter(entry => isCropId(entry.cropId))
-      .map(entry =>
-        this.#toRow(
+      .map(entry => {
+        const varietyId =
+          entry.varietyId !== null && byId.has(entry.varietyId) ? entry.varietyId : null;
+        const harvestedKg = varietyId
+          ? harvestedByVariety[varietyId] ?? 0
+          : harvestedByCrop[entry.cropId as CropId] ?? 0;
+        const harvestValueEur = varietyId
+          ? valueByVariety[varietyId] ?? 0
+          : valueByCrop[entry.cropId as CropId] ?? 0;
+        return this.#toRow(
           entry,
-          harvestedByCrop[entry.cropId as CropId] ?? 0,
-          valueByCrop[entry.cropId as CropId] ?? 0,
+          varietyId,
+          harvestedKg,
+          harvestValueEur,
           expenseByPlant[entry.id] ?? 0,
-        ),
-      )
+        );
+      })
       .sort((a, b) => b.netSavingsEur - a.netSavingsEur);
   });
 
@@ -75,7 +90,7 @@ export class GardenStore extends ApiEntityStore<Plant> {
   readonly bestNetSavingsCropLabel = computed(() => this.rows().at(0)?.cropLabel ?? '—');
 
   add(draft: PlantDraft): void {
-    const existing = this.entries().find(entry => entry.cropId === draft.cropId);
+    const existing = this.entries().find(entry => entry.varietyId === draft.varietyId);
     if (existing) {
       void this.updateEntry(existing.id, () =>
         this.api.updatePlant(existing.id, { quantity: existing.quantity + draft.quantity }),
@@ -83,7 +98,11 @@ export class GardenStore extends ApiEntityStore<Plant> {
       return;
     }
     void this.createEntry(() =>
-      this.api.createPlant({ cropId: draft.cropId, quantity: draft.quantity }),
+      this.api.createPlant({
+        cropId: draft.cropId,
+        varietyId: draft.varietyId,
+        quantity: draft.quantity,
+      }),
     );
   }
 
@@ -97,6 +116,7 @@ export class GardenStore extends ApiEntityStore<Plant> {
 
   #toRow(
     entry: Plant,
+    varietyId: VarietyId | null,
     harvestedKg: number,
     harvestValueEur: number,
     expenseEur: number,
@@ -109,6 +129,8 @@ export class GardenStore extends ApiEntityStore<Plant> {
       cropId,
       cropLabel: crop.label,
       cropIcon: crop.icon,
+      varietyId,
+      label: varietyId ? this.#catalog.labelFor(varietyId) ?? crop.label : crop.label,
       categoryLabel: CATEGORY_META[crop.category].label,
       quantity: entry.quantity,
       harvestedKg: this.#roundToCents(harvestedKg),

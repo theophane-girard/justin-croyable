@@ -4,6 +4,7 @@ import {
   type CreateExpensePayload,
   type CreateHarvestPayload,
   type CreatePlantPayload,
+  type CreateVarietyPayload,
   type CreateVarietyPricePayload,
   type UpdateExpensePayload,
   type UpdateHarvestPayload,
@@ -83,6 +84,22 @@ export class ApiService {
 
   removeExpense(id: string) {
     return this.#client.expenses.remove({ params: { id } });
+  }
+
+  listVarieties() {
+    return this.#client.varieties.list();
+  }
+
+  createVariety(body: CreateVarietyPayload) {
+    return this.#client.varieties.create({ body });
+  }
+
+  removeVariety(id: string) {
+    return this.#client.varieties.remove({ params: { id } });
+  }
+
+  currentGarden() {
+    return this.#client.gardens.current();
   }
 
   listVarietyPrices() {

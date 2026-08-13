@@ -112,79 +112,18 @@ export const CROP_BY_ID: Readonly<Record<CropId, Crop>> = CROPS.reduce(
   {} as Record<CropId, Crop>,
 );
 
+export type VarietyId = string;
+
 export type Variety = {
-  readonly id: string;
+  readonly id: VarietyId;
   readonly cropId: CropId;
   readonly label: string;
-  readonly referencePricePerKg: number;
-  readonly referenceBioPricePerKg: number;
-  readonly rnmKeywords: readonly string[];
+  readonly slug: string | null;
+  readonly gardenId: string | null;
+  readonly referenceVarietyId: VarietyId | null;
+  readonly isCustom: boolean;
+  readonly pricingVarietyId: VarietyId;
 };
-
-const TOMATO_CROP_ID: CropId = 'tomate';
-
-const TOMATO_VARIETIES = [
-  { id: 'tomate-grappe', cropId: TOMATO_CROP_ID, label: 'Tomate grappe', referencePricePerKg: 3, referenceBioPricePerKg: 5.2, rnmKeywords: ['tomate grappe'] },
-  { id: 'tomate-ronde', cropId: TOMATO_CROP_ID, label: 'Tomate ronde', referencePricePerKg: 2.8, referenceBioPricePerKg: 5.2, rnmKeywords: ['tomate ronde'] },
-  { id: 'tomate-coeur-de-boeuf', cropId: TOMATO_CROP_ID, label: 'Tomate cœur de bœuf', referencePricePerKg: 5.4, referenceBioPricePerKg: 6.2, rnmKeywords: ['tomate coeur', 'tomate ancienne', 'tomate cotelee'] },
-  { id: 'tomate-cerise', cropId: TOMATO_CROP_ID, label: 'Tomate cerise', referencePricePerKg: 7.1, referenceBioPricePerKg: 12.6, rnmKeywords: ['tomate cerise'] },
-  { id: 'tomate-allongee', cropId: TOMATO_CROP_ID, label: 'Tomate allongée (Roma)', referencePricePerKg: 2.8, referenceBioPricePerKg: 4.2, rnmKeywords: ['tomate allongee', 'tomate roma'] },
-  { id: 'tomate-noire-de-crimee', cropId: TOMATO_CROP_ID, label: 'Tomate noire de Crimée', referencePricePerKg: 5.4, referenceBioPricePerKg: 6.2, rnmKeywords: [] },
-  { id: 'tomate-ananas', cropId: TOMATO_CROP_ID, label: 'Tomate ananas', referencePricePerKg: 5.6, referenceBioPricePerKg: 6.6, rnmKeywords: [] },
-  { id: 'tomate-green-zebra', cropId: TOMATO_CROP_ID, label: 'Tomate Green Zebra', referencePricePerKg: 5.4, referenceBioPricePerKg: 6.2, rnmKeywords: [] },
-] as const satisfies readonly Variety[];
-
-type TomatoVarietyId = (typeof TOMATO_VARIETIES)[number]['id'];
-
-const DEFAULT_VARIETY_KEYWORDS: Partial<Record<CropId, readonly string[]>> = {
-  'pomme-de-terre': ['pomme de terre'],
-  salade: ['salade', 'laitue'],
-  'haricot-vert': ['haricot vert'],
-};
-
-function defaultVarietyKeywords(cropId: CropId): readonly string[] {
-  return DEFAULT_VARIETY_KEYWORDS[cropId] ?? [cropId];
-}
-
-const DEFAULT_VARIETIES: readonly Variety[] = CROPS.filter(
-  crop => crop.id !== TOMATO_CROP_ID,
-).map(crop => ({
-  id: crop.id,
-  cropId: crop.id,
-  label: crop.label,
-  referencePricePerKg: crop.referencePricePerKg,
-  referenceBioPricePerKg: crop.referenceBioPricePerKg,
-  rnmKeywords: defaultVarietyKeywords(crop.id),
-}));
-
-export const VARIETIES: readonly Variety[] = [...TOMATO_VARIETIES, ...DEFAULT_VARIETIES];
-
-export type VarietyId = Exclude<CropId, typeof TOMATO_CROP_ID> | TomatoVarietyId;
-
-export const VARIETY_BY_ID: Readonly<Record<VarietyId, Variety>> = VARIETIES.reduce(
-  (accumulator, variety) => ({ ...accumulator, [variety.id]: variety }),
-  {} as Record<VarietyId, Variety>,
-);
-
-export const VARIETIES_BY_CROP: Readonly<Record<CropId, readonly Variety[]>> = VARIETIES.reduce(
-  (accumulator, variety) => ({
-    ...accumulator,
-    [variety.cropId]: [...(accumulator[variety.cropId] ?? []), variety],
-  }),
-  {} as Record<CropId, readonly Variety[]>,
-);
-
-export function isVarietyId(value: string): value is VarietyId {
-  return value in VARIETY_BY_ID;
-}
-
-export function cropFallbackVarietyId(cropId: CropId): VarietyId {
-  const fallback = CROP_BY_ID[cropId].fallbackVarietyId;
-  if (fallback !== undefined && isVarietyId(fallback)) {
-    return fallback;
-  }
-  return cropId as VarietyId;
-}
 
 export const PRICE_ORIGIN = {
   rnm: 'rnm',
@@ -254,6 +193,7 @@ export type ExpenseRow = {
 
 export type PlantDraft = {
   readonly cropId: CropId;
+  readonly varietyId: VarietyId;
   readonly quantity: number;
 };
 
@@ -262,6 +202,8 @@ export type PlantRow = {
   readonly cropId: CropId;
   readonly cropLabel: string;
   readonly cropIcon: string;
+  readonly varietyId: VarietyId | null;
+  readonly label: string;
   readonly categoryLabel: string;
   readonly quantity: number;
   readonly harvestedKg: number;

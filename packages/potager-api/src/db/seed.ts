@@ -1,9 +1,9 @@
 import 'dotenv/config';
 
-import { eq } from 'drizzle-orm';
+import { eq, isNull } from 'drizzle-orm';
 
-import { createDatabase } from './drizzle';
-import { varietyPrices } from './schema';
+import { createDatabase, type Database } from './drizzle';
+import { varieties, varietyPrices } from './schema';
 
 const EFFECTIVE_FROM = new Date('2020-01-01T00:00:00.000Z');
 const SOURCE = 'reference';
@@ -13,6 +13,46 @@ type SeedPrice = {
   readonly conventionalPricePerKg: number;
   readonly bioPricePerKg: number;
 };
+
+type SeedVariety = {
+  readonly slug: string;
+  readonly cropId: string;
+  readonly label: string;
+};
+
+const REFERENCE_VARIETIES: readonly SeedVariety[] = [
+  { slug: 'tomate-grappe', cropId: 'tomate', label: 'Tomate grappe' },
+  { slug: 'tomate-ronde', cropId: 'tomate', label: 'Tomate ronde' },
+  { slug: 'tomate-coeur-de-boeuf', cropId: 'tomate', label: 'Tomate cœur de bœuf' },
+  { slug: 'tomate-cerise', cropId: 'tomate', label: 'Tomate cerise' },
+  { slug: 'tomate-allongee', cropId: 'tomate', label: 'Tomate allongée (Roma)' },
+  { slug: 'tomate-noire-de-crimee', cropId: 'tomate', label: 'Tomate noire de Crimée' },
+  { slug: 'tomate-ananas', cropId: 'tomate', label: 'Tomate ananas' },
+  { slug: 'tomate-green-zebra', cropId: 'tomate', label: 'Tomate Green Zebra' },
+  { slug: 'courgette', cropId: 'courgette', label: 'Courgette' },
+  { slug: 'carotte', cropId: 'carotte', label: 'Carotte' },
+  { slug: 'pomme-de-terre', cropId: 'pomme-de-terre', label: 'Pomme de terre' },
+  { slug: 'salade', cropId: 'salade', label: 'Salade' },
+  { slug: 'haricot-vert', cropId: 'haricot-vert', label: 'Haricot vert' },
+  { slug: 'poivron', cropId: 'poivron', label: 'Poivron' },
+  { slug: 'aubergine', cropId: 'aubergine', label: 'Aubergine' },
+  { slug: 'concombre', cropId: 'concombre', label: 'Concombre' },
+  { slug: 'radis', cropId: 'radis', label: 'Radis' },
+  { slug: 'oignon', cropId: 'oignon', label: 'Oignon' },
+  { slug: 'poireau', cropId: 'poireau', label: 'Poireau' },
+  { slug: 'epinard', cropId: 'epinard', label: 'Épinard' },
+  { slug: 'courge', cropId: 'courge', label: 'Courge' },
+  { slug: 'fraise', cropId: 'fraise', label: 'Fraise' },
+  { slug: 'framboise', cropId: 'framboise', label: 'Framboise' },
+  { slug: 'pomme', cropId: 'pomme', label: 'Pomme' },
+  { slug: 'poire', cropId: 'poire', label: 'Poire' },
+  { slug: 'prune', cropId: 'prune', label: 'Prune' },
+  { slug: 'cerise', cropId: 'cerise', label: 'Cerise' },
+  { slug: 'abricot', cropId: 'abricot', label: 'Abricot' },
+  { slug: 'peche', cropId: 'peche', label: 'Pêche' },
+  { slug: 'raisin', cropId: 'raisin', label: 'Raisin' },
+  { slug: 'rhubarbe', cropId: 'rhubarbe', label: 'Rhubarbe' },
+];
 
 const REFERENCE_PRICES: readonly SeedPrice[] = [
   { varietyId: 'tomate-grappe', conventionalPricePerKg: 3, bioPricePerKg: 5.2 },
@@ -48,32 +88,77 @@ const REFERENCE_PRICES: readonly SeedPrice[] = [
   { varietyId: 'rhubarbe', conventionalPricePerKg: 3.5, bioPricePerKg: 5.5 },
 ];
 
+async function referenceIdBySlug(db: Database): Promise<Map<string, string>> {
+  const rows = await db
+    .select({ id: varieties.id, slug: varieties.slug })
+    .from(varieties)
+    .where(isNull(varieties.gardenId));
+  return new Map(
+    rows.filter(row => row.slug !== null).map(row => [row.slug as string, row.id]),
+  );
+}
+
+async function seedPrices(db: Database): Promise<void> {
+  const idBySlug = await referenceIdBySlug(db);
+  const existing = await db
+    .select({ varietyId: varietyPrices.varietyId })
+    .from(varietyPrices)
+    .where(eq(varietyPrices.source, SOURCE));
+  const existingIds = new Set(existing.map(row => row.varietyId));
+  const toInsert = REFERENCE_PRICES.map(price => ({
+    price,
+    varietyId: idBySlug.get(price.varietyId),
+  })).filter(
+    (entry): entry is { price: SeedPrice; varietyId: string } =>
+      entry.varietyId !== undefined && !existingIds.has(entry.varietyId),
+  );
+  if (toInsert.length === 0) {
+    console.log('Seed variety_prices : rien à insérer (prix de référence déjà présents).');
+    return;
+  }
+  await db.insert(varietyPrices).values(
+    toInsert.map(entry => ({
+      varietyId: entry.varietyId,
+      conventionalPricePerKg: entry.price.conventionalPricePerKg,
+      bioPricePerKg: entry.price.bioPricePerKg,
+      effectiveFrom: EFFECTIVE_FROM,
+      source: SOURCE,
+    })),
+  );
+  console.log(`Seed variety_prices : ${toInsert.length} prix de référence insérés.`);
+}
+
+async function seedVarieties(db: Database): Promise<void> {
+  const existing = await db
+    .select({ slug: varieties.slug })
+    .from(varieties)
+    .where(isNull(varieties.gardenId));
+  const existingSlugs = new Set(existing.map(row => row.slug));
+  const toInsert = REFERENCE_VARIETIES.filter(variety => !existingSlugs.has(variety.slug));
+  if (toInsert.length === 0) {
+    console.log('Seed varieties : rien à insérer (variétés de référence déjà présentes).');
+    return;
+  }
+  await db.insert(varieties).values(
+    toInsert.map(variety => ({
+      gardenId: null,
+      slug: variety.slug,
+      cropId: variety.cropId,
+      label: variety.label,
+      referenceVarietyId: null,
+    })),
+  );
+  console.log(`Seed varieties : ${toInsert.length} variétés de référence insérées.`);
+}
+
 async function seed(): Promise<void> {
   const connectionString = process.env['DATABASE_URL'];
   if (!connectionString) {
     throw new Error('DATABASE_URL requis pour le seed.');
   }
   const db = createDatabase(connectionString);
-  const existing = await db
-    .select({ varietyId: varietyPrices.varietyId })
-    .from(varietyPrices)
-    .where(eq(varietyPrices.source, SOURCE));
-  const existingIds = new Set(existing.map(row => row.varietyId));
-  const toInsert = REFERENCE_PRICES.filter(price => !existingIds.has(price.varietyId));
-  if (toInsert.length === 0) {
-    console.log('Seed variety_prices : rien à insérer (prix de référence déjà présents).');
-    return;
-  }
-  await db.insert(varietyPrices).values(
-    toInsert.map(price => ({
-      varietyId: price.varietyId,
-      conventionalPricePerKg: price.conventionalPricePerKg,
-      bioPricePerKg: price.bioPricePerKg,
-      effectiveFrom: EFFECTIVE_FROM,
-      source: SOURCE,
-    })),
-  );
-  console.log(`Seed variety_prices : ${toInsert.length} prix de référence insérés.`);
+  await seedVarieties(db);
+  await seedPrices(db);
 }
 
 seed()

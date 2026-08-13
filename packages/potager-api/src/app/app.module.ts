@@ -8,8 +8,10 @@ import { validateEnv } from '../config/env';
 import { DbModule } from '../db/db.module';
 import { ExpenseModule } from '../expenses/expense.module';
 import { FirebaseModule } from '../firebase/firebase.module';
+import { GardenModule } from '../gardens/garden.module';
 import { HarvestModule } from '../harvests/harvest.module';
 import { PlantModule } from '../plants/plant.module';
+import { VarietyModule } from '../varieties/variety.module';
 import { VarietyPriceModule } from '../variety-prices/variety-price.module';
 
 import { AppController } from './app.controller';
@@ -36,6 +38,8 @@ const RATE_LIMIT_MAX_REQUESTS = 100;
     PlantModule,
     ExpenseModule,
     VarietyPriceModule,
+    GardenModule,
+    VarietyModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

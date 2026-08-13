@@ -11,8 +11,6 @@ import { RouterLink } from '@angular/router';
 
 import {
   ButtonComponent,
-  CardComponent,
-  CountUpDirective,
   EmptyComponent,
   FabButtonComponent,
   FabContainerComponent,
@@ -70,8 +68,8 @@ function formatYieldCell(params: ValueFormatterParams<PlantRow, number>): string
 
 const PLANT_COLUMNS: ColDef<PlantRow>[] = [
   {
-    field: 'cropLabel',
-    headerName: 'Culture',
+    field: 'label',
+    headerName: 'Variété',
     minWidth: 150,
     flex: 1,
     cellRenderer: TagCellComponent,
@@ -135,8 +133,6 @@ const SEASON_FILTER_ITEMS: SegmentItem[] = [
     RouterLink,
     NgIcon,
     ButtonComponent,
-    CardComponent,
-    CountUpDirective,
     SegmentComponent,
     FabButtonComponent,
     FabContainerComponent,
@@ -216,50 +212,6 @@ const SEASON_FILTER_ITEMS: SegmentItem[] = [
           </a>
         </app-empty>
       } @else {
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <app-card>
-            <div class="flex items-center justify-between">
-              <div class="flex flex-col gap-1">
-                <span class="text-muted-foreground text-sm">Plants cultivés</span>
-                <span class="text-foreground text-3xl font-bold tabular-nums">
-                  <span appCountUp>{{ store.plantCount() }}</span>
-                </span>
-              </div>
-              <div class="bg-secondary text-secondary-foreground flex size-10 items-center justify-center rounded-lg">
-                <ng-icon name="phosphorPottedPlant" class="size-5" />
-              </div>
-            </div>
-          </app-card>
-
-          <app-card>
-            <div class="flex items-center justify-between">
-              <div class="flex flex-col gap-1">
-                <span class="text-muted-foreground text-sm">Économie nette</span>
-                <span class="text-primary text-3xl font-bold tabular-nums">
-                  <span appCountUp>{{ store.totalNetSavingsEur() }}</span> €
-                </span>
-              </div>
-              <div class="bg-primary/10 text-primary flex size-10 items-center justify-center rounded-lg">
-                <ng-icon name="phosphorPiggyBank" class="size-5" />
-              </div>
-            </div>
-          </app-card>
-
-          <app-card>
-            <div class="flex items-center justify-between">
-              <div class="flex flex-col gap-1">
-                <span class="text-muted-foreground text-sm">Rendement moyen</span>
-                <span class="text-foreground text-2xl font-bold tabular-nums">
-                  <span appCountUp>{{ store.averageYieldPerPlantKg() }}</span> kg/plant
-                </span>
-              </div>
-              <div class="bg-secondary text-secondary-foreground flex size-10 items-center justify-center rounded-lg">
-                <ng-icon name="phosphorTrendUp" class="size-5" />
-              </div>
-            </div>
-          </app-card>
-        </div>
-
         <app-table
           [rowData]="displayedRows()"
           [columnDefs]="columns"

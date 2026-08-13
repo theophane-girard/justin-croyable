@@ -4,7 +4,24 @@ export {
   plantContract,
   expenseContract,
   varietyPriceContract,
+  gardenContract,
+  varietyContract,
 } from './contract';
+export {
+  GARDEN_ROLE,
+  gardenRoleSchema,
+  gardenSchema,
+  gardenMemberSchema,
+  type GardenRole,
+  type Garden,
+  type GardenMember,
+} from './garden/garden.schema';
+export {
+  varietySchema,
+  createVarietySchema,
+  type Variety,
+  type CreateVarietyPayload,
+} from './variety/variety.schema';
 export { userContract } from './user/user.contract';
 export {
   userProfileSchema,

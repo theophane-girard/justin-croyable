@@ -286,7 +286,7 @@ export class ExpensesComponent {
   protected readonly categoryValue = computed(() => this.categoryFilter() ?? CATEGORY_ALL);
 
   readonly #plantLabelById = computed<Map<string, string>>(
-    () => new Map(this.#garden.rows().map(plant => [plant.id, plant.cropLabel])),
+    () => new Map(this.#garden.rows().map(plant => [plant.id, plant.label])),
   );
 
   protected readonly displayedRows = computed<ExpenseTableRow[]>(() => {

@@ -7,7 +7,8 @@ import {
 
 import { AuthService } from './auth.service';
 import { ApiService } from './api.service';
-import { cropFallbackVarietyId, isVarietyId, VARIETY_BY_ID, type VarietyId } from './potager.model';
+import { type VarietyId } from './potager.model';
+import { CatalogStore } from './catalog-store';
 
 type ResolvedPrice = {
   readonly effectiveFrom: number;
@@ -27,6 +28,7 @@ type PriceIndex = ReadonlyMap<VarietyId, readonly ResolvedPrice[]>;
 export class PriceStore {
   readonly #api = inject(ApiService);
   readonly #auth = inject(AuthService);
+  readonly #catalog = inject(CatalogStore);
 
   readonly #prices = signal<readonly VarietyPrice[]>([]);
   readonly #loading = signal(false);
@@ -105,27 +107,35 @@ export class PriceStore {
   }
 
   latestFor(varietyId: VarietyId): ResolvedPrice | null {
-    return this.#index().get(varietyId)?.at(0) ?? null;
+    const pricingId = this.#catalog.pricingVarietyIdFor(varietyId) ?? varietyId;
+    return this.#index().get(pricingId)?.at(0) ?? null;
   }
 
   currentFor(varietyId: VarietyId): CurrentPrice | null {
-    const direct = this.#index().get(varietyId)?.at(0);
+    const pricingId = this.#catalog.pricingVarietyIdFor(varietyId) ?? varietyId;
+    const direct = this.#index().get(pricingId)?.at(0);
     if (direct) {
       return { price: direct, viaFallback: false };
     }
-    const fallbackId = cropFallbackVarietyId(VARIETY_BY_ID[varietyId].cropId);
-    const fallback = this.#index().get(fallbackId)?.at(0);
+    const fallbackId = this.#fallbackId(varietyId);
+    const fallback = fallbackId ? this.#index().get(fallbackId)?.at(0) : undefined;
     return fallback ? { price: fallback, viaFallback: true } : null;
   }
 
   #resolve(varietyId: VarietyId, atDate: Date): ResolvedPrice | null {
     const timestamp = atDate.getTime();
-    const direct = this.#pickAt(this.#index().get(varietyId), timestamp);
+    const pricingId = this.#catalog.pricingVarietyIdFor(varietyId) ?? varietyId;
+    const direct = this.#pickAt(this.#index().get(pricingId), timestamp);
     if (direct) {
       return direct;
     }
-    const fallbackId = cropFallbackVarietyId(VARIETY_BY_ID[varietyId].cropId);
-    return this.#pickAt(this.#index().get(fallbackId), timestamp);
+    const fallbackId = this.#fallbackId(varietyId);
+    return fallbackId ? this.#pickAt(this.#index().get(fallbackId), timestamp) : null;
+  }
+
+  #fallbackId(varietyId: VarietyId): VarietyId | null {
+    const cropId = this.#catalog.byId().get(varietyId)?.cropId;
+    return cropId ? this.#catalog.cropFallbackVarietyId(cropId) : null;
   }
 
   #pickAt(records: readonly ResolvedPrice[] | undefined, timestamp: number): ResolvedPrice | null {
@@ -137,9 +147,6 @@ export class PriceStore {
 
   #buildIndex(prices: readonly VarietyPrice[]): PriceIndex {
     const grouped = prices.reduce<Map<VarietyId, ResolvedPrice[]>>((accumulator, price) => {
-      if (!isVarietyId(price.varietyId)) {
-        return accumulator;
-      }
       const existing = accumulator.get(price.varietyId) ?? [];
       existing.push({
         effectiveFrom: new Date(price.effectiveFrom).getTime(),

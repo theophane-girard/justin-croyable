@@ -12,7 +12,7 @@ import {
 import { NgIcon } from '@ng-icons/core';
 import type { ColDef, GridOptions, RowSelectedEvent, ValueFormatterParams } from 'ag-grid-community';
 
-import { isVarietyId, VARIETY_BY_ID } from '../../core/potager.model';
+import { CatalogStore } from '../../core/catalog-store';
 import { PriceStore } from '../../core/price-store';
 import { UserStore } from '../../core/user-store';
 import { TagCellComponent } from '../../shared/tag-cell.component';
@@ -204,6 +204,7 @@ const PRICE_GRID_OPTIONS: GridOptions<AdminPriceRow> = {
 })
 export class AdminPricesComponent {
   readonly #prices = inject(PriceStore);
+  readonly #catalog = inject(CatalogStore);
   readonly #users = inject(UserStore);
 
   protected readonly isAdmin = this.#users.isAdmin;
@@ -272,9 +273,7 @@ export class AdminPricesComponent {
     return {
       id: price.id,
       varietyId: price.varietyId,
-      varietyLabel: isVarietyId(price.varietyId)
-        ? VARIETY_BY_ID[price.varietyId].label
-        : price.varietyId,
+      varietyLabel: this.#catalog.labelFor(price.varietyId) ?? price.varietyId,
       conventionalPricePerKg: price.conventionalPricePerKg,
       bioPricePerKg: price.bioPricePerKg,
       source: price.source,

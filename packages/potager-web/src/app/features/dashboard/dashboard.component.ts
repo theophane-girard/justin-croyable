@@ -40,6 +40,38 @@ import { APP_PATHS } from '../../app.routes';
 
 const TOP_CROPS_COUNT = 8;
 
+const ROLLING_MONTHS_COUNT = 6;
+
+type MonthlyWindow = {
+  readonly labels: string[];
+  readonly savings: number[];
+  readonly expenses: number[];
+};
+
+function buildMonthlyWindow(savings: readonly number[], expenses: readonly number[]): MonthlyWindow {
+  const monthsWithData = savings
+    .map((_, month) => month)
+    .filter(month => savings[month] > 0 || expenses[month] > 0);
+
+  if (monthsWithData.length === 0) {
+    return { labels: [...MONTHS_FR], savings: [...savings], expenses: [...expenses] };
+  }
+
+  const lastMonth = monthsWithData[monthsWithData.length - 1];
+  const firstMonth = monthsWithData[0];
+  const startMonth = Math.max(firstMonth, lastMonth - (ROLLING_MONTHS_COUNT - 1));
+  const window = Array.from(
+    { length: lastMonth - startMonth + 1 },
+    (_, offset) => startMonth + offset,
+  );
+
+  return {
+    labels: window.map(month => MONTHS_FR[month]),
+    savings: window.map(month => savings[month]),
+    expenses: window.map(month => expenses[month]),
+  };
+}
+
 const PRICE_MODE_ITEMS: SegmentItem[] = [
   { value: PRICE_MODE.conventional, label: 'Conventionnel', icon: 'phosphorBasket' },
   { value: PRICE_MODE.bio, label: 'Bio', icon: 'phosphorLeaf' },
@@ -343,23 +375,30 @@ export class DashboardComponent {
     }
   }
 
-  protected readonly monthlyOptions = computed<EChartsCoreOption>(() => ({
-    tooltip: { trigger: 'axis' },
-    legend: { data: ['Valeur récoltée (€)', 'Dépenses (€)'] },
-    grid: { left: 12, right: 12, top: 48, bottom: 8, containLabel: true },
-    xAxis: { type: 'category', data: [...MONTHS_FR] },
-    yAxis: { type: 'value', name: '€' },
-    series: [
-      { name: 'Valeur récoltée (€)', type: 'bar', data: this.store.monthlySavings() },
-      {
-        name: 'Dépenses (€)',
-        type: 'line',
-        smooth: true,
-        areaStyle: {},
-        data: this.expenses.monthlyExpenses(),
-      },
-    ],
-  }));
+  protected readonly monthlyWindow = computed<MonthlyWindow>(() =>
+    buildMonthlyWindow(this.store.monthlySavings(), this.expenses.monthlyExpenses()),
+  );
+
+  protected readonly monthlyOptions = computed<EChartsCoreOption>(() => {
+    const window = this.monthlyWindow();
+    return {
+      tooltip: { trigger: 'axis' },
+      legend: { data: ['Valeur récoltée (€)', 'Dépenses (€)'], top: 4, right: 8 },
+      grid: { left: 12, right: 12, top: 48, bottom: 8, containLabel: true },
+      xAxis: { type: 'category', data: window.labels },
+      yAxis: { type: 'value', name: '€' },
+      series: [
+        { name: 'Valeur récoltée (€)', type: 'bar', data: window.savings },
+        {
+          name: 'Dépenses (€)',
+          type: 'line',
+          smooth: true,
+          areaStyle: {},
+          data: window.expenses,
+        },
+      ],
+    };
+  });
 
   protected readonly savingsChartOptions = computed<EChartsCoreOption>(() => {
     const source =

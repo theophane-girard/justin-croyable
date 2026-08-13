@@ -110,7 +110,7 @@ const THEME_VALUE = { light: 'light', dark: 'dark' } as const;
           <app-layout direction="vertical" class="min-w-0 flex-1">
             <app-header class="px-4">
               <div class="flex items-center gap-2">
-                <p class="text-sm font-medium">Récoltes & économies</p>
+                <p class="text-sm font-medium">Mon Potager</p>
               </div>
               <div class="ml-auto flex items-center gap-2">
                 @if (priceModeBio()) {
@@ -133,10 +133,6 @@ const THEME_VALUE = { light: 'light', dark: 'dark' } as const;
                 <router-outlet />
               </app-skeleton-outlet>
             </app-content>
-
-            <app-footer class="text-muted-foreground flex items-center px-4 text-xs">
-              Économies estimées d'après les prix moyens des fruits et légumes en France (FranceAgriMer — RNM).
-            </app-footer>
           </app-layout>
         </app-layout>
       </div>

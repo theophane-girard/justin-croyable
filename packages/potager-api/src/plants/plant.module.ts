@@ -17,6 +17,7 @@ function toPlant(record: PlantRecord): Plant {
   return {
     id: record.id,
     cropId: record.cropId,
+    varietyId: record.varietyId ?? null,
     quantity: record.quantity,
     createdAt: record.createdAt.toISOString(),
   };
@@ -34,7 +35,12 @@ export class PlantService {
   async create(userId: string, payload: CreatePlantPayload): Promise<Plant> {
     const [created] = await this.db
       .insert(plants)
-      .values({ userId, cropId: payload.cropId, quantity: payload.quantity })
+      .values({
+        userId,
+        cropId: payload.cropId,
+        varietyId: payload.varietyId ?? null,
+        quantity: payload.quantity,
+      })
       .returning();
     return toPlant(created);
   }
@@ -44,6 +50,7 @@ export class PlantService {
       .update(plants)
       .set({
         ...(payload.cropId !== undefined ? { cropId: payload.cropId } : {}),
+        ...(payload.varietyId !== undefined ? { varietyId: payload.varietyId } : {}),
         ...(payload.quantity !== undefined ? { quantity: payload.quantity } : {}),
         updatedAt: new Date(),
       })
