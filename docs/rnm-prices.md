@@ -33,6 +33,27 @@ L'ingestion remplace, en transaction, les lignes `source = 'rnm'` de
 `variety_prices`. **Anti-clobber** : rien n'est écrasé si le téléchargement ou
 le parsing échoue, ou si le fichier contient trop peu de cotations détail.
 
+## Inventaire des libellés (pour enrichir le mapping)
+
+Le RNM publie au stade détail des libellés bien plus fins que nos catégories
+(variété + couleur + calibre + conditionnement, ex. `AUBERGINE violette`,
+`PÊCHE chair jaune`, `POMME Gala`). Pour découvrir ces libellés avant d'écrire
+de nouveaux matchers, un script liste **tous les libellés détail distincts** du
+fichier annuel, avec leur fréquence, leurs marchés et leurs unités :
+
+```bash
+# Tous les libellés détail de l'année courante
+npx nx rnm-inventory potager-api
+
+# Année précise + filtre texte (variables d'env, toujours transmises)
+RNM_YEAR=2026 RNM_FILTER=tomate npx nx rnm-inventory potager-api
+```
+
+Il n'écrit rien en base : il télécharge le ZIP, parse le CSV et affiche
+trois sections (marchés, unités, libellés produit). Utile pour transformer les
+lignes « probables » de la nomenclature en matchers concrets dans
+`rnm-mapping.ts`.
+
 ## Déclenchement
 
 ### Manuel (disponible)
