@@ -93,6 +93,7 @@ export function parseRnmCsv(zip: Uint8Array): RnmObservation[] {
   const csvText = iconv.decode(Buffer.from(extractCsvBytes(zip)), 'ISO-8859-1');
   const rows = parse(csvText, {
     delimiter: ';',
+    quote: false,
     from_line: 2,
     relax_column_count: true,
     skip_empty_lines: true,
