@@ -31,6 +31,8 @@ const PER_PIECE: UnitWeightsKg = { [RNM_SUPPORTED_UNITS.perPiece]: 1 };
 
 const RADISH_KILOGRAMS_PER_BUNCH = 0.2;
 
+const BIO_TO_CONVENTIONAL_DIVISOR = 1.6;
+
 const VARIETY_MATCHERS: readonly VarietyMatcher[] = [
   { slug: 'tomate-grappe', pattern: /tomate\b.*grappe/i },
   { slug: 'tomate-ronde', pattern: /tomate ronde/i, exclude: /grappe/i },
@@ -46,6 +48,8 @@ const VARIETY_MATCHERS: readonly VarietyMatcher[] = [
   { slug: 'aubergine', pattern: /aubergine/i },
   { slug: 'oignon', pattern: /oignon/i },
   { slug: 'poireau', pattern: /poireau/i },
+  { slug: 'epinard', pattern: /[ée]pinard/i },
+  { slug: 'haricot-vert', pattern: /haricot vert/i },
   { slug: 'courge', pattern: /\bcourge\b/i },
   { slug: 'salade', pattern: /laitue|salade/i, unitWeightsKg: PER_PIECE },
   { slug: 'concombre', pattern: /concombre/i, unitWeightsKg: PER_PIECE },
@@ -144,18 +148,22 @@ function resolveMatcher(
     .map(observation => toPricedObservation(matcher, observation))
     .filter((observation): observation is PricedObservation => observation !== null);
   const conventional = aggregate(matched.filter(observation => !observation.isOrganic));
-  if (!conventional) {
-    return null;
-  }
   const bio = aggregateByPriority(
     matched.filter(observation => observation.isOrganic),
     BIO_MARKET_PRIORITY,
   );
+  const reference = conventional ?? bio;
+  if (!reference) {
+    return null;
+  }
+  const conventionalPricePerKg = conventional
+    ? conventional.pricePerKg
+    : roundPrice(reference.pricePerKg / BIO_TO_CONVENTIONAL_DIVISOR);
   return {
     varietyId: matcher.slug,
-    conventionalPricePerKg: conventional.pricePerKg,
+    conventionalPricePerKg,
     bioPricePerKg: bio?.pricePerKg ?? null,
-    effectiveFrom: conventional.observedOn,
+    effectiveFrom: reference.observedOn,
   };
 }
 
