@@ -1,6 +1,6 @@
 import 'dotenv/config';
 
-import { eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 
 import { createDatabase, type Database } from './drizzle';
 import { varieties, varietyPrices } from './schema';
@@ -18,6 +18,7 @@ type SeedVariety = {
   readonly slug: string;
   readonly cropId: string;
   readonly label: string;
+  readonly pricingReferenceSlug?: string;
 };
 
 const REFERENCE_VARIETIES: readonly SeedVariety[] = [
@@ -25,10 +26,10 @@ const REFERENCE_VARIETIES: readonly SeedVariety[] = [
   { slug: 'tomate-ronde', cropId: 'tomate', label: 'Tomate ronde' },
   { slug: 'tomate-coeur-de-boeuf', cropId: 'tomate', label: 'Tomate cœur de bœuf' },
   { slug: 'tomate-cerise', cropId: 'tomate', label: 'Tomate cerise' },
-  { slug: 'tomate-allongee', cropId: 'tomate', label: 'Tomate allongée (Roma)' },
-  { slug: 'tomate-noire-de-crimee', cropId: 'tomate', label: 'Tomate noire de Crimée' },
-  { slug: 'tomate-ananas', cropId: 'tomate', label: 'Tomate ananas' },
-  { slug: 'tomate-green-zebra', cropId: 'tomate', label: 'Tomate Green Zebra' },
+  { slug: 'tomate-allongee', cropId: 'tomate', label: 'Tomate allongée (Roma)', pricingReferenceSlug: 'tomate-ronde' },
+  { slug: 'tomate-noire-de-crimee', cropId: 'tomate', label: 'Tomate noire de Crimée', pricingReferenceSlug: 'tomate-coeur-de-boeuf' },
+  { slug: 'tomate-ananas', cropId: 'tomate', label: 'Tomate ananas', pricingReferenceSlug: 'tomate-coeur-de-boeuf' },
+  { slug: 'tomate-green-zebra', cropId: 'tomate', label: 'Tomate Green Zebra', pricingReferenceSlug: 'tomate-coeur-de-boeuf' },
   { slug: 'courgette', cropId: 'courgette', label: 'Courgette' },
   { slug: 'carotte', cropId: 'carotte', label: 'Carotte' },
   { slug: 'pomme-de-terre', cropId: 'pomme-de-terre', label: 'Pomme de terre' },
@@ -37,7 +38,7 @@ const REFERENCE_VARIETIES: readonly SeedVariety[] = [
   { slug: 'poivron', cropId: 'poivron', label: 'Poivron' },
   { slug: 'poivron-rouge', cropId: 'poivron', label: 'Poivron rouge' },
   { slug: 'poivron-vert', cropId: 'poivron', label: 'Poivron vert' },
-  { slug: 'poivron-jaune', cropId: 'poivron', label: 'Poivron jaune' },
+  { slug: 'poivron-jaune', cropId: 'poivron', label: 'Poivron jaune', pricingReferenceSlug: 'poivron' },
   { slug: 'aubergine', cropId: 'aubergine', label: 'Aubergine' },
   { slug: 'concombre', cropId: 'concombre', label: 'Concombre' },
   { slug: 'radis', cropId: 'radis', label: 'Radis' },
@@ -70,10 +71,6 @@ const REFERENCE_PRICES: readonly SeedPrice[] = [
   { varietyId: 'tomate-ronde', conventionalPricePerKg: 2.8, bioPricePerKg: 5.2 },
   { varietyId: 'tomate-coeur-de-boeuf', conventionalPricePerKg: 5.4, bioPricePerKg: 6.2 },
   { varietyId: 'tomate-cerise', conventionalPricePerKg: 7.1, bioPricePerKg: 12.6 },
-  { varietyId: 'tomate-allongee', conventionalPricePerKg: 2.8, bioPricePerKg: 4.2 },
-  { varietyId: 'tomate-noire-de-crimee', conventionalPricePerKg: 5.4, bioPricePerKg: 6.2 },
-  { varietyId: 'tomate-ananas', conventionalPricePerKg: 5.6, bioPricePerKg: 6.6 },
-  { varietyId: 'tomate-green-zebra', conventionalPricePerKg: 5.4, bioPricePerKg: 6.2 },
   { varietyId: 'courgette', conventionalPricePerKg: 2.7, bioPricePerKg: 4.8 },
   { varietyId: 'carotte', conventionalPricePerKg: 1.7, bioPricePerKg: 2.8 },
   { varietyId: 'pomme-de-terre', conventionalPricePerKg: 1.7, bioPricePerKg: 3 },
@@ -82,7 +79,6 @@ const REFERENCE_PRICES: readonly SeedPrice[] = [
   { varietyId: 'poivron', conventionalPricePerKg: 4.8, bioPricePerKg: 6.6 },
   { varietyId: 'poivron-rouge', conventionalPricePerKg: 3.5, bioPricePerKg: 5.5 },
   { varietyId: 'poivron-vert', conventionalPricePerKg: 2.8, bioPricePerKg: 4.5 },
-  { varietyId: 'poivron-jaune', conventionalPricePerKg: 3.8, bioPricePerKg: 5.8 },
   { varietyId: 'aubergine', conventionalPricePerKg: 3.6, bioPricePerKg: 5.9 },
   { varietyId: 'concombre', conventionalPricePerKg: 0.9, bioPricePerKg: 1.5 },
   { varietyId: 'radis', conventionalPricePerKg: 2.5, bioPricePerKg: 3.6 },
@@ -173,6 +169,39 @@ async function seedVarieties(db: Database): Promise<void> {
   console.log(`Seed varieties : ${toInsert.length} variétés de référence insérées.`);
 }
 
+async function linkPricingReferences(db: Database): Promise<void> {
+  const references = await db
+    .select({ id: varieties.id, slug: varieties.slug })
+    .from(varieties)
+    .where(isNull(varieties.gardenId));
+  const idBySlug = new Map(
+    references.filter(row => row.slug !== null).map(row => [row.slug as string, row.id]),
+  );
+  const links = REFERENCE_VARIETIES.map(variety => ({
+    slug: variety.slug,
+    targetId: variety.pricingReferenceSlug
+      ? idBySlug.get(variety.pricingReferenceSlug)
+      : undefined,
+  })).filter(
+    (link): link is { slug: string; targetId: string } => link.targetId !== undefined,
+  );
+  await Promise.all(
+    links.map(link =>
+      db
+        .update(varieties)
+        .set({ referenceVarietyId: link.targetId })
+        .where(
+          and(
+            eq(varieties.slug, link.slug),
+            isNull(varieties.gardenId),
+            isNull(varieties.referenceVarietyId),
+          ),
+        ),
+    ),
+  );
+  console.log(`Seed varieties : ${links.length} repli(s) de prix reliés.`);
+}
+
 async function seed(): Promise<void> {
   const connectionString = process.env['DATABASE_URL'];
   if (!connectionString) {
@@ -180,6 +209,7 @@ async function seed(): Promise<void> {
   }
   const db = createDatabase(connectionString);
   await seedVarieties(db);
+  await linkPricingReferences(db);
   await seedPrices(db);
 }
 
