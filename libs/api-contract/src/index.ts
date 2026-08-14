@@ -19,8 +19,10 @@ export {
 export {
   varietySchema,
   createVarietySchema,
+  updateVarietyPricingSchema,
   type Variety,
   type CreateVarietyPayload,
+  type UpdateVarietyPricingPayload,
 } from './variety/variety.schema';
 export { userContract } from './user/user.contract';
 export {

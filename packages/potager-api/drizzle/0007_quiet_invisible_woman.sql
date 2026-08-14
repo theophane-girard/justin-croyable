@@ -1,0 +1,1 @@
+ALTER TABLE "varieties" ADD COLUMN "pricing_factor" double precision;

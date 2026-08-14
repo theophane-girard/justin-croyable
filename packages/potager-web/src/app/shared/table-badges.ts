@@ -6,6 +6,8 @@ export const CATEGORY_TAG_COLOR: CellTagColor = 'neutral';
 
 const PRICE_ORIGIN_TAG_COLOR: Readonly<Record<PriceOrigin, CellTagColor>> = {
   [PRICE_ORIGIN.rnm]: 'success',
+  [PRICE_ORIGIN.manuel]: 'primary',
+  [PRICE_ORIGIN.estimation]: 'info',
   [PRICE_ORIGIN.fallback]: 'warning',
   [PRICE_ORIGIN.reference]: 'neutral',
 };
