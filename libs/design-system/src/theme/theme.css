@@ -18,13 +18,13 @@
   --primary-foreground: var(--color-action-text);
   --secondary: var(--primary-100);
   --secondary-foreground: var(--primary-800);
-  --muted: var(--color-muted-bg);
+  --muted: var(--gray-100);
   --muted-foreground: var(--color-muted);
   --accent: var(--primary-100);
   --accent-foreground: var(--primary-800);
   --destructive: var(--error);
   --border: var(--color-border);
-  --input: var(--color-input);
+  --input: var(--color-border);
   --ring: var(--color-action);
 
   --sidebar: var(--color-surface);
@@ -49,13 +49,13 @@
   --primary-foreground: var(--color-action-text);
   --secondary: var(--primary-800);
   --secondary-foreground: var(--gray-50);
-  --muted: var(--color-muted-bg);
+  --muted: var(--gray-800);
   --muted-foreground: var(--color-muted);
   --accent: var(--primary-800);
   --accent-foreground: var(--gray-50);
   --destructive: oklch(0.704 0.191 28);
   --border: var(--color-border);
-  --input: var(--color-input);
+  --input: var(--color-border);
   --ring: var(--color-action);
 
   --sidebar: var(--color-surface);
