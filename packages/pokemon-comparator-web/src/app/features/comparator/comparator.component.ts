@@ -202,6 +202,7 @@ const DISPLAY_MODE_ITEMS: readonly SegmentItem[] = [
                 <app-toggle-group
                   mode="multiple"
                   size="sm"
+                  itemClass="aria-pressed:bg-foreground/15 data-[state=on]:bg-foreground/15"
                   [items]="statItems"
                   [defaultValue]="defaultVisibleStats"
                   (valueChange)="onVisibleStatsChange($event)"
