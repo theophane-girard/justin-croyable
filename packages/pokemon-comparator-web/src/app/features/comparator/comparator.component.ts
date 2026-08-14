@@ -203,7 +203,7 @@ const DISPLAY_MODE_ITEMS: readonly SegmentItem[] = [
                   mode="multiple"
                   size="sm"
                   [items]="statItems"
-                  [value]="visibleStats()"
+                  [defaultValue]="defaultVisibleStats"
                   (valueChange)="onVisibleStatsChange($event)"
                 />
               </div>
@@ -329,6 +329,7 @@ export class ComparatorComponent {
     ariaLabel: STAT_META[stat].label,
   }));
 
+  protected readonly defaultVisibleStats: Stat[] = [...STAT_ORDER];
   protected readonly visibleStats = signal<Stat[]>([...STAT_ORDER]);
   readonly #visibleStatSet = computed(() => new Set(this.visibleStats()));
   readonly #visibleStatOrder = computed<readonly Stat[]>(() =>
