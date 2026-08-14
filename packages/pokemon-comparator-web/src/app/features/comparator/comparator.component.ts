@@ -4,6 +4,7 @@ import {
   computed,
   effect,
   inject,
+  signal,
   type TemplateRef,
   ViewContainerRef,
   viewChild,
@@ -22,6 +23,8 @@ import {
   GenericSkeletonComponent,
   SheetService,
   ThemePaletteService,
+  ToggleGroupComponent,
+  type ToggleGroupItem,
 } from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
 import type { EChartsCoreOption } from 'echarts/core';
@@ -113,6 +116,7 @@ const DISPLAY_MODE_ITEMS: readonly SegmentItem[] = [
     GenericSkeletonComponent,
     PokedexGridComponent,
     StatEnhancerComponent,
+    ToggleGroupComponent,
   ],
   template: `
     <div class="mx-auto flex w-full max-w-5xl flex-col gap-6">
@@ -193,7 +197,22 @@ const DISPLAY_MODE_ITEMS: readonly SegmentItem[] = [
                 </div>
               </div>
 
-              @if (displayMode() === displayModeBars) {
+              <div class="flex flex-col gap-2">
+                <span class="text-muted-foreground text-xs font-medium">Statistiques affichées</span>
+                <app-toggle-group
+                  mode="multiple"
+                  size="sm"
+                  [items]="statItems"
+                  [value]="visibleStats()"
+                  (valueChange)="onVisibleStatsChange($event)"
+                />
+              </div>
+
+              @if (visibleStats().length === 0) {
+                <p class="text-muted-foreground text-sm">
+                  Sélectionnez au moins une statistique à afficher.
+                </p>
+              } @else if (displayMode() === displayModeBars) {
                 <div class="flex flex-col gap-6">
                   @for (group of statGroups(); track group.key) {
                     <section class="flex flex-col gap-2">
@@ -304,6 +323,18 @@ export class ComparatorComponent {
   protected readonly displayModeItems = DISPLAY_MODE_ITEMS;
   protected readonly displayModeBars = DISPLAY_MODE.bars;
 
+  protected readonly statItems: ToggleGroupItem[] = STAT_ORDER.map(stat => ({
+    value: stat,
+    label: STAT_META[stat].short,
+    ariaLabel: STAT_META[stat].label,
+  }));
+
+  protected readonly visibleStats = signal<Stat[]>([...STAT_ORDER]);
+  readonly #visibleStatSet = computed(() => new Set(this.visibleStats()));
+  readonly #visibleStatOrder = computed<readonly Stat[]>(() =>
+    STAT_ORDER.filter(stat => this.#visibleStatSet().has(stat)),
+  );
+
   protected readonly displayMode = this.store.displayMode;
 
   protected readonly enhanceTargets = computed<readonly { id: number; name: string }[]>(() =>
@@ -353,7 +384,7 @@ export class ComparatorComponent {
   protected readonly statGroups = computed<readonly StatGroup[]>(() => {
     const selected = this.store.selected();
     const scaleMax = this.#scaleMax();
-    return STAT_ORDER.map(stat => ({
+    return this.#visibleStatOrder().map(stat => ({
       key: stat,
       label: STAT_META[stat].label,
       rows: selected.map((pokemon, index) => {
@@ -373,13 +404,14 @@ export class ComparatorComponent {
     const palette = this.#palette.palette();
     const selected = this.store.selected();
     const scaleMax = this.#scaleMax();
+    const visibleOrder = this.#visibleStatOrder();
     return {
       tooltip: { trigger: 'item' },
       legend: { bottom: 0, type: 'scroll' },
       radar: {
         radius: '65%',
         center: ['50%', '46%'],
-        indicator: STAT_ORDER.map(stat => ({ name: STAT_META[stat].short, max: scaleMax })),
+        indicator: visibleOrder.map(stat => ({ name: STAT_META[stat].short, max: scaleMax })),
         axisName: { color: palette.mutedForeground },
         axisLine: { lineStyle: { color: palette.border } },
         splitLine: { lineStyle: { color: palette.border } },
@@ -392,7 +424,7 @@ export class ComparatorComponent {
             const color = palette.series[index % palette.series.length];
             return {
               name: pokemonName(pokemon, LANG.fr),
-              value: STAT_ORDER.map(stat => this.#statValue(pokemon.id, stat)),
+              value: visibleOrder.map(stat => this.#statValue(pokemon.id, stat)),
               symbolSize: 4,
               lineStyle: { color, width: 2 },
               itemStyle: { color },
@@ -435,6 +467,11 @@ export class ComparatorComponent {
 
   protected onDisplayModeChange(value: string): void {
     this.store.setDisplayMode(value === DISPLAY_MODE.radar ? DISPLAY_MODE.radar : DISPLAY_MODE.bars);
+  }
+
+  protected onVisibleStatsChange(value: string | string[]): void {
+    const selected = Array.isArray(value) ? value : [value];
+    this.visibleStats.set(STAT_ORDER.filter(stat => selected.includes(stat)));
   }
 
   protected reload(): void {
