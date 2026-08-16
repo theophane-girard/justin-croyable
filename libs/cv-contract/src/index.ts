@@ -1,11 +1,13 @@
 export {
   apiContract,
+  authContract,
   tagContract,
   experienceContract,
   skillContract,
   profileContract,
   cvContract,
 } from './contract';
+export { sessionSchema, type Session } from './auth/session.schema';
 export { errorSchema, idParamSchema, deletedSchema } from './crud';
 export {
   tagSchema,

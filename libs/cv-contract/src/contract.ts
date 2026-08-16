@@ -1,6 +1,7 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
+import { sessionSchema } from './auth/session.schema';
 import { deletedSchema, errorSchema, idParamSchema } from './crud';
 import { cvSchema } from './cv/cv.schema';
 import {
@@ -37,20 +38,26 @@ export const tagContract = contract.router({
     method: 'POST',
     path: '/tags',
     body: createTagSchema,
-    responses: { 201: tagSchema, 401: errorSchema },
+    responses: { 201: tagSchema, 401: errorSchema, 403: errorSchema },
   },
   update: {
     method: 'PATCH',
     path: '/tags/:id',
     pathParams: idParamSchema,
     body: updateTagSchema,
-    responses: { 200: tagSchema, 401: errorSchema, 404: errorSchema },
+    responses: { 200: tagSchema, 401: errorSchema, 403: errorSchema, 404: errorSchema },
   },
   remove: {
     method: 'DELETE',
     path: '/tags/:id',
     pathParams: idParamSchema,
-    responses: { 200: deletedSchema, 401: errorSchema, 404: errorSchema, 409: errorSchema },
+    responses: {
+      200: deletedSchema,
+      401: errorSchema,
+      403: errorSchema,
+      404: errorSchema,
+      409: errorSchema,
+    },
   },
 });
 
@@ -71,20 +78,26 @@ export const experienceContract = contract.router({
     method: 'POST',
     path: '/experiences',
     body: createExperienceSchema,
-    responses: { 201: experienceSchema, 400: errorSchema, 401: errorSchema },
+    responses: { 201: experienceSchema, 400: errorSchema, 401: errorSchema, 403: errorSchema },
   },
   update: {
     method: 'PATCH',
     path: '/experiences/:id',
     pathParams: idParamSchema,
     body: updateExperienceSchema,
-    responses: { 200: experienceSchema, 400: errorSchema, 401: errorSchema, 404: errorSchema },
+    responses: {
+      200: experienceSchema,
+      400: errorSchema,
+      401: errorSchema,
+      403: errorSchema,
+      404: errorSchema,
+    },
   },
   remove: {
     method: 'DELETE',
     path: '/experiences/:id',
     pathParams: idParamSchema,
-    responses: { 200: deletedSchema, 401: errorSchema, 404: errorSchema },
+    responses: { 200: deletedSchema, 401: errorSchema, 403: errorSchema, 404: errorSchema },
   },
 });
 
@@ -99,20 +112,26 @@ export const skillContract = contract.router({
     method: 'POST',
     path: '/skills',
     body: createSkillSchema,
-    responses: { 201: skillSchema, 400: errorSchema, 401: errorSchema },
+    responses: { 201: skillSchema, 400: errorSchema, 401: errorSchema, 403: errorSchema },
   },
   update: {
     method: 'PATCH',
     path: '/skills/:id',
     pathParams: idParamSchema,
     body: updateSkillSchema,
-    responses: { 200: skillSchema, 400: errorSchema, 401: errorSchema, 404: errorSchema },
+    responses: {
+      200: skillSchema,
+      400: errorSchema,
+      401: errorSchema,
+      403: errorSchema,
+      404: errorSchema,
+    },
   },
   remove: {
     method: 'DELETE',
     path: '/skills/:id',
     pathParams: idParamSchema,
-    responses: { 200: deletedSchema, 401: errorSchema, 404: errorSchema },
+    responses: { 200: deletedSchema, 401: errorSchema, 403: errorSchema, 404: errorSchema },
   },
 });
 
@@ -126,7 +145,7 @@ export const profileContract = contract.router({
     method: 'PUT',
     path: '/profile',
     body: upsertProfileSchema,
-    responses: { 200: profileSchema, 401: errorSchema },
+    responses: { 200: profileSchema, 401: errorSchema, 403: errorSchema },
   },
 });
 
@@ -138,7 +157,16 @@ export const cvContract = contract.router({
   },
 });
 
+export const authContract = contract.router({
+  me: {
+    method: 'GET',
+    path: '/auth/me',
+    responses: { 200: sessionSchema, 401: errorSchema },
+  },
+});
+
 export const apiContract = contract.router({
+  auth: authContract,
   tags: tagContract,
   experiences: experienceContract,
   skills: skillContract,

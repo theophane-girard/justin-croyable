@@ -1,14 +1,15 @@
 import { z } from 'zod';
 
-const ADMIN_TOKEN_MIN_LENGTH = 24;
-
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().int().positive().default(3100),
   DATABASE_URL: z.string().url(),
   CORS_ORIGIN: z.string().default('http://localhost:4200,http://localhost:4400'),
   CORS_ORIGIN_REGEX: z.string().optional(),
-  ADMIN_TOKEN: z.string().min(ADMIN_TOKEN_MIN_LENGTH),
+  RESUME_ADMIN_EMAIL: z.string().email(),
+  FIREBASE_PROJECT_ID: z.string().min(1),
+  FIREBASE_CLIENT_EMAIL: z.string().email(),
+  FIREBASE_PRIVATE_KEY: z.string().min(1),
 });
 
 export type Env = z.infer<typeof envSchema>;

@@ -1,0 +1,52 @@
+{
+  "name": "@justin-croyable/resume-admin",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "packages/resume-admin/src",
+  "targets": {
+    "build": {
+      "executor": "@angular/build:application",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/resume-admin",
+        "index": "packages/resume-admin/index.html",
+        "browser": "packages/resume-admin/src/main.ts",
+        "tsConfig": "packages/resume-admin/tsconfig.build.json",
+        "styles": ["packages/resume-admin/src/styles.css"]
+      },
+      "configurations": {
+        "production": {
+          "outputHashing": "all",
+          "fileReplacements": [
+            {
+              "replace": "packages/resume-admin/src/environments/environment.ts",
+              "with": "packages/resume-admin/src/environments/environment.production.ts"
+            }
+          ]
+        },
+        "development": {
+          "optimization": false,
+          "extractLicenses": false,
+          "sourceMap": true
+        }
+      },
+      "defaultConfiguration": "production"
+    },
+    "serve": {
+      "executor": "@angular/build:dev-server",
+      "options": {
+        "buildTarget": "@justin-croyable/resume-admin:build",
+        "port": 4400
+      },
+      "configurations": {
+        "development": {
+          "buildTarget": "@justin-croyable/resume-admin:build:development"
+        },
+        "production": {
+          "buildTarget": "@justin-croyable/resume-admin:build:production"
+        }
+      },
+      "defaultConfiguration": "development"
+    }
+  }
+}

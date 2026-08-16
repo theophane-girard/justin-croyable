@@ -13,7 +13,7 @@ Postgres via Drizzle.
 | API | ts-rest + Zod (contrat partagé `libs/cv-contract`) |
 | ORM | Drizzle ORM (`postgres-js`) |
 | Base | Postgres (Supabase / Neon) |
-| Auth | Jeton d'administration en écriture, lecture publique |
+| Auth | Google (Firebase Auth) en écriture, lecture publique |
 
 ## Modèle de données
 
@@ -38,18 +38,36 @@ Règles de suppression :
 ## Authentification
 
 - **Lectures (`GET`) : publiques.** Le site CV n'a besoin d'aucun secret.
-- **Écritures (`POST`, `PATCH`, `PUT`, `DELETE`) : jeton d'administration**
-  attendu dans l'en-tête `Authorization: Bearer <ADMIN_TOKEN>`.
+- **Écritures (`POST`, `PATCH`, `PUT`, `DELETE`) : compte Google.** Le front
+  se connecte avec Google (Firebase Auth) et envoie l'ID token dans
+  `Authorization: Bearer <idToken>` ; le back le vérifie avec le SDK admin.
 
-Le garde est global (`APP_GUARD`) : toute route non-`GET` ajoutée plus tard est
-protégée par défaut. La comparaison du jeton est faite en temps constant.
+Réponses possibles sur une écriture :
 
-```bash
-curl -X POST http://localhost:3100/api/tags \
-  -H "Authorization: Bearer $ADMIN_TOKEN" \
-  -H 'Content-Type: application/json' \
-  -d '{"label":"Angular","type":"techno","icon":"phosphorCode"}'
+| Cas | Statut |
+| --- | --- |
+| Aucun jeton, jeton illisible, expiré ou email non vérifié | `401 Unauthorized` |
+| Jeton Google valide mais email ≠ `RESUME_ADMIN_EMAIL` | `403 Forbidden` |
+| Jeton Google valide et email = `RESUME_ADMIN_EMAIL` | la requête passe |
+
+`RESUME_ADMIN_EMAIL` est un secret côté serveur (secret GitHub du même nom) :
+le front ne le connaît pas. La comparaison est insensible à la casse et aux
+espaces, et l'email doit être vérifié (`email_verified`) pour être accepté.
+
+Le garde est global (`APP_GUARD`) : toute route non-`GET` ajoutée plus tard
+est protégée par défaut.
+
+### Savoir si le compte connecté est autorisé
+
 ```
+GET /api/auth/me     (Authorization: Bearer <idToken>)
+→ 200 { email, displayName, photoUrl, isAdmin }
+→ 401 si le jeton est absent ou invalide
+```
+
+L'app d'administration appelle cette route après connexion pour afficher soit
+les écrans d'édition (`isAdmin: true`), soit un message d'accès refusé —
+plutôt que de laisser la première écriture échouer en 403.
 
 ## Configuration
 
@@ -61,8 +79,11 @@ cp packages/cv-api/.env.example packages/cv-api/.env
 
 - `DATABASE_URL` : chaîne de connexion Postgres (Supabase → Project Settings →
   Database → Connection string ; utiliser le pooler pour la prod serverless).
-- `ADMIN_TOKEN` : secret d'écriture, 24 caractères minimum
-  (`openssl rand -hex 32`). L'application refuse de démarrer sans lui.
+- `RESUME_ADMIN_EMAIL` : adresse Google autorisée à modifier le CV.
+  L'application refuse de démarrer sans elle.
+- `FIREBASE_*` : Console Firebase → Paramètres du projet → Comptes de service →
+  « Générer une nouvelle clé privée ». Reporter `project_id`, `client_email` et
+  `private_key` (garder les `\n` échappés entre guillemets).
 - `CORS_ORIGIN` : origine(s) du site CV, séparées par des virgules.
 
 ## Base de données (Drizzle)
@@ -93,11 +114,13 @@ Port par défaut : `3100` (le potager utilise `3000`).
 
 ## Routes
 
-Toutes préfixées par `/api`.
+Toutes préfixées par `/api`. 🔒 = compte Google autorisé requis ;
+🔑 = jeton Google requis, quel que soit le compte.
 
 | Méthode | Route | Auth | Description |
 | --- | --- | --- | --- |
 | `GET` | `/health` | — | Sonde publique. |
+| `GET` | `/auth/me` | 🔑 | Identité du compte Google connecté + `isAdmin`. |
 | `GET` | `/cv` | — | Agrégat en un appel : profil + expériences + compétences + tags. |
 | `GET` | `/profile` | — | Profil (`404` s'il n'est pas encore renseigné). |
 | `PUT` | `/profile` | 🔒 | Crée ou remplace le profil (singleton). |
