@@ -89,7 +89,8 @@
     "packages/*",
     "libs/mobile-ds",
     "libs/design-system",
-    "libs/api-contract"
+    "libs/api-contract",
+    "libs/cv-contract"
   ],
   "dependencies": {
     "@jsverse/transloco": "^8.4.0",
