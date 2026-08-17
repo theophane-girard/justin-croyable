@@ -1,0 +1,109 @@
+name: Deploy Resume Admin
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+concurrency:
+  group: deploy-resume-admin-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FIREBASE_PROJECT_ID: justin-croyable-story
+  HOSTING_TARGET: resume-admin
+  ENV_FILE: packages/resume-admin/src/environments/environment.production.ts
+  API_URL_PLACEHOLDER: https://REMPLACER-PAR-URL-CLOUD-RUN
+
+jobs:
+  deploy:
+    name: Build & déploiement admin CV
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
+      # nrwl/nx-set-shas interroge l'API Actions sur un push master pour
+      # trouver le dernier run réussi (base du diff affected).
+      actions: read
+    steps:
+      # Tant que le secret FIREBASE_SERVICE_ACCOUNT n'est pas configuré, tout est
+      # ignoré : le job reste vert (même logique de garde que les autres fronts).
+      - name: Firebase configuré ?
+        id: cfg
+        env:
+          FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -n "$FIREBASE_SA" ]; then
+            echo 'ready=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'ready=false' >> "$GITHUB_OUTPUT"
+            echo "::warning::Déploiement admin CV ignoré : secret FIREBASE_SERVICE_ACCOUNT absent."
+          fi
+
+      - name: Checkout
+        if: steps.cfg.outputs.ready == 'true'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        if: steps.cfg.outputs.ready == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: SHAs de base pour nx affected
+        if: steps.cfg.outputs.ready == 'true'
+        uses: nrwl/nx-set-shas@v4
+        with:
+          main-branch-name: master
+
+      - name: Install dependencies
+        if: steps.cfg.outputs.ready == 'true'
+        run: npm ci
+
+      # Ne (re)build/déploie l'admin que si elle est réellement impactée (elle
+      # ou une de ses libs : design-system, cv-contract).
+      - name: Admin affectée ?
+        id: affected
+        if: steps.cfg.outputs.ready == 'true'
+        run: |
+          if AFFECTED=$(npx nx show projects --affected --json 2>/dev/null); then
+            echo "web=$(echo "$AFFECTED" | grep -q 'resume-admin' && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          else
+            echo "web=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # L'URL Cloud Run de cv-api est injectée dans le fichier d'environnement
+      # de production avant le build. Sans le secret, on garde le placeholder :
+      # le build reste fonctionnel mais l'API est injoignable.
+      - name: Injecte l'URL de l'API CV
+        if: steps.cfg.outputs.ready == 'true' && steps.affected.outputs.web == 'true'
+        env:
+          CV_API_URL: ${{ secrets.CV_API_URL }}
+        run: |
+          if [ -n "$CV_API_URL" ]; then
+            sed -i "s|${API_URL_PLACEHOLDER}|${CV_API_URL}|" "$ENV_FILE"
+          else
+            echo "::warning::CV_API_URL absent : l'admin pointera vers le placeholder."
+          fi
+
+      - name: Build
+        if: steps.cfg.outputs.ready == 'true' && steps.affected.outputs.web == 'true'
+        run: npx nx build @justin-croyable/resume-admin --configuration production
+
+      # Pas de canal de prévisualisation par PR ici : chaque URL de preview est
+      # un domaine distinct qu'il faudrait autoriser dans Firebase Auth pour que
+      # la connexion Google fonctionne. L'admin ne se déploie donc que sur live.
+      - name: Déploiement live (master)
+        if: steps.cfg.outputs.ready == 'true' && steps.affected.outputs.web == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          projectId: ${{ env.FIREBASE_PROJECT_ID }}
+          target: ${{ env.HOSTING_TARGET }}
+          channelId: live

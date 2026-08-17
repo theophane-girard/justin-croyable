@@ -48,6 +48,30 @@ npx nx build @justin-croyable/resume-admin   # build production (dist/resume-adm
 L'API doit tourner en parallèle (`npx nx serve cv-api`), et son `CORS_ORIGIN`
 doit inclure `http://localhost:4400` — c'est le cas par défaut.
 
+## Déployer
+
+L'app est hébergée sur le site Firebase **`theophane-girard-resume-admin`**, dans
+le projet `justin-croyable-story` partagé avec les autres apps. La cible de
+hosting `resume-admin` fait le lien (`.firebaserc` + `firebase.json`).
+
+```bash
+npm run deploy:resume-admin           # build + déploiement sur le canal live
+npm run deploy:resume-admin:preview   # canal de prévisualisation, 7 jours
+```
+
+En CI, `.github/workflows/deploy-resume-admin.yml` déploie sur `live` à chaque
+push sur `master` où l'app est affectée. Il injecte au préalable l'URL Cloud Run
+de `cv-api` (secret `CV_API_URL`) à la place du placeholder de
+`environment.production.ts` ; sans ce secret le build reste fonctionnel mais
+l'API est injoignable.
+
+Il n'y a volontairement pas de déploiement de prévisualisation par PR : chaque
+canal de preview est un domaine distinct qu'il faudrait autoriser dans Firebase
+Auth → Settings → Authorized domains pour que la connexion Google fonctionne.
+Le domaine du site live, lui, est à autoriser une fois.
+
+Penser aussi à ajouter l'origine du site déployé au `CORS_ORIGIN` de `cv-api`.
+
 ## Écrans
 
 | Route | Contenu |

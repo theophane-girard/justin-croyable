@@ -12,7 +12,10 @@
     "deploy:potager-web:preview": "nx build @justin-croyable/potager-web && firebase hosting:channel:deploy preview --only potager --expires 7d",
     "build:pokemon-comparator-web": "nx build @justin-croyable/pokemon-comparator-web",
     "deploy:pokemon-comparator-web": "nx build @justin-croyable/pokemon-comparator-web && firebase deploy --only hosting:pokemon",
-    "deploy:pokemon-comparator-web:preview": "nx build @justin-croyable/pokemon-comparator-web && firebase hosting:channel:deploy preview --only pokemon --expires 7d"
+    "deploy:pokemon-comparator-web:preview": "nx build @justin-croyable/pokemon-comparator-web && firebase hosting:channel:deploy preview --only pokemon --expires 7d",
+    "build:resume-admin": "nx build @justin-croyable/resume-admin",
+    "deploy:resume-admin": "nx build @justin-croyable/resume-admin && firebase deploy --only hosting:resume-admin",
+    "deploy:resume-admin:preview": "nx build @justin-croyable/resume-admin && firebase hosting:channel:deploy preview --only resume-admin --expires 7d"
   },
   "private": true,
   "devDependencies": {
