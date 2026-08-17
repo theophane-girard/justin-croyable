@@ -22,6 +22,7 @@ export class ComparatorStore {
   readonly #selectedIds = signal<readonly number[]>(DEFAULT_SELECTION);
   readonly #displayMode = signal<DisplayMode>(DISPLAY_MODE.bars);
   readonly #enhanceById = signal<ReadonlyMap<number, EnhanceConfig>>(new Map());
+  readonly #enhanceAllConfig = signal<EnhanceConfig | null>(null);
 
   readonly #pokemonById = computed(
     () => new Map<number, Pokemon>(this.#api.pokemons().map(pokemon => [pokemon.id, pokemon])),
@@ -57,6 +58,11 @@ export class ComparatorStore {
       return;
     }
     this.#selectedIds.set([...current, id]);
+
+    const sharedConfig = this.#enhanceAllConfig();
+    if (sharedConfig) {
+      this.setEnhanceConfigs(new Map([[id, sharedConfig]]));
+    }
   }
 
   remove(id: number): void {
@@ -89,6 +95,10 @@ export class ComparatorStore {
     const next = new Map(this.#enhanceById());
     ids.forEach(id => next.delete(id));
     this.#enhanceById.set(next);
+  }
+
+  setEnhanceAllConfig(config: EnhanceConfig | null): void {
+    this.#enhanceAllConfig.set(config);
   }
 
   reload(): void {

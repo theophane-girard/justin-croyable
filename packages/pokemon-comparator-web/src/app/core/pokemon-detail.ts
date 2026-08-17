@@ -9,6 +9,7 @@ export interface PokemonAbility {
 export interface PokemonMove {
   readonly name: string;
   readonly power: number | null;
+  readonly accuracy: number | null;
   readonly type: string;
   readonly damageClass: string;
 }
@@ -42,6 +43,7 @@ query PokemonDetail($id: Int!) {
       move {
         name
         power
+        accuracy
         movenames(where: { language: { name: { _in: ["fr", "en"] } } }) {
           name
           language { name }
@@ -77,6 +79,7 @@ interface RawMove {
   readonly move: {
     readonly name: string;
     readonly power: number | null;
+    readonly accuracy: number | null;
     readonly movenames: readonly LocalizedName[];
     readonly type: { readonly name: string } | null;
     readonly movedamageclass: { readonly name: string } | null;
@@ -126,6 +129,7 @@ export function parsePokemonDetail(value: unknown): PokemonDetailData {
     .map(entry => ({
       name: pickName(entry.move.movenames, entry.move.name),
       power: entry.move.power,
+      accuracy: entry.move.accuracy,
       type: entry.move.type?.name ?? '',
       damageClass: entry.move.movedamageclass?.name ?? '',
     }));

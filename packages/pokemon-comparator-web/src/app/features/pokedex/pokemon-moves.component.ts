@@ -16,6 +16,8 @@ import {
   FabButtonComponent,
   FabContainerComponent,
   FabListComponent,
+  PopoverComponent,
+  PopoverDirective,
   SheetService,
   SkeletonComponent,
   ToggleGroupComponent,
@@ -49,6 +51,7 @@ const DAMAGE_ITEMS: ToggleGroupItem[] = [
 const SORT_FIELD_ITEMS: ToggleGroupItem[] = [
   { value: 'type', label: 'Type' },
   { value: 'power', label: 'Puissance' },
+  { value: 'accuracy', label: 'Précision' },
   { value: 'name', label: 'Nom' },
 ];
 
@@ -68,6 +71,8 @@ interface MoveView {
   readonly damageTag: string;
   readonly power: number | null;
   readonly powerLabel: string;
+  readonly accuracy: number | null;
+  readonly accuracyLabel: string;
 }
 
 function asArray(value: string | string[]): string[] {
@@ -86,6 +91,8 @@ function toMoveView(move: PokemonMove): MoveView {
     damageTag: DAMAGE_CLASS_TAG.get(move.damageClass) ?? 'bg-muted text-muted-foreground',
     power: move.power,
     powerLabel: move.power === null ? '—' : `${move.power}`,
+    accuracy: move.accuracy,
+    accuracyLabel: move.accuracy === null ? '—' : `${move.accuracy}%`,
   };
 }
 
@@ -98,6 +105,8 @@ function toMoveView(move: PokemonMove): MoveView {
     FabButtonComponent,
     FabContainerComponent,
     FabListComponent,
+    PopoverComponent,
+    PopoverDirective,
     SkeletonComponent,
     ToggleGroupComponent,
   ],
@@ -119,7 +128,14 @@ function toMoveView(move: PokemonMove): MoveView {
         <span class="text-muted-foreground text-sm">{{ visibleMoves().length }} attaque(s)</span>
         <div class="flex max-h-[26rem] flex-col gap-2 overflow-y-auto pr-1">
           @for (move of visibleMoves(); track move.key) {
-            <div class="border-border flex items-center gap-2 rounded-lg border p-2">
+            <button
+              type="button"
+              class="border-border hover:bg-muted/50 flex w-full items-center gap-2 rounded-lg border p-2 text-left transition-colors"
+              appPopover
+              [content]="movePopover"
+              [mobileSheet]="true"
+              (click)="selectedMove.set(move)"
+            >
               <span class="min-w-0 flex-1 truncate text-sm font-medium">{{ move.name }}</span>
               <span [class]="move.typeClass" class="rounded-full px-2 py-0.5 text-xs font-medium">
                 {{ move.typeLabel }}
@@ -127,8 +143,11 @@ function toMoveView(move: PokemonMove): MoveView {
               <span [class]="move.damageTag" class="rounded-full px-2 py-0.5 text-xs font-medium">
                 {{ move.damageLabel }}
               </span>
-              <span class="w-10 shrink-0 text-right text-sm tabular-nums">{{ move.powerLabel }}</span>
-            </div>
+              <span class="w-9 shrink-0 text-right text-sm tabular-nums">{{ move.powerLabel }}</span>
+              <span class="text-muted-foreground w-12 shrink-0 text-right text-sm tabular-nums">
+                {{ move.accuracyLabel }}
+              </span>
+            </button>
           }
         </div>
       </div>
@@ -211,6 +230,35 @@ function toMoveView(move: PokemonMove): MoveView {
         </div>
       </div>
     </ng-template>
+
+    <ng-template #movePopover>
+      @let move = selectedMove();
+      <app-popover class="max-w-xs">
+        @if (move) {
+          <div class="flex flex-col gap-2 p-1">
+            <h4 class="text-sm font-semibold">{{ move.name }}</h4>
+            <div class="flex flex-wrap gap-1.5">
+              <span [class]="move.typeClass" class="rounded-full px-2 py-0.5 text-xs font-medium">
+                {{ move.typeLabel }}
+              </span>
+              <span [class]="move.damageTag" class="rounded-full px-2 py-0.5 text-xs font-medium">
+                {{ move.damageLabel }}
+              </span>
+            </div>
+            <dl class="flex flex-col gap-1 text-sm">
+              <div class="flex items-center justify-between gap-4">
+                <dt class="text-muted-foreground">Puissance</dt>
+                <dd class="font-medium tabular-nums">{{ move.powerLabel }}</dd>
+              </div>
+              <div class="flex items-center justify-between gap-4">
+                <dt class="text-muted-foreground">Précision</dt>
+                <dd class="font-medium tabular-nums">{{ move.accuracyLabel }}</dd>
+              </div>
+            </dl>
+          </div>
+        }
+      </app-popover>
+    </ng-template>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -223,6 +271,8 @@ export class PokemonMovesComponent {
 
   private readonly filtersTemplate = viewChild.required<TemplateRef<unknown>>('filtersSheet');
   private readonly sortTemplate = viewChild.required<TemplateRef<unknown>>('sortSheet');
+
+  protected readonly selectedMove = signal<MoveView | undefined>(undefined);
 
   protected readonly typeItems = TYPE_ITEMS;
   protected readonly damageItems = DAMAGE_ITEMS;
@@ -262,6 +312,11 @@ export class PokemonMovesComponent {
       }
       if (field === 'name') {
         return ascending ? a.name.localeCompare(b.name, 'fr') : b.name.localeCompare(a.name, 'fr');
+      }
+      if (field === 'accuracy') {
+        const accuracyA = a.accuracy ?? -1;
+        const accuracyB = b.accuracy ?? -1;
+        return ascending ? accuracyA - accuracyB : accuracyB - accuracyA;
       }
       const powerA = a.power ?? -1;
       const powerB = b.power ?? -1;
