@@ -36,6 +36,12 @@ const NAV_ITEMS: readonly NavItem[] = [
     label: 'Pokédex',
     icon: 'phosphorSquaresFour',
   },
+  {
+    path: APP_PATHS.types,
+    link: `/${APP_PATHS.types}`,
+    label: 'Types & Faiblesses',
+    icon: 'phosphorShield',
+  },
 ];
 
 @Component({

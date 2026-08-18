@@ -172,13 +172,20 @@ function multiplierAgainst(attacking: string, defenderTypes: readonly string[]):
   }, 1);
 }
 
+function toMatchup(type: string, multiplier: number): TypeMatchup {
+  return { type, label: typeLabel(type), tileClass: typeTileClass(type), multiplier };
+}
+
+export function defensiveMatchups(defenderTypes: readonly string[]): readonly TypeMatchup[] {
+  return TYPE_SLUGS.map(type => toMatchup(type, multiplierAgainst(type, defenderTypes)));
+}
+
+export function offensiveMatchups(attackingType: string): readonly TypeMatchup[] {
+  return TYPE_SLUGS.map(type => toMatchup(type, multiplierAgainst(attackingType, [type])));
+}
+
 export function typeWeaknesses(defenderTypes: readonly string[]): readonly TypeMatchup[] {
-  return TYPE_SLUGS.map(type => ({
-    type,
-    label: typeLabel(type),
-    tileClass: typeTileClass(type),
-    multiplier: multiplierAgainst(type, defenderTypes),
-  }))
+  return defensiveMatchups(defenderTypes)
     .filter(matchup => matchup.multiplier > 1)
     .sort(
       (a, b) => b.multiplier - a.multiplier || TYPE_SLUGS.indexOf(a.type) - TYPE_SLUGS.indexOf(b.type),
