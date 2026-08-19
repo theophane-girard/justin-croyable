@@ -137,7 +137,6 @@ function toMoveView(move: PokemonMove): MoveView {
               class="border-border hover:bg-muted/50 flex w-full items-center gap-2 rounded-lg border p-2 text-left transition-colors"
               appPopover
               [content]="movePopover"
-              [mobileSheet]="true"
               (click)="selectedMove.set(move)"
             >
               <span class="min-w-0 flex-1 truncate text-sm font-medium">{{ move.name }}</span>

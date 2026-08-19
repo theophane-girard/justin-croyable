@@ -40,13 +40,8 @@ import {
 } from '../command';
 import { EmptyComponent } from '../empty';
 import { PopoverComponent, PopoverDirective } from '../popover';
-import { SheetHandleComponent } from '../sheet-handle';
 import { IdDirective } from '../../core';
-import {
-  MOBILE_SHEET_CONTENT_CLASSES,
-  MOBILE_SHEET_ENTER_CLASSES,
-  ViewportService,
-} from '../../core/services/viewport.service';
+import { ViewportService } from '../../core/services/viewport.service';
 import {
   fieldLabelClasses,
   fieldMessage,
@@ -83,7 +78,6 @@ export interface ComboboxGroup {
     PopoverComponent,
     EmptyComponent,
     IdDirective,
-    SheetHandleComponent,
   ],
   template: `
     @if (label()) {
@@ -101,7 +95,6 @@ export interface ComboboxGroup {
       type="button"
       appButton
       appPopover
-      [mobileSheet]="true"
       role="combobox"
       [content]="popoverContent"
       [variant]="buttonVariant()"
@@ -139,20 +132,11 @@ export interface ComboboxGroup {
     }
 
     <ng-template #popoverContent>
-      <app-popover #popoverCmp [class]="popoverClasses()">
-        @if (isMobile()) {
-          <div class="bg-popover sticky top-0 z-10">
-            <app-sheet-handle
-              [sheetElement]="popoverCmp.elementRef.nativeElement"
-              (dismissed)="dismissFromHandle()"
-            />
-            @if (sheetHeader()) {
-              <div class="text-foreground border-b px-3 py-3 text-sm font-medium">
-                {{ sheetHeader() }}
-              </div>
-            }
-          </div>
-        }
+      <app-popover
+        [class]="popoverClasses()"
+        [sheetHeader]="sheetHeader()"
+        (sheetDismissed)="onSheetDismissed()"
+      >
         <app-command [class]="commandClasses()" (commandSelected)="handleSelect($event)" #commandRef>
           @if (searchable()) {
             <app-command-input [placeholder]="searchPlaceholder()" #commandInputRef />
@@ -325,7 +309,7 @@ export class ComboboxComponent implements ControlValueAccessor {
 
   protected readonly popoverClasses = computed(() => {
     if (this.isMobile()) {
-      return `${MOBILE_SHEET_CONTENT_CLASSES} ${MOBILE_SHEET_ENTER_CLASSES} p-0`;
+      return 'p-0';
     }
     const widthClass =
       this.width() === 'full' ? 'w-full' : comboboxVariants({ width: this.width() });
@@ -421,8 +405,7 @@ export class ComboboxComponent implements ControlValueAccessor {
     this.buttonRef().nativeElement.focus();
   }
 
-  protected dismissFromHandle(): void {
-    this.popoverDirective().hide(false);
+  protected onSheetDismissed(): void {
     this.buttonRef().nativeElement.focus();
   }
 

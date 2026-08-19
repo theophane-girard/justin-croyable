@@ -11,9 +11,14 @@ export const MOBILE_MEDIA_QUERY = '(max-width: 639.98px)';
  * Classes appliquées au contenu d'un overlay présenté en bottom sheet sur mobile.
  * Reproduit le positionnement du composant sheet (`fixed inset-x-0 bottom-0`) et
  * l'emporte, via twMerge, sur la largeur/les coins des variantes popover/select.
+ *
+ * La largeur est marquée `!important` : une classe statique posée par le
+ * consommateur (`<app-popover class="max-w-xs">`) reste sur l'élément en plus du
+ * binding `[class]`, donc hors de portée de twMerge — sans `!` c'est l'ordre de
+ * la feuille Tailwind qui trancherait, et `max-w-xs` gagnerait.
  */
 export const MOBILE_SHEET_CONTENT_CLASSES =
-  'fixed inset-x-0 bottom-0 z-50 max-h-[85vh] w-auto max-w-none overflow-y-auto rounded-t-xl rounded-b-none border-x-0 border-b-0';
+  'fixed inset-x-0 bottom-0 z-50 max-h-[85vh] w-auto! max-w-none! overflow-y-auto rounded-t-xl rounded-b-none border-x-0 border-b-0';
 
 /** Animation d'entrée du bottom sheet (glisse depuis le bas). */
 export const MOBILE_SHEET_ENTER_CLASSES = 'animate-in slide-in-from-bottom duration-300';
