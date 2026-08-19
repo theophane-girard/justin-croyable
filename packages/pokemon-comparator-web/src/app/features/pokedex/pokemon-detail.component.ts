@@ -28,9 +28,12 @@ import { ComparatorStore } from '../../core/comparator-store';
 import { APP_PATHS } from '../../app.routes';
 import {
   EMPTY_DETAIL,
+  MOVE_EFFECTS_QUERY,
   POKEAPI_GRAPHQL_URL,
   POKEMON_DETAIL_QUERY,
   type PokemonAbility,
+  type PokemonMove,
+  parseMoveEffects,
   parsePokemonDetail,
 } from '../../core/pokemon-detail';
 import {
@@ -406,8 +409,27 @@ export class PokemonDetailComponent {
     { parse: parsePokemonDetail, defaultValue: EMPTY_DETAIL },
   );
 
+  readonly #moveEffectsResource = httpResource<ReadonlyMap<string, string>>(
+    () => {
+      const slugs = this.#detailResource.value().moves.map(move => move.slug);
+      return slugs.length > 0
+        ? {
+            url: POKEAPI_GRAPHQL_URL,
+            method: 'POST',
+            body: { query: MOVE_EFFECTS_QUERY, variables: { moves: slugs } },
+          }
+        : undefined;
+    },
+    { parse: parseMoveEffects, defaultValue: new Map<string, string>() },
+  );
+
   protected readonly abilities = computed(() => this.#detailResource.value().abilities);
-  protected readonly moves = computed(() => this.#detailResource.value().moves);
+  protected readonly moves = computed<readonly PokemonMove[]>(() => {
+    const effects = this.#moveEffectsResource.value();
+    return this.#detailResource
+      .value()
+      .moves.map(move => ({ ...move, description: effects.get(move.slug) ?? move.description }));
+  });
   protected readonly detailLoading = this.#detailResource.isLoading;
 
   protected add(id: number): void {

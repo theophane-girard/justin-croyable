@@ -8,6 +8,7 @@ export interface PokemonAbility {
 
 export interface PokemonMove {
   readonly name: string;
+  readonly slug: string;
   readonly power: number | null;
   readonly accuracy: number | null;
   readonly type: string;
@@ -45,17 +46,9 @@ query PokemonDetail($id: Int!) {
         name
         power
         accuracy
-        effect_chance
         movenames(where: { language: { name: { _in: ["fr", "en"] } } }) {
           name
           language { name }
-        }
-        moveeffect {
-          moveeffecteffecttexts(where: { language: { name: { _in: ["fr", "en"] } } }) {
-            short_effect
-            effect
-            language { name }
-          }
         }
         type { name }
         movedamageclass { name }
@@ -89,9 +82,7 @@ interface RawMove {
     readonly name: string;
     readonly power: number | null;
     readonly accuracy: number | null;
-    readonly effect_chance: number | null;
     readonly movenames: readonly LocalizedName[];
-    readonly moveeffect: { readonly moveeffecteffecttexts: readonly EffectText[] } | null;
     readonly type: { readonly name: string } | null;
     readonly movedamageclass: { readonly name: string } | null;
   } | null;
@@ -119,15 +110,6 @@ function pickEffect(texts: readonly EffectText[]): string {
   return chosen?.short_effect ?? chosen?.effect ?? 'Description indisponible.';
 }
 
-function pickMoveEffect(move: {
-  readonly effect_chance: number | null;
-  readonly moveeffect: { readonly moveeffecteffecttexts: readonly EffectText[] } | null;
-}): string {
-  const texts = move.moveeffect?.moveeffecteffecttexts ?? [];
-  const chance = move.effect_chance != null ? String(move.effect_chance) : '';
-  return pickEffect(texts).replace(/\$effect_chance/g, chance);
-}
-
 export function parsePokemonDetail(value: unknown): PokemonDetailData {
   const pokemon = (value as DetailResponse).data?.pokemon?.[0];
   if (!pokemon) {
@@ -148,12 +130,57 @@ export function parsePokemonDetail(value: unknown): PokemonDetailData {
     .filter((entry): entry is RawMove & { move: NonNullable<RawMove['move']> } => entry.move !== null)
     .map(entry => ({
       name: pickName(entry.move.movenames, entry.move.name),
+      slug: entry.move.name,
       power: entry.move.power,
       accuracy: entry.move.accuracy,
       type: entry.move.type?.name ?? '',
       damageClass: entry.move.movedamageclass?.name ?? '',
-      description: pickMoveEffect(entry.move),
+      description: '',
     }));
 
   return { abilities, moves };
+}
+
+export const MOVE_EFFECTS_QUERY = `
+query PokemonComparatorMoveEffects($moves: [String!]!) {
+  move(where: { name: { _in: $moves } }) {
+    name
+    effect_chance
+    moveeffect {
+      moveeffecteffecttexts(where: { language_id: { _eq: 9 } }) {
+        short_effect
+        effect
+      }
+    }
+  }
+}`;
+
+interface RawMoveEffectText {
+  readonly short_effect: string | null;
+  readonly effect: string | null;
+}
+
+interface RawMoveEffect {
+  readonly name: string;
+  readonly effect_chance: number | null;
+  readonly moveeffect: { readonly moveeffecteffecttexts: readonly RawMoveEffectText[] } | null;
+}
+
+interface MoveEffectsResponse {
+  readonly data?: { readonly move?: readonly RawMoveEffect[] };
+}
+
+export function parseMoveEffects(value: unknown): ReadonlyMap<string, string> {
+  const moves = (value as MoveEffectsResponse).data?.move ?? [];
+  const descriptions = new Map<string, string>();
+  moves.forEach(move => {
+    const text = move.moveeffect?.moveeffecteffecttexts?.[0];
+    const raw = text?.short_effect ?? text?.effect ?? '';
+    if (!raw) {
+      return;
+    }
+    const chance = move.effect_chance != null ? String(move.effect_chance) : '';
+    descriptions.set(move.name, raw.replace(/\$effect_chance/g, chance));
+  });
+  return descriptions;
 }
