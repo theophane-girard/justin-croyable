@@ -174,6 +174,7 @@ export class DialogService {
         hasBackdrop: true,
         backdropClass: ['bg-black/10', 'supports-backdrop-filter:backdrop-blur-xs'],
         positionStrategy: this.overlay.position().global(),
+        scrollStrategy: this.overlay.scrollStrategies.block(),
       }),
     );
   }

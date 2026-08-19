@@ -69,7 +69,7 @@ const meta: Meta<SheetArgs> = {
     docs: {
       description: {
         component:
-          "Panneau latéral ouvert par service : `SheetService.create()` reçoit les options — côté, taille, titre, contenu, libellés des actions — et renvoie un `SheetRef` pour fermer le panneau et récupérer un résultat. Le contenu accepte une chaîne, un `TemplateRef` ou un composant, auquel les données passent par le jeton `SHEET_DATA`.",
+          "Panneau latéral ouvert par service : `SheetService.create()` reçoit les options — côté, taille, titre, contenu, libellés des actions — et renvoie un `SheetRef` pour fermer le panneau et récupérer un résultat. Le contenu accepte une chaîne, un `TemplateRef` ou un composant, auquel les données passent par le jeton `SHEET_DATA`. En `side: 'bottom'`, le panneau reçoit la poignée commune aux bottom sheets du DS — glisser vers le haut pour agrandir, vers le bas pour fermer — et son contenu défile sans déclencher le rafraîchissement natif du navigateur.",
       },
     },
   },
@@ -148,12 +148,22 @@ export const Right: Story = {
   play: async ({ canvasElement }) => {
     const panneau = await ouvrirPanneau(canvasElement);
     expect(panneau.getAttribute('data-side') ?? panneau.className).toContain('right');
+    expect(panneau.querySelector('app-sheet-handle')).toBeNull();
 
     await fermerParAnnuler();
   },
 };
 
-export const Bottom: Story = { args: { side: 'bottom', size: 'sm' } };
+export const Bottom: Story = {
+  args: { side: 'bottom', size: 'sm' },
+  play: async ({ canvasElement }) => {
+    const panneau = await ouvrirPanneau(canvasElement);
+
+    expect(panneau.querySelector('app-sheet-handle')).toBeTruthy();
+
+    await fermerParAnnuler();
+  },
+};
 
 export const BottomLongContent: Story = {
   args: { side: 'bottom', longContent: true },
@@ -172,6 +182,7 @@ export const BottomLongContent: Story = {
       throw new Error('Le corps du panneau est introuvable.');
     }
 
+    expect(panneau.querySelector('app-sheet-handle')).toBeTruthy();
     expect(panneau.getBoundingClientRect().height).toBeLessThanOrEqual(window.innerHeight);
     expect(corps.scrollHeight).toBeGreaterThan(corps.clientHeight);
 

@@ -27,6 +27,7 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideX } from '@ng-icons/lucide';
 
 import { ButtonComponent } from '../button';
+import { SheetHandleComponent } from '../sheet-handle';
 import { mergeClasses, noopFn } from '../../utils/merge-classes';
 
 import type { SheetRef } from './sheet-ref';
@@ -59,8 +60,12 @@ export class SheetOptions<T, U> {
 
 @Component({
   selector: 'app-sheet',
-  imports: [OverlayModule, PortalModule, ButtonComponent, NgIcon],
+  imports: [OverlayModule, PortalModule, ButtonComponent, NgIcon, SheetHandleComponent],
   template: `
+    @if (isBottomSheet) {
+      <app-sheet-handle class="-mb-4" [sheetElement]="hostElement" (dismissed)="onDismiss()" />
+    }
+
     @if (config.closable || config.closable === undefined) {
       <button
         type="button"
@@ -168,11 +173,14 @@ export class SheetComponent<T, U> extends BasePortalOutlet {
   sheetRef?: SheetRef<T>;
 
   protected readonly isStringContent = typeof this.config.content === 'string';
+  protected readonly isBottomSheet = this.config.side === 'bottom';
+  protected readonly hostElement = this.host.nativeElement;
 
   readonly portalOutlet = viewChild.required(CdkPortalOutlet);
 
   readonly okTriggered = output<void>();
   readonly cancelTriggered = output<void>();
+  readonly dismissTriggered = output<void>();
   readonly state = signal<'closed' | 'open'>('closed');
 
   constructor() {
@@ -204,5 +212,9 @@ export class SheetComponent<T, U> extends BasePortalOutlet {
 
   onCloseClick() {
     this.cancelTriggered.emit();
+  }
+
+  onDismiss() {
+    this.dismissTriggered.emit();
   }
 }
