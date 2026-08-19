@@ -1,9 +1,11 @@
 {
   "libs/design-system": 53,
   "libs/mobile-ds": 1,
+  "packages/cv-api": 0,
   "packages/pokemon-comparator-web": 0,
   "packages/potager-api": 0,
   "packages/potager-web": 0,
+  "packages/resume-admin": 0,
   "packages/storybook-host": 0,
   "packages/storybook-web": 40
 }

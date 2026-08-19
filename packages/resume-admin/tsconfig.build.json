@@ -1,0 +1,48 @@
+{
+  "//": "tsconfig dédié au builder @angular/build:application (AOT esbuild). Non-composite et sans project references : le builder ne les supporte pas. Le typecheck Nx passe par tsconfig.app.json (composite).",
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "emitDeclarationOnly": false,
+    "outDir": "dist",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["es2022", "dom", "dom.iterable"],
+    "types": [],
+    "experimentalDecorators": true,
+    "noUnusedLocals": false,
+    "baseUrl": ".",
+    // Libs source-only (leur `main` pointe sur src/index.ts) : le mapping vise
+    // le chemin réel du dépôt et non le lien npm de node_modules. Sinon le
+    // serveur de dev les prend pour des paquets publiés et les confie au
+    // pré-bundling Vite, qui ne résout que .mjs/.js/.cjs et casse sur leurs
+    // imports TypeScript.
+    "paths": {
+      "@justin-croyable/design-system": ["../../libs/design-system/src/index.ts"],
+      "@justin-croyable/design-system/package.json": ["../../libs/design-system/package.json"],
+      "@justin-croyable/design-system/palettes/*": [
+        "../../libs/design-system/src/theme/palettes/*"
+      ],
+      "@justin-croyable/design-system/*": ["../../libs/design-system/src/*"],
+      "@justin-croyable/cv-contract": ["../../libs/cv-contract/src/index.ts"],
+      "@justin-croyable/cv-contract/*": ["../../libs/cv-contract/src/*"]
+    }
+  },
+  "angularCompilerOptions": {
+    "strictInjectionParameters": true,
+    "strictInputAccessModifiers": true,
+    "strictTemplates": false
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["dist", "out-tsc"],
+  "references": [
+    {
+      "path": "../../libs/cv-contract/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/design-system/tsconfig.lib.json"
+    }
+  ]
+}

@@ -26,6 +26,15 @@
     },
     {
       "path": "./libs/api-contract"
+    },
+    {
+      "path": "./libs/cv-contract"
+    },
+    {
+      "path": "./packages/cv-api"
+    },
+    {
+      "path": "./packages/resume-admin"
     }
   ]
 }

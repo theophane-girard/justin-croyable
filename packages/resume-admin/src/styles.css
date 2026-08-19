@@ -1,0 +1,22 @@
+/*
+ * CSS global de l'app d'administration du CV, compilé par Tailwind v4 via
+ * @tailwindcss/postcss (voir .postcssrc.json) dans le pipeline @angular/build.
+ *
+ * L'app fournit Tailwind et le plugin d'animations, puis importe le preset du
+ * DS. Aucune palette n'est surchargée : l'administration garde la palette
+ * par défaut du design system.
+ */
+
+@layer ng-icon, theme, base, components, utilities;
+
+@import 'tailwindcss';
+@plugin 'tailwindcss-animate';
+
+@import '../../../libs/design-system/src/theme/theme.css';
+
+@source '../../../libs/design-system/src/components';
+@source './app';
+
+body {
+  @apply bg-background text-foreground;
+}

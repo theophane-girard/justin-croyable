@@ -1,0 +1,29 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": ".",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["es2022", "dom", "dom.iterable"],
+    "types": [],
+    "experimentalDecorators": true,
+    "noUnusedLocals": false,
+    "tsBuildInfoFile": "dist/tsconfig.app.tsbuildinfo"
+  },
+  "angularCompilerOptions": {
+    "strictInjectionParameters": true,
+    "strictInputAccessModifiers": true,
+    "strictTemplates": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["dist", "out-tsc", "src/**/*.spec.ts"],
+  "references": [
+    {
+      "path": "../../libs/cv-contract/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/design-system/tsconfig.lib.json"
+    }
+  ]
+}
