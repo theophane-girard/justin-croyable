@@ -4,6 +4,7 @@ import { computed, Injectable, type Signal } from '@angular/core';
 import { MEGA_SUPPLEMENT } from './mega-supplement.data';
 import { ULTRA_BEAST_SPECIES_IDS } from './ultra-beast.data';
 import { type Ability, ABILITIES_QUERY, parseAbilities } from './pokemon-ability';
+import { type MoveOption, MOVES_QUERY, parseMoves } from './pokemon-move-filter';
 import {
   EVOLUTION_STAGE,
   type EvolutionStage,
@@ -305,14 +306,25 @@ export class PokemonApiService {
     { parse: parseAbilities, defaultValue: [] },
   );
 
+  readonly #movesResource = httpResource<readonly MoveOption[]>(
+    () => ({
+      url: POKEAPI_GRAPHQL_URL,
+      method: 'POST',
+      body: { query: MOVES_QUERY },
+    }),
+    { parse: parseMoves, defaultValue: [] },
+  );
+
   readonly pokemons: Signal<readonly Pokemon[]> = this.#resource.value;
   readonly isLoading: Signal<boolean> = this.#resource.isLoading;
   readonly hasError = computed(() => this.#resource.error() !== undefined);
 
   readonly abilities: Signal<readonly Ability[]> = this.#abilitiesResource.value;
+  readonly moves: Signal<readonly MoveOption[]> = this.#movesResource.value;
 
   reload(): void {
     this.#resource.reload();
     this.#abilitiesResource.reload();
+    this.#movesResource.reload();
   }
 }

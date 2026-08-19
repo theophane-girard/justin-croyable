@@ -44,6 +44,7 @@ import { PokedexGridComponent } from './pokedex-grid.component';
           viewportClass="h-[calc(100dvh-13rem)]"
           [pokemons]="store.pokemons()"
           [abilities]="store.abilities()"
+          [moves]="store.moves()"
           [syncUrl]="true"
           (select)="openDetail($event)"
         />

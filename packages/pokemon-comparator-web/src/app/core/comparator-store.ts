@@ -1,6 +1,7 @@
 import { computed, inject, Injectable, type Signal, signal } from '@angular/core';
 
 import { type Ability } from './pokemon-ability';
+import { type MoveOption } from './pokemon-move-filter';
 import { PokemonApiService } from './pokemon-api.service';
 import { type Pokemon } from './pokemon.model';
 import { DEFAULT_ENHANCE_CONFIG, type EnhanceConfig } from './pokemon-stats';
@@ -32,6 +33,7 @@ export class ComparatorStore {
 
   readonly pokemons: Signal<readonly Pokemon[]> = this.#api.pokemons;
   readonly abilities: Signal<readonly Ability[]> = this.#api.abilities;
+  readonly moves: Signal<readonly MoveOption[]> = this.#api.moves;
   readonly isLoading: Signal<boolean> = this.#api.isLoading;
   readonly hasError = this.#api.hasError;
 
