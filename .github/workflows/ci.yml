@@ -36,37 +36,14 @@ jobs:
           # branche à sa base.
           fetch-depth: 0
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-
-      # Calcule NX_BASE / NX_HEAD consommés par `nx affected` : base de la PR,
-      # ou dernier run réussi sur master pour un push.
-      - name: SHAs de base pour nx affected
-        uses: nrwl/nx-set-shas@v4
-        with:
-          main-branch-name: master
-
-      - name: Install dependencies
-        run: npm ci
+      - name: Préparation du workspace
+        uses: ./.github/actions/setup-workspace
 
       # Détermine les sites impactés pour ne (re)builder et (re)déployer que
-      # ceux-là. S'appuie sur NX_BASE / NX_HEAD posés plus haut. En cas d'échec
-      # de détection, on retombe sur « tout affecté » pour ne rien manquer.
+      # ceux-là. S'appuie sur NX_BASE / NX_HEAD posés par l'action ci-dessus.
       - name: Sites affectés
         id: affected
-        run: |
-          if AFFECTED=$(npx nx show projects --affected --json 2>/dev/null); then
-            echo "storybook=$(echo "$AFFECTED" | grep -q 'storybook-web' && echo true || echo false)" >> "$GITHUB_OUTPUT"
-            echo "potager=$(echo "$AFFECTED" | grep -q 'potager-web' && echo true || echo false)" >> "$GITHUB_OUTPUT"
-            echo "pokemon=$(echo "$AFFECTED" | grep -q 'pokemon-comparator-web' && echo true || echo false)" >> "$GITHUB_OUTPUT"
-          else
-            echo "storybook=true" >> "$GITHUB_OUTPUT"
-            echo "potager=true" >> "$GITHUB_OUTPUT"
-            echo "pokemon=true" >> "$GITHUB_OUTPUT"
-          fi
+        uses: ./.github/actions/affected-projects
 
       - name: Typecheck
         run: npx nx affected -t typecheck

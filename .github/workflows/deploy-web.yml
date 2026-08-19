@@ -48,40 +48,22 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js
+      - name: Préparation du workspace
         if: steps.cfg.outputs.ready == 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-
-      - name: SHAs de base pour nx affected
-        if: steps.cfg.outputs.ready == 'true'
-        uses: nrwl/nx-set-shas@v4
-        with:
-          main-branch-name: master
-
-      - name: Install dependencies
-        if: steps.cfg.outputs.ready == 'true'
-        run: npm ci
+        uses: ./.github/actions/setup-workspace
 
       # Ne (re)build/déploie le front que s'il est réellement impacté (lui ou
       # une de ses libs). Évite de rebuilder à chaque push, y compris back-only.
       - name: Front affecté ?
         id: affected
         if: steps.cfg.outputs.ready == 'true'
-        run: |
-          if AFFECTED=$(npx nx show projects --affected --json 2>/dev/null); then
-            echo "web=$(echo "$AFFECTED" | grep -q 'potager-web' && echo true || echo false)" >> "$GITHUB_OUTPUT"
-          else
-            echo "web=true" >> "$GITHUB_OUTPUT"
-          fi
+        uses: ./.github/actions/affected-projects
 
       # L'URL de l'API de staging (Cloud Run) est injectée dans le fichier
       # d'environnement de production avant le build. Sans le secret, on garde
       # le placeholder (le build reste fonctionnel mais l'API est injoignable).
       - name: Injecte l'URL de l'API de staging
-        if: steps.cfg.outputs.ready == 'true' && steps.affected.outputs.web == 'true'
+        if: steps.cfg.outputs.ready == 'true' && steps.affected.outputs.potager == 'true'
         env:
           STAGING_API_URL: ${{ secrets.GARDEN_HARVEST_STAGING_API_URL }}
         run: |
@@ -92,11 +74,11 @@ jobs:
           fi
 
       - name: Build
-        if: steps.cfg.outputs.ready == 'true' && steps.affected.outputs.web == 'true'
+        if: steps.cfg.outputs.ready == 'true' && steps.affected.outputs.potager == 'true'
         run: npx nx build potager-web --configuration production
 
       - name: Déploiement prévisualisation (PR)
-        if: steps.cfg.outputs.ready == 'true' && steps.affected.outputs.web == 'true' && github.event_name == 'pull_request'
+        if: steps.cfg.outputs.ready == 'true' && steps.affected.outputs.potager == 'true' && github.event_name == 'pull_request'
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
@@ -107,7 +89,7 @@ jobs:
           expires: 7d
 
       - name: Déploiement live (master)
-        if: steps.cfg.outputs.ready == 'true' && steps.affected.outputs.web == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master'
+        if: steps.cfg.outputs.ready == 'true' && steps.affected.outputs.potager == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master'
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
