@@ -1,6 +1,7 @@
 import {
   phosphorArrowLeft,
   phosphorBriefcase,
+  phosphorEye,
   phosphorFloppyDisk,
   phosphorGoogleLogo,
   phosphorIdentificationCard,
@@ -19,6 +20,7 @@ import {
 export const APP_ICONS = {
   phosphorArrowLeft,
   phosphorBriefcase,
+  phosphorEye,
   phosphorFloppyDisk,
   phosphorGoogleLogo,
   phosphorIdentificationCard,

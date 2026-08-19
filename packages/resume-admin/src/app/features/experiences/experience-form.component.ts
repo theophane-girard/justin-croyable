@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -20,8 +21,14 @@ import {
   DatePickerComponent,
   InputDirective,
   InputGroupComponent,
+  mergeClasses,
+  MOBILE_SHEET_CONTENT_CLASSES,
+  MOBILE_SHEET_ENTER_CLASSES,
+  PopoverComponent,
+  PopoverDirective,
   SelectImports,
   TextareaComponent,
+  ViewportService,
 } from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
 
@@ -42,6 +49,8 @@ const TYPE_OPTIONS: readonly SelectOption[] = [
 
 const TITLE_MAX_LENGTH = 255;
 
+const PREVIEW_PANEL_PADDING = 'p-4';
+
 function isExperienceType(value: string): value is ExperienceType {
   return value === EXPERIENCE_TYPE.job || value === EXPERIENCE_TYPE.extra;
 }
@@ -57,6 +66,9 @@ function isExperienceType(value: string): value is ExperienceType {
     DatePickerComponent,
     InputDirective,
     InputGroupComponent,
+    NgTemplateOutlet,
+    PopoverComponent,
+    PopoverDirective,
     TextareaComponent,
   ],
   template: `
@@ -144,7 +156,24 @@ function isExperienceType(value: string): value is ExperienceType {
           </div>
 
           <div class="flex flex-col gap-2 md:col-span-2">
-            <label class="text-sm font-medium">Description</label>
+            <div class="flex items-center justify-between gap-2">
+              <label class="text-sm font-medium">Description</label>
+              @if (isMobile()) {
+                <button
+                  appButton
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  appPopover
+                  mobileSheet
+                  placement="top"
+                  [content]="previewPanel"
+                >
+                  <ng-icon name="phosphorEye" class="size-4" />
+                  Aperçu
+                </button>
+              }
+            </div>
             <textarea
               app-textarea
               rows="10"
@@ -155,12 +184,41 @@ function isExperienceType(value: string): value is ExperienceType {
             ></textarea>
             <p class="text-muted-foreground text-xs">
               Contenu riche : le HTML saisi ici est renvoyé tel quel par l'API et rendu par le site
-              CV.
+              CV. L'aperçu est nettoyé par Angular : scripts et attributs de style n'y apparaissent
+              pas.
             </p>
           </div>
         </div>
       </app-card>
+
+      @if (!isMobile()) {
+        <app-card>
+          <div class="flex flex-col gap-2">
+            <p class="text-sm font-medium">Aperçu de la description</p>
+            <div class="max-h-80 overflow-auto">
+              <ng-container [ngTemplateOutlet]="previewBody" />
+            </div>
+          </div>
+        </app-card>
+      }
     </div>
+
+    <ng-template #previewPanel>
+      <app-popover [class]="previewPanelClasses()">
+        <ng-container [ngTemplateOutlet]="previewBody" />
+      </app-popover>
+    </ng-template>
+
+    <ng-template #previewBody>
+      @if (hasDescription()) {
+        <div
+          class="text-foreground text-sm [&_a]:text-primary [&_a]:underline [&_code]:bg-muted [&_code]:rounded [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-xs [&_em]:italic [&_h1]:mb-2 [&_h1]:text-lg [&_h1]:font-semibold [&_h2]:mb-2 [&_h2]:text-base [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:text-sm [&_h3]:font-semibold [&_li]:mb-1 [&_ol]:mb-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_ul]:mb-2 [&_ul]:list-disc [&_ul]:pl-5"
+          [innerHTML]="description()"
+        ></div>
+      } @else {
+        <p class="text-muted-foreground text-sm">Rien à prévisualiser : la description est vide.</p>
+      }
+    </ng-template>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -170,6 +228,8 @@ export class ExperienceFormComponent {
   readonly #store = inject(ExperienceStore);
   readonly #tags = inject(TagStore);
   readonly #router = inject(Router);
+
+  protected readonly isMobile = inject(ViewportService).isMobile;
 
   protected readonly experiencesLink = EXPERIENCES_LINK;
   protected readonly typeOptions = TYPE_OPTIONS;
@@ -184,6 +244,18 @@ export class ExperienceFormComponent {
   protected readonly tagIds = signal<string[]>([]);
 
   protected readonly title = computed(() => (this.id() ? EDIT_TITLE : CREATE_TITLE));
+
+  protected readonly hasDescription = computed(() => this.description().trim() !== '');
+
+  protected readonly previewPanelClasses = computed(() =>
+    this.isMobile()
+      ? mergeClasses(
+          MOBILE_SHEET_CONTENT_CLASSES,
+          MOBILE_SHEET_ENTER_CLASSES,
+          PREVIEW_PANEL_PADDING,
+        )
+      : PREVIEW_PANEL_PADDING,
+  );
 
   protected readonly tagOptions = computed<readonly SelectOption[]>(() =>
     this.#tags
