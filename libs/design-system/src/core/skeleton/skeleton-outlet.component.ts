@@ -15,7 +15,7 @@ import { RouteSkeletonStore } from './route-skeleton.store';
   imports: [NgComponentOutlet],
   template: `
     @if (visible() && component()) {
-      <div class="absolute inset-0 z-10" role="status" aria-live="polite">
+      <div class="bg-background absolute inset-0 z-10" role="status" aria-live="polite">
         <ng-container *ngComponentOutlet="component()" />
       </div>
     }
