@@ -7,6 +7,8 @@ import { type Env } from './config/env';
 
 const GLOBAL_PREFIX = 'api';
 
+const FIREBASE_PREVIEW_ORIGIN = /^https:\/\/justin-croyable-potager--pr-\d+-[a-z0-9]+\.web\.app$/;
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const config = app.get<ConfigService<Env, true>>(ConfigService);
@@ -16,6 +18,7 @@ async function bootstrap() {
     .split(',')
     .map(origin => origin.trim())
     .filter(Boolean);
+  corsOrigins.push(FIREBASE_PREVIEW_ORIGIN);
   const corsOriginRegex = config.get('CORS_ORIGIN_REGEX', { infer: true });
   if (corsOriginRegex) {
     corsOrigins.push(new RegExp(corsOriginRegex));
