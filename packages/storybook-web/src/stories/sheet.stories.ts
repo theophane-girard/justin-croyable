@@ -122,6 +122,35 @@ async function ouvrirPanneau(canvasElement: HTMLElement): Promise<HTMLElement> {
   });
 }
 
+function attendreImage(): Promise<void> {
+  return new Promise(resolve => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+  });
+}
+
+async function glisserVersLeBas(depuis: HTMLElement, distance: number): Promise<void> {
+  const rect = depuis.getBoundingClientRect();
+  const clientX = rect.left + rect.width / 2;
+  const départ = rect.top + 20;
+  const options = (clientY: number) => ({
+    bubbles: true,
+    cancelable: true,
+    clientX,
+    clientY,
+    pointerId: 1,
+    pointerType: 'touch',
+  });
+
+  depuis.dispatchEvent(new PointerEvent('pointerdown', options(départ)));
+  [8, distance / 2, distance].forEach(parcouru =>
+    window.dispatchEvent(new PointerEvent('pointermove', options(départ + parcouru))),
+  );
+
+  await attendreImage();
+
+  window.dispatchEvent(new PointerEvent('pointerup', options(départ + distance)));
+}
+
 async function fermerParAnnuler(): Promise<void> {
   await userEvent.click(within(document.body).getByRole('button', { name: 'Annuler' }));
   await waitFor(() => {
@@ -162,6 +191,35 @@ export const Bottom: Story = {
     expect(panneau.querySelector('app-sheet-handle')).toBeTruthy();
 
     await fermerParAnnuler();
+  },
+};
+
+export const BottomSwipeToDismiss: Story = {
+  args: { side: 'bottom', longContent: true },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Le geste de fermeture part de n'importe où dans le panneau, comme sur les bottom sheets natifs : le panneau ne prend la main que si le contenu est déjà en haut, sinon le contenu défile normalement.",
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const panneau = await ouvrirPanneau(canvasElement);
+    const corps = panneau.querySelector<HTMLElement>('main');
+    if (!corps) {
+      throw new Error('Le corps du panneau est introuvable.');
+    }
+
+    corps.scrollTop = 200;
+    await glisserVersLeBas(corps, 200);
+    expect(document.querySelector('[data-slot="sheet"]')).toBeTruthy();
+
+    corps.scrollTop = 0;
+    await glisserVersLeBas(corps, 200);
+    await waitFor(() => {
+      expect(document.querySelector('[data-slot="sheet"]')).toBeNull();
+    });
   },
 };
 

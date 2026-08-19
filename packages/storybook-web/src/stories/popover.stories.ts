@@ -27,7 +27,7 @@ const meta: Meta<PopoverArgs> = {
     docs: {
       description: {
         component:
-          "`appPopover` est une directive posée sur le déclencheur ; le contenu est un `ng-template` passé via `content`, projeté dans un overlay CDK. `app-popover` n'est que la surface stylée du panneau — utile pour garder le style du DS sur un contenu libre. Sur mobile (< sm), le panneau s'ouvre en bottom sheet ancré en bas — avec une poignée (glisser vers le haut pour agrandir, vers le bas pour fermer), un en-tête optionnel (`sheetHeader`) et des animations d'ouverture/fermeture — au lieu du popover ancré. `[mobileSheet]=\"false\"` sur la directive rétablit le popover ancré partout.",
+          "`appPopover` est une directive posée sur le déclencheur ; le contenu est un `ng-template` passé via `content`, projeté dans un overlay CDK. `app-popover` n'est que la surface stylée du panneau — utile pour garder le style du DS sur un contenu libre. Sur mobile (< sm), le panneau s'ouvre en bottom sheet ancré en bas — avec une poignée (glisser vers le haut pour agrandir) et un geste de fermeture qui part de n'importe où dans le panneau, comme sur mobile natif, un en-tête optionnel (`sheetHeader`) et des animations d'ouverture/fermeture — au lieu du popover ancré. `[mobileSheet]=\"false\"` sur la directive rétablit le popover ancré partout.",
       },
     },
   },
