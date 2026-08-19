@@ -6,7 +6,11 @@ import { createExpenseSchema, expenseSchema, updateExpenseSchema } from './expen
 import { gardenSchema } from './garden/garden.schema';
 import { createHarvestSchema, harvestSchema, updateHarvestSchema } from './harvest/harvest.schema';
 import { createPlantSchema, plantSchema, updatePlantSchema } from './plant/plant.schema';
-import { createVarietySchema, varietySchema } from './variety/variety.schema';
+import {
+  createVarietySchema,
+  updateVarietyPricingSchema,
+  varietySchema,
+} from './variety/variety.schema';
 import { userContract } from './user/user.contract';
 import {
   createVarietyPriceSchema,
@@ -143,6 +147,19 @@ export const varietyContract = contract.router({
     path: '/varieties',
     body: createVarietySchema,
     responses: { 201: varietySchema, 400: errorSchema, 401: errorSchema, 403: errorSchema },
+  },
+  updatePricing: {
+    method: 'PATCH',
+    path: '/varieties/:id/pricing',
+    pathParams: idParamSchema,
+    body: updateVarietyPricingSchema,
+    responses: {
+      200: varietySchema,
+      400: errorSchema,
+      401: errorSchema,
+      403: errorSchema,
+      404: errorSchema,
+    },
   },
   remove: {
     method: 'DELETE',

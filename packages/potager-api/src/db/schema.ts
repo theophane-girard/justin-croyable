@@ -62,6 +62,7 @@ export const varieties = pgTable('varieties', {
   referenceVarietyId: uuid('reference_variety_id').references((): AnyPgColumn => varieties.id, {
     onDelete: 'set null',
   }),
+  pricingFactor: doublePrecision('pricing_factor'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
