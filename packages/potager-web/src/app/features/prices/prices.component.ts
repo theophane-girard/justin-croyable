@@ -32,12 +32,14 @@ import {
   CATEGORY_META,
   type CategoryId,
   CROP_BY_ID,
+  type CropId,
   cropUnit,
   HARVEST_UNIT_META,
   PRICE_ORIGIN,
   type PriceOrigin,
   type PriceRow,
   type Variety,
+  type VarietyId,
 } from '../../core/potager.model';
 import {
   CULTURE_FILTER_ALL,
@@ -70,6 +72,38 @@ const NATURE_TEXT: Readonly<Record<PriceOrigin, string>> = {
   [PRICE_ORIGIN.fallback]: 'Repli',
   [PRICE_ORIGIN.reference]: 'Référence',
 };
+
+function recordOrigin(source: string): PriceOrigin {
+  if (source === PRICE_ORIGIN.rnm) {
+    return PRICE_ORIGIN.rnm;
+  }
+  if (source === PRICE_ORIGIN.manuel) {
+    return PRICE_ORIGIN.manuel;
+  }
+  return PRICE_ORIGIN.reference;
+}
+
+type PriceHistoryRow = {
+  readonly id: string;
+  readonly varietyId: VarietyId;
+  readonly cropId: CropId;
+  readonly cropLabel: string;
+  readonly varietyLabel: string;
+  readonly categoryLabel: string;
+  readonly conventionalPricePerKg: number;
+  readonly bioPricePerKg: number | null;
+  readonly origin: PriceOrigin;
+  readonly sourceLabel: string;
+  readonly effectiveFrom: Date;
+};
+
+const PRICE_SCOPE = { latest: 'latest', all: 'all' } as const;
+type PriceScope = (typeof PRICE_SCOPE)[keyof typeof PRICE_SCOPE];
+
+const SCOPE_ITEMS: SegmentItem[] = [
+  { value: PRICE_SCOPE.latest, label: 'Derniers prix' },
+  { value: PRICE_SCOPE.all, label: 'Tous les prix' },
+];
 
 const CATEGORY_ALL = 'all';
 
@@ -170,6 +204,77 @@ const PRICE_GRID_OPTIONS: GridOptions<PriceRow> = {
   paginationPageSizeSelector: [12, 24, 48],
 };
 
+function formatHistoryPriceCell(params: ValueFormatterParams<PriceHistoryRow, number>): string {
+  return typeof params.value === 'number' && params.data
+    ? `${PRICE_NUMBER_FORMATTER.format(params.value)} ${HARVEST_UNIT_META[cropUnit(params.data.cropId)].priceSuffix}`
+    : '—';
+}
+
+function formatHistoryDateCell(params: ValueFormatterParams<PriceHistoryRow, Date>): string {
+  return params.value instanceof Date ? DATE_FORMATTER.format(params.value) : '—';
+}
+
+const HISTORY_COLUMNS: ColDef<PriceHistoryRow>[] = [
+  {
+    field: 'cropLabel',
+    headerName: 'Culture',
+    minWidth: 130,
+    flex: 1,
+    cellRenderer: TagCellComponent,
+    cellRendererParams: { color: 'primary' },
+  },
+  {
+    field: 'varietyLabel',
+    headerName: 'Variété',
+    minWidth: 170,
+    flex: 1,
+    cellRenderer: TagCellComponent,
+    cellRendererParams: { color: 'info' },
+  },
+  {
+    field: 'categoryLabel',
+    headerName: 'Catégorie',
+    minWidth: 110,
+    cellRenderer: TagCellComponent,
+    cellRendererParams: { color: CATEGORY_TAG_COLOR },
+  },
+  {
+    field: 'conventionalPricePerKg',
+    headerName: 'Prix conv.',
+    type: 'numericColumn',
+    minWidth: 130,
+    valueFormatter: formatHistoryPriceCell,
+  },
+  {
+    field: 'bioPricePerKg',
+    headerName: 'Prix bio',
+    type: 'numericColumn',
+    minWidth: 120,
+    valueFormatter: formatHistoryPriceCell,
+  },
+  {
+    field: 'sourceLabel',
+    headerName: 'Source',
+    minWidth: 130,
+    cellRenderer: TagCellComponent,
+    cellRendererParams: {
+      color: (params: ICellRendererParams<PriceHistoryRow>) => priceOriginTagColor(params.data?.origin),
+    },
+  },
+  {
+    field: 'effectiveFrom',
+    headerName: 'Date effective',
+    minWidth: 150,
+    valueFormatter: formatHistoryDateCell,
+  },
+];
+
+const HISTORY_GRID_OPTIONS: GridOptions<PriceHistoryRow> = {
+  pagination: true,
+  paginationPageSize: 12,
+  paginationPageSizeSelector: [12, 24, 48],
+};
+
 function parsePositive(raw: string): number | null {
   const parsed = Number.parseFloat(raw.replace(',', '.'));
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
@@ -209,16 +314,18 @@ function parsePositive(raw: string): number | null {
               <ng-icon name="phosphorCloudArrowDown" class="size-4" />
               Rafraîchir (RNM)
             </button>
-            <button
-              appButton
-              variant="outline"
-              size="sm"
-              [buttonDisabled]="!canEditSelection()"
-              (click)="openEditor()"
-            >
-              <ng-icon name="phosphorPencilSimple" class="size-4" />
-              Éditer
-            </button>
+            @if (!showHistory()) {
+              <button
+                appButton
+                variant="outline"
+                size="sm"
+                [buttonDisabled]="!canEditSelection()"
+                (click)="openEditor()"
+              >
+                <ng-icon name="phosphorPencilSimple" class="size-4" />
+                Éditer
+              </button>
+            }
           }
           <button appButton variant="outline" size="sm" (click)="openFilter()">
             <ng-icon name="phosphorFunnel" class="size-4" />
@@ -231,13 +338,30 @@ function parsePositive(raw: string): number | null {
         <p class="text-destructive text-sm">{{ refreshError() }}</p>
       }
 
-      <app-table
-        [rowData]="displayedRows()"
-        [columnDefs]="columns"
-        [gridOptions]="gridOptions"
-        (rowSelected)="onRowSelected($event)"
-        height="32rem"
+      <app-segment
+        class="self-start"
+        variant="accent"
+        [items]="scopeItems"
+        [value]="scope()"
+        (valueChange)="onScopeChange($event)"
       />
+
+      @if (showHistory()) {
+        <app-table
+          [rowData]="displayedHistoryRows()"
+          [columnDefs]="historyColumns"
+          [gridOptions]="historyGridOptions"
+          height="32rem"
+        />
+      } @else {
+        <app-table
+          [rowData]="displayedRows()"
+          [columnDefs]="columns"
+          [gridOptions]="gridOptions"
+          (rowSelected)="onRowSelected($event)"
+          height="32rem"
+        />
+      }
     </div>
 
     <ng-template #filterSheet>
@@ -367,14 +491,18 @@ export class PricesComponent {
 
   protected readonly columns = PRICE_COLUMNS;
   protected readonly gridOptions = PRICE_GRID_OPTIONS;
+  protected readonly historyColumns = HISTORY_COLUMNS;
+  protected readonly historyGridOptions = HISTORY_GRID_OPTIONS;
   protected readonly categoryItems = CATEGORY_ITEMS;
   protected readonly editModeItems = EDIT_MODE_ITEMS;
+  protected readonly scopeItems = SCOPE_ITEMS;
   protected readonly cultureOptions = CULTURE_FILTER_OPTIONS;
   protected readonly isAdmin = this.#users.isAdmin;
 
   protected readonly categoryFilter = signal<CategoryId | null>(null);
   protected readonly cultureFilter = signal<string>(CULTURE_FILTER_ALL);
   protected readonly varietyFilter = signal<string>(VARIETY_FILTER_ALL);
+  protected readonly scope = signal<PriceScope>(PRICE_SCOPE.latest);
 
   protected readonly refreshing = signal(false);
   protected readonly refreshError = signal<string | null>(null);
@@ -388,6 +516,7 @@ export class PricesComponent {
   protected readonly editBioInput = signal<string>('');
 
   protected readonly categoryValue = computed(() => this.categoryFilter() ?? CATEGORY_ALL);
+  protected readonly showHistory = computed(() => this.scope() === PRICE_SCOPE.all);
   protected readonly varietyOptions = computed(() =>
     varietyFilterOptions(this.cultureFilter(), this.#catalog.varieties()),
   );
@@ -406,18 +535,38 @@ export class PricesComponent {
       .sort((a, b) => a.cropLabel.localeCompare(b.cropLabel, 'fr')),
   );
 
-  protected readonly displayedRows = computed<PriceRow[]>(() => {
+  protected readonly historyRows = computed<PriceHistoryRow[]>(() => {
+    const byId = this.#catalog.byId();
+    return this.#prices
+      .prices()
+      .map(price => this.#toHistoryRow(price, byId))
+      .filter((row): row is PriceHistoryRow => row !== null)
+      .sort(
+        (a, b) =>
+          a.cropLabel.localeCompare(b.cropLabel, 'fr') ||
+          a.varietyLabel.localeCompare(b.varietyLabel, 'fr') ||
+          b.effectiveFrom.getTime() - a.effectiveFrom.getTime(),
+      );
+  });
+
+  readonly #matchesFilters = computed(() => {
     const category = this.categoryFilter();
     const categoryLabel = category ? CATEGORY_META[category].label : null;
     const culture = this.cultureFilter();
     const variety = this.varietyFilter();
-    return this.rows().filter(
-      row =>
-        (categoryLabel === null || row.categoryLabel === categoryLabel) &&
-        (culture === CULTURE_FILTER_ALL || row.cropId === culture) &&
-        (variety === VARIETY_FILTER_ALL || row.varietyId === variety),
-    );
+    return (row: { categoryLabel: string; cropId: string; varietyId: string }): boolean =>
+      (categoryLabel === null || row.categoryLabel === categoryLabel) &&
+      (culture === CULTURE_FILTER_ALL || row.cropId === culture) &&
+      (variety === VARIETY_FILTER_ALL || row.varietyId === variety);
   });
+
+  protected readonly displayedRows = computed<PriceRow[]>(() =>
+    this.rows().filter(this.#matchesFilters()),
+  );
+
+  protected readonly displayedHistoryRows = computed<PriceHistoryRow[]>(() =>
+    this.historyRows().filter(this.#matchesFilters()),
+  );
 
   protected onRowSelected(event: RowSelectedEvent<PriceRow>): void {
     const row = event.data;
@@ -539,6 +688,12 @@ export class PricesComponent {
     this.editBioInput.set((event.target as HTMLInputElement).value);
   }
 
+  protected onScopeChange(value: string | null): void {
+    if (value === PRICE_SCOPE.latest || value === PRICE_SCOPE.all) {
+      this.scope.set(value);
+    }
+  }
+
   protected onCategoryChange(value: string | null): void {
     if (value === CATEGORY_ALL || value === null) {
       this.categoryFilter.set(null);
@@ -592,6 +747,31 @@ export class PricesComponent {
       natureLabel: this.#natureLabel(current),
       editable: origin !== PRICE_ORIGIN.rnm,
       priceDate: current ? new Date(current.price.effectiveFrom) : null,
+    };
+  }
+
+  #toHistoryRow(
+    price: { id: string; varietyId: string; conventionalPricePerKg: number; bioPricePerKg: number | null; source: string; effectiveFrom: string },
+    byId: ReadonlyMap<VarietyId, Variety>,
+  ): PriceHistoryRow | null {
+    const variety = byId.get(price.varietyId);
+    if (!variety) {
+      return null;
+    }
+    const crop = CROP_BY_ID[variety.cropId];
+    const origin = recordOrigin(price.source);
+    return {
+      id: price.id,
+      varietyId: price.varietyId,
+      cropId: variety.cropId,
+      cropLabel: crop.label,
+      varietyLabel: variety.label,
+      categoryLabel: CATEGORY_META[crop.category].label,
+      conventionalPricePerKg: price.conventionalPricePerKg,
+      bioPricePerKg: price.bioPricePerKg,
+      origin,
+      sourceLabel: NATURE_TEXT[origin],
+      effectiveFrom: new Date(price.effectiveFrom),
     };
   }
 
