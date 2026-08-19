@@ -167,9 +167,17 @@ export class SheetHandleComponent {
       return true;
     }
     if (deltaY < 0) {
-      return false;
+      return !this.#isAtMaxHeight();
     }
     return (this.#scrollContainer?.scrollTop ?? 0) <= 0;
+  }
+
+  #expandedHeight(): number {
+    return Math.round(window.innerHeight * EXPANDED_VIEWPORT_RATIO);
+  }
+
+  #isAtMaxHeight(): boolean {
+    return this.sheetElement().getBoundingClientRect().height >= this.#expandedHeight() - 1;
   }
 
   #engage(event: PointerEvent): void {
@@ -178,7 +186,7 @@ export class SheetHandleComponent {
     this.#engaged = true;
     this.#startY = event.clientY;
     this.#startHeight = sheet.getBoundingClientRect().height;
-    this.#maxExpandedPx = Math.round(window.innerHeight * EXPANDED_VIEWPORT_RATIO);
+    this.#maxExpandedPx = this.#expandedHeight();
     this.#pendingTranslate = 0;
     this.#pendingHeight = this.#startHeight;
     this.#grew = false;
@@ -262,7 +270,7 @@ export class SheetHandleComponent {
       return;
     }
 
-    if (this.#grew && this.#pendingHeight - this.#startHeight > EXPAND_TRAVEL_THRESHOLD_PX) {
+    if (this.#shouldExpand()) {
       this.#snapExpanded();
       return;
     }
@@ -277,6 +285,18 @@ export class SheetHandleComponent {
     return (
       this.#velocity > FLICK_VELOCITY_PX_PER_MS && this.#pendingTranslate > FLICK_MIN_TRAVEL_PX
     );
+  }
+
+  #shouldExpand(): boolean {
+    if (!this.#grew) {
+      return false;
+    }
+
+    const gained = this.#pendingHeight - this.#startHeight;
+    if (gained > EXPAND_TRAVEL_THRESHOLD_PX) {
+      return true;
+    }
+    return this.#velocity < -FLICK_VELOCITY_PX_PER_MS && gained > FLICK_MIN_TRAVEL_PX;
   }
 
   #snapExpanded(): void {

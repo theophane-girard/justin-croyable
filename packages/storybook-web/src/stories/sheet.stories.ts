@@ -128,10 +128,11 @@ function attendreImage(): Promise<void> {
   });
 }
 
-async function glisserVersLeBas(depuis: HTMLElement, distance: number): Promise<void> {
+async function glisser(depuis: HTMLElement, distance: number): Promise<void> {
   const rect = depuis.getBoundingClientRect();
   const clientX = rect.left + rect.width / 2;
-  const départ = rect.top + 20;
+  const départ = rect.top + rect.height / 2;
+  const sens = Math.sign(distance);
   const options = (clientY: number) => ({
     bubbles: true,
     cancelable: true,
@@ -142,7 +143,7 @@ async function glisserVersLeBas(depuis: HTMLElement, distance: number): Promise<
   });
 
   depuis.dispatchEvent(new PointerEvent('pointerdown', options(départ)));
-  [8, distance / 2, distance].forEach(parcouru =>
+  [8 * sens, distance / 2, distance].forEach(parcouru =>
     window.dispatchEvent(new PointerEvent('pointermove', options(départ + parcouru))),
   );
 
@@ -194,6 +195,35 @@ export const Bottom: Story = {
   },
 };
 
+export const BottomSwipeToExpand: Story = {
+  args: { side: 'bottom', longContent: true },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Un glissé vers le haut agrandit le panneau, où qu'il commence, tant que le panneau n'est pas déjà déployé — une fois déployé, le même geste défile le contenu.",
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const panneau = await ouvrirPanneau(canvasElement);
+    const corps = panneau.querySelector<HTMLElement>('main');
+    if (!corps) {
+      throw new Error('Le corps du panneau est introuvable.');
+    }
+
+    const hauteurInitiale = panneau.getBoundingClientRect().height;
+
+    corps.scrollTop = 0;
+    await glisser(corps, -260);
+    await waitFor(() => {
+      expect(panneau.getBoundingClientRect().height).toBeGreaterThan(hauteurInitiale);
+    });
+
+    await fermerParAnnuler();
+  },
+};
+
 export const BottomSwipeToDismiss: Story = {
   args: { side: 'bottom', longContent: true },
   parameters: {
@@ -212,11 +242,11 @@ export const BottomSwipeToDismiss: Story = {
     }
 
     corps.scrollTop = 200;
-    await glisserVersLeBas(corps, 200);
+    await glisser(corps, 200);
     expect(document.querySelector('[data-slot="sheet"]')).toBeTruthy();
 
     corps.scrollTop = 0;
-    await glisserVersLeBas(corps, 200);
+    await glisser(corps, 200);
     await waitFor(() => {
       expect(document.querySelector('[data-slot="sheet"]')).toBeNull();
     });
