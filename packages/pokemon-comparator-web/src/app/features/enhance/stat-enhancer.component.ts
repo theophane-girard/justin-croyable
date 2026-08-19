@@ -179,6 +179,7 @@ export class StatEnhancerComponent {
       }, {} as Record<number, TargetDraft>),
     );
     this.#store.resetEnhanceConfigs(ids);
+    this.#store.setEnhanceAllConfig(null);
   }
 
   #updateDraft(id: number, updater: (entry: TargetDraft) => TargetDraft): void {
@@ -204,5 +205,12 @@ export class StatEnhancerComponent {
       configs.set(target.id, { level100: true, nature: entry.nature, evs: entry.evs });
     });
     this.#store.setEnhanceConfigs(configs);
+
+    if (!this.isMulti()) {
+      return;
+    }
+    const firstTargetId = this.targets()[0]?.id;
+    const sharedConfig = firstTargetId === undefined ? undefined : configs.get(firstTargetId);
+    this.#store.setEnhanceAllConfig(this.applyToAll() && sharedConfig ? sharedConfig : null);
   }
 }

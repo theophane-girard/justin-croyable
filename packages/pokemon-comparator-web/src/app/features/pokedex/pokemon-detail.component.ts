@@ -28,9 +28,13 @@ import { ComparatorStore } from '../../core/comparator-store';
 import { APP_PATHS } from '../../app.routes';
 import {
   EMPTY_DETAIL,
+  MOVE_EFFECTS_QUERY,
+  type MoveEffectInfo,
   POKEAPI_GRAPHQL_URL,
   POKEMON_DETAIL_QUERY,
   type PokemonAbility,
+  type PokemonMove,
+  parseMoveEffects,
   parsePokemonDetail,
 } from '../../core/pokemon-detail';
 import {
@@ -48,7 +52,13 @@ import {
   enhancedStatScaleMax,
   statsTotal,
 } from '../../core/pokemon-stats';
-import { typeBarClass, typeLabels, typeTileClass } from '../../core/pokemon-type';
+import {
+  typeBarClass,
+  typeLabels,
+  typeTileClass,
+  type TypeMatchup,
+  typeWeaknesses,
+} from '../../core/pokemon-type';
 import {
   CONFIG_PARAM_PREFIX,
   decodeEnhanceConfig,
@@ -85,6 +95,7 @@ interface DetailView {
   readonly barClass: string;
   readonly types: readonly string[];
   readonly info: readonly InfoTag[];
+  readonly weaknesses: readonly TypeMatchup[];
   readonly stats: readonly StatRow[];
   readonly total: number;
 }
@@ -102,6 +113,7 @@ function toDetail(pokemon: Pokemon, config: EnhanceConfig): DetailView {
     headerClass: typeTileClass(pokemon.types[0]),
     barClass: typeBarClass(pokemon.types[0]),
     types: typeLabels(pokemon.types),
+    weaknesses: typeWeaknesses(pokemon.types),
     info: [
       { label: `Stade : ${EVOLUTION_STAGE_LABEL[pokemon.stage]}`, class: TAG_STAGE },
       pokemon.legendary
@@ -193,6 +205,27 @@ function toDetail(pokemon: Pokemon, config: EnhanceConfig): DetailView {
                         <app-badge type="secondary" [class]="tag.class">{{ tag.label }}</app-badge>
                       }
                     </div>
+                  </section>
+
+                  <section class="flex flex-col gap-2">
+                    <h3 class="text-foreground text-sm font-semibold">Faiblesses</h3>
+                    @if (view.weaknesses.length === 0) {
+                      <span class="text-muted-foreground text-sm">
+                        Aucune faiblesse de type particulière.
+                      </span>
+                    } @else {
+                      <div class="flex flex-wrap gap-2">
+                        @for (weakness of view.weaknesses; track weakness.type) {
+                          <span
+                            [class]="weakness.tileClass"
+                            class="flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium"
+                          >
+                            {{ weakness.label }}
+                            <span class="font-bold tabular-nums">×{{ weakness.multiplier }}</span>
+                          </span>
+                        }
+                      </div>
+                    }
                   </section>
 
                   <section class="flex flex-col gap-2">
@@ -377,8 +410,32 @@ export class PokemonDetailComponent {
     { parse: parsePokemonDetail, defaultValue: EMPTY_DETAIL },
   );
 
+  readonly #moveEffectsResource = httpResource<ReadonlyMap<string, MoveEffectInfo>>(
+    () => {
+      const slugs = this.#detailResource.value().moves.map(move => move.slug);
+      return slugs.length > 0
+        ? {
+            url: POKEAPI_GRAPHQL_URL,
+            method: 'POST',
+            body: { query: MOVE_EFFECTS_QUERY, variables: { moves: slugs } },
+          }
+        : undefined;
+    },
+    { parse: parseMoveEffects, defaultValue: new Map<string, MoveEffectInfo>() },
+  );
+
   protected readonly abilities = computed(() => this.#detailResource.value().abilities);
-  protected readonly moves = computed(() => this.#detailResource.value().moves);
+  protected readonly moves = computed<readonly PokemonMove[]>(() => {
+    const effects = this.#moveEffectsResource.value();
+    return this.#detailResource.value().moves.map(move => {
+      const info = effects.get(move.slug);
+      return {
+        ...move,
+        description: info?.flavor || move.description,
+        effect: info?.effect || move.effect,
+      };
+    });
+  });
   protected readonly detailLoading = this.#detailResource.isLoading;
 
   protected add(id: number): void {

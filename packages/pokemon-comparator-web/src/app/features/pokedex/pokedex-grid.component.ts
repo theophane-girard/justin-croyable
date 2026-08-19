@@ -1,4 +1,5 @@
 import { ScrollingModule } from '@angular/cdk/scrolling';
+import { httpResource } from '@angular/common/http';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
@@ -37,6 +38,12 @@ import {
 import { NgIcon } from '@ng-icons/core';
 
 import { type Ability } from '../../core/pokemon-ability';
+import {
+  type MoveOption,
+  MOVE_LEARNERS_QUERY,
+  parseMoveLearners,
+  POKEAPI_GRAPHQL_URL,
+} from '../../core/pokemon-move-filter';
 import { searchPokemons } from '../../core/pokemon-search';
 import {
   LANG,
@@ -343,6 +350,30 @@ function toTile(pokemon: Pokemon): PokedexTile {
           </app-select>
         </section>
 
+        <section class="flex flex-col gap-2">
+          <h3 class="text-sm font-semibold">Attaques apprises</h3>
+          <app-select
+            [multiple]="true"
+            withSearch
+            class="w-full"
+            placeholder="Filtrer par attaques apprises"
+            searchPlaceholder="Rechercher une attaque (toutes langues)"
+            emptyText="Aucune attaque trouvée."
+            [maxLabelCount]="2"
+            [value]="selectedMoves()"
+            (selectionChange)="onMovesChange($event)"
+          >
+            @for (move of moves(); track move.slug) {
+              <app-select-item [value]="move.slug" [searchKeywords]="move.searchText">
+                {{ move.label }}
+              </app-select-item>
+            }
+          </app-select>
+          <p class="text-muted-foreground text-xs">
+            Affiche les Pokémon qui apprennent toutes les attaques sélectionnées.
+          </p>
+        </section>
+
         <div class="flex items-center justify-between gap-2">
           <span class="text-muted-foreground text-sm">{{ tiles().length }} résultat(s)</span>
           <button appButton type="button" variant="ghost" size="sm" (click)="resetFilters()">
@@ -391,6 +422,7 @@ function toTile(pokemon: Pokemon): PokedexTile {
 export class PokedexGridComponent {
   readonly pokemons = input.required<readonly Pokemon[]>();
   readonly abilities = input<readonly Ability[]>([]);
+  readonly moves = input<readonly MoveOption[]>([]);
   readonly excludedIds = input<ReadonlySet<number>>(new Set<number>());
   readonly disabledPicking = input<boolean>(false);
   readonly disabledHint = input<string>('');
@@ -425,6 +457,7 @@ export class PokedexGridComponent {
     mega: enumFilter(MEGA_VALUES, ALL),
     ultra: enumFilter(ULTRA_BEAST_VALUES, ALL),
     abilities: arrayFilter(),
+    moves: arrayFilter(),
     sort: enumFilter(SORT_VALUES, DEFAULT_SORT_FIELD),
     dir: enumFilter(DIRECTION_VALUES, DEFAULT_SORT_DIRECTION),
   });
@@ -436,6 +469,7 @@ export class PokedexGridComponent {
   readonly #megaFilter = signal<string>(ALL);
   readonly #ultraBeastFilter = signal<string>(ALL);
   readonly #selectedAbilities = signal<string[]>([]);
+  readonly #selectedMoves = signal<string[]>([]);
   readonly #sortField = signal<string>(DEFAULT_SORT_FIELD);
   readonly #sortDirection = signal<string>(DEFAULT_SORT_DIRECTION);
   readonly #resetKey = signal(0);
@@ -467,12 +501,31 @@ export class PokedexGridComponent {
     this.syncUrl() ? this.#url.abilities() : this.#selectedAbilities(),
   );
   protected readonly selectedAbilities = computed<string[]>(() => [...this.#effectiveAbilities()]);
+  readonly #effectiveMoves = computed<readonly string[]>(() =>
+    this.syncUrl() ? this.#url.moves() : this.#selectedMoves(),
+  );
+  protected readonly selectedMoves = computed<string[]>(() => [...this.#effectiveMoves()]);
   protected readonly resetKeys = computed(() => [this.#resetKey()]);
+
+  readonly #moveLearners = httpResource<ReadonlySet<number> | null>(
+    () => {
+      const moves = this.#effectiveMoves();
+      return moves.length > 0
+        ? {
+            url: POKEAPI_GRAPHQL_URL,
+            method: 'POST',
+            body: { query: MOVE_LEARNERS_QUERY, variables: { moves: [...moves] } },
+          }
+        : undefined;
+    },
+    { parse: parseMoveLearners, defaultValue: null },
+  );
 
   protected readonly activeFilterCount = computed(
     () =>
       this.selectedTypes().length +
       this.#effectiveAbilities().length +
+      this.#effectiveMoves().length +
       (this.stageFilter() !== ALL ? 1 : 0) +
       (this.legendaryFilter() !== ALL ? 1 : 0) +
       (this.megaFilter() !== ALL ? 1 : 0) +
@@ -500,6 +553,7 @@ export class PokedexGridComponent {
     const mega = this.megaFilter();
     const ultraBeast = this.ultraBeastFilter();
     const abilities = new Set(this.#effectiveAbilities());
+    const moveLearnerIds = this.#effectiveMoves().length > 0 ? this.#moveLearners.value() : null;
 
     const filtered = this.pokemons()
       .filter(pokemon => !excluded.has(pokemon.id))
@@ -519,7 +573,8 @@ export class PokedexGridComponent {
       .filter(
         pokemon =>
           abilities.size === 0 || pokemon.abilitySlugs.some(slug => abilities.has(slug)),
-      );
+      )
+      .filter(pokemon => moveLearnerIds === null || moveLearnerIds.has(pokemon.id));
 
     const query = this.query();
     if (query.trim()) {
@@ -652,6 +707,15 @@ export class PokedexGridComponent {
     this.#selectedAbilities.set(abilities);
   }
 
+  protected onMovesChange(value: string | string[]): void {
+    const moves = asArray(value);
+    if (this.syncUrl()) {
+      this.#url.set('moves', moves);
+      return;
+    }
+    this.#selectedMoves.set(moves);
+  }
+
   protected onSortFieldChange(value: string | string[]): void {
     const field = asArray(value)[0] ?? DEFAULT_SORT_FIELD;
     if (this.syncUrl()) {
@@ -672,7 +736,15 @@ export class PokedexGridComponent {
 
   protected resetFilters(): void {
     if (this.syncUrl()) {
-      this.#url.patch({ types: [], stage: ALL, legendary: ALL, mega: ALL, ultra: ALL, abilities: [] });
+      this.#url.patch({
+        types: [],
+        stage: ALL,
+        legendary: ALL,
+        mega: ALL,
+        ultra: ALL,
+        abilities: [],
+        moves: [],
+      });
     } else {
       this.#selectedTypes.set([]);
       this.#stageFilter.set(ALL);
@@ -680,6 +752,7 @@ export class PokedexGridComponent {
       this.#megaFilter.set(ALL);
       this.#ultraBeastFilter.set(ALL);
       this.#selectedAbilities.set([]);
+      this.#selectedMoves.set([]);
     }
     this.#resetKey.update(key => key + 1);
   }
@@ -703,6 +776,7 @@ export class PokedexGridComponent {
         mega: ALL,
         ultra: ALL,
         abilities: [],
+        moves: [],
         sort: DEFAULT_SORT_FIELD,
         dir: DEFAULT_SORT_DIRECTION,
       });
@@ -713,6 +787,7 @@ export class PokedexGridComponent {
       this.#megaFilter.set(ALL);
       this.#ultraBeastFilter.set(ALL);
       this.#selectedAbilities.set([]);
+      this.#selectedMoves.set([]);
       this.#sortField.set(DEFAULT_SORT_FIELD);
       this.#sortDirection.set(DEFAULT_SORT_DIRECTION);
     }

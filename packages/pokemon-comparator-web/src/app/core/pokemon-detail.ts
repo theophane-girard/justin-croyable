@@ -8,9 +8,13 @@ export interface PokemonAbility {
 
 export interface PokemonMove {
   readonly name: string;
+  readonly slug: string;
   readonly power: number | null;
+  readonly accuracy: number | null;
   readonly type: string;
   readonly damageClass: string;
+  readonly description: string;
+  readonly effect: string;
 }
 
 export interface PokemonDetailData {
@@ -42,6 +46,7 @@ query PokemonDetail($id: Int!) {
       move {
         name
         power
+        accuracy
         movenames(where: { language: { name: { _in: ["fr", "en"] } } }) {
           name
           language { name }
@@ -77,6 +82,7 @@ interface RawMove {
   readonly move: {
     readonly name: string;
     readonly power: number | null;
+    readonly accuracy: number | null;
     readonly movenames: readonly LocalizedName[];
     readonly type: { readonly name: string } | null;
     readonly movedamageclass: { readonly name: string } | null;
@@ -125,10 +131,90 @@ export function parsePokemonDetail(value: unknown): PokemonDetailData {
     .filter((entry): entry is RawMove & { move: NonNullable<RawMove['move']> } => entry.move !== null)
     .map(entry => ({
       name: pickName(entry.move.movenames, entry.move.name),
+      slug: entry.move.name,
       power: entry.move.power,
+      accuracy: entry.move.accuracy,
       type: entry.move.type?.name ?? '',
       damageClass: entry.move.movedamageclass?.name ?? '',
+      description: '',
+      effect: '',
     }));
 
   return { abilities, moves };
+}
+
+const FRENCH_LANGUAGE_ID = 5;
+const ENGLISH_LANGUAGE_ID = 9;
+
+export const MOVE_EFFECTS_QUERY = `
+query PokemonComparatorMoveEffects($moves: [String!]!) {
+  move(where: { name: { _in: $moves } }) {
+    name
+    move_effect_chance
+    moveflavortexts(
+      where: { language_id: { _eq: ${FRENCH_LANGUAGE_ID} } }
+      order_by: { version_group_id: desc }
+      limit: 1
+    ) {
+      flavor_text
+    }
+    moveeffect {
+      moveeffecteffecttexts(where: { language_id: { _eq: ${ENGLISH_LANGUAGE_ID} } }) {
+        short_effect
+        effect
+      }
+    }
+  }
+}`;
+
+interface RawMoveEffectText {
+  readonly short_effect: string | null;
+  readonly effect: string | null;
+}
+
+interface RawMoveFlavor {
+  readonly flavor_text: string | null;
+}
+
+interface RawMoveEffect {
+  readonly name: string;
+  readonly move_effect_chance: number | null;
+  readonly moveflavortexts: readonly RawMoveFlavor[];
+  readonly moveeffect: { readonly moveeffecteffecttexts: readonly RawMoveEffectText[] } | null;
+}
+
+interface MoveEffectsResponse {
+  readonly data?: { readonly move?: readonly RawMoveEffect[] };
+}
+
+export interface MoveEffectInfo {
+  readonly flavor: string;
+  readonly effect: string;
+}
+
+function normalizeWhitespace(text: string): string {
+  return text.replace(/\s+/g, ' ').trim();
+}
+
+function moveEffectInfo(move: RawMoveEffect): MoveEffectInfo {
+  const flavor = move.moveflavortexts[0]?.flavor_text ?? '';
+  const technical = move.moveeffect?.moveeffecteffecttexts?.[0];
+  const rawEffect = technical?.short_effect ?? technical?.effect ?? '';
+  const chance = move.move_effect_chance != null ? String(move.move_effect_chance) : '';
+  return {
+    flavor: normalizeWhitespace(flavor),
+    effect: normalizeWhitespace(rawEffect.replace(/\$effect_chance/g, chance)),
+  };
+}
+
+export function parseMoveEffects(value: unknown): ReadonlyMap<string, MoveEffectInfo> {
+  const moves = (value as MoveEffectsResponse).data?.move ?? [];
+  const effects = new Map<string, MoveEffectInfo>();
+  moves.forEach(move => {
+    const info = moveEffectInfo(move);
+    if (info.flavor || info.effect) {
+      effects.set(move.name, info);
+    }
+  });
+  return effects;
 }
