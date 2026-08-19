@@ -1,15 +1,19 @@
 # Déploiement du front (Firebase Hosting)
 
-Le workflow [`/.github/workflows/deploy-web.yml`](../.github/workflows/deploy-web.yml)
-build `potager-web` en configuration `production` et le déploie sur Firebase
-Hosting (site `justin-croyable-potager`) :
+Le workflow [`/.github/workflows/ci.yml`](../.github/workflows/ci.yml) build
+`potager-web` en configuration `production` dans le job **Vérifications et
+builds**, puis le job **Déploiement de l'app potager** publie ce build sur
+Firebase Hosting (site `justin-croyable-potager`) :
 
 - **push sur `master`** → déploiement sur le canal **live** (production).
 - **pull request** → **canal de prévisualisation** `pr-<n>` avec une URL
   temporaire (expire au bout de 7 jours), commentée automatiquement sur la PR.
 
-Tant que le secret `FIREBASE_SERVICE_ACCOUNT` n'est pas configuré, **le job
-reste vert et ne déploie rien** (même garde que le déploiement backend).
+Tant que le secret `FIREBASE_SERVICE_ACCOUNT` n'est pas configuré, **le job de
+déploiement est simplement ignoré** (même garde que le déploiement backend).
+
+Le déploiement dépend (`needs`) du job de vérifications : si le typecheck, le
+lint ou les tests échouent, **rien n'est déployé**.
 
 ## URL de l'API
 

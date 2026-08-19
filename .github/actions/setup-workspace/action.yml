@@ -1,0 +1,36 @@
+name: Setup workspace
+description: >
+  Prépare le runner pour une commande nx : Node, cache npm, dépendances, et
+  optionnellement les SHAs de base consommés par `nx affected`.
+
+inputs:
+  nx-shas:
+    description: >
+      Pose NX_BASE / NX_HEAD via nrwl/nx-set-shas. Requiert un checkout en
+      fetch-depth 0 et la permission `actions: read` sur le job.
+    required: false
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    # La version de Node du monorepo est définie ICI et nulle part ailleurs :
+    # c'est tout l'intérêt de cette action. `cache: 'npm'` met en cache ~/.npm
+    # (les tarballs), pas node_modules — chaque job réinstalle, mais sans réseau.
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+        cache: 'npm'
+
+    # Calcule NX_BASE / NX_HEAD consommés par `nx affected` : base de la PR, ou
+    # dernier run réussi sur master pour un push.
+    - name: SHAs de base pour nx affected
+      if: inputs.nx-shas == 'true'
+      uses: nrwl/nx-set-shas@v4
+      with:
+        main-branch-name: master
+
+    - name: Install dependencies
+      shell: bash
+      run: npm ci

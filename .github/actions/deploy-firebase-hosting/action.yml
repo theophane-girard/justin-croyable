@@ -1,0 +1,56 @@
+name: Déploiement Firebase Hosting
+description: >
+  Récupère le build produit par le job de vérification et le publie sur la cible
+  Firebase demandée : canal live sur un push master, canal de prévisualisation
+  sur une pull request.
+
+inputs:
+  target:
+    description: Cible de hosting déclarée dans .firebaserc (storybook, potager, pokemon).
+    required: true
+  artifact:
+    description: Nom de l'artefact contenant le build.
+    required: true
+  path:
+    description: Chemin où restaurer l'artefact, tel qu'attendu par firebase.json.
+    required: true
+  project-id:
+    description: Identifiant du projet Firebase.
+    required: true
+  service-account:
+    description: Contenu du secret FIREBASE_SERVICE_ACCOUNT.
+    required: true
+  repo-token:
+    description: GITHUB_TOKEN, utilisé pour commenter l'URL de prévisualisation sur la PR.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    # Le build vient du job `verify` : rien n'est recompilé ici, et ce job n'a
+    # donc besoin ni de Node ni de node_modules.
+    - name: Récupération du build
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.artifact }}
+        path: ${{ inputs.path }}
+
+    - name: Publication sur le canal live
+      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      uses: FirebaseExtended/action-hosting-deploy@v0
+      with:
+        repoToken: ${{ inputs.repo-token }}
+        firebaseServiceAccount: ${{ inputs.service-account }}
+        projectId: ${{ inputs.project-id }}
+        target: ${{ inputs.target }}
+        channelId: live
+
+    - name: Publication sur un canal de prévisualisation
+      if: github.event_name == 'pull_request'
+      uses: FirebaseExtended/action-hosting-deploy@v0
+      with:
+        repoToken: ${{ inputs.repo-token }}
+        firebaseServiceAccount: ${{ inputs.service-account }}
+        projectId: ${{ inputs.project-id }}
+        target: ${{ inputs.target }}
+        expires: 7d

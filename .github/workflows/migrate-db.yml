@@ -41,16 +41,13 @@ jobs:
         if: steps.db.outputs.ready == 'true'
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      # `nx-shas: false` : ce workflow ne fait pas de `nx affected`, il n'a donc
+      # besoin ni de l'historique complet ni de la permission `actions: read`.
+      - name: Préparation du workspace
         if: steps.db.outputs.ready == 'true'
-        uses: actions/setup-node@v4
+        uses: ./.github/actions/setup-workspace
         with:
-          node-version: '22'
-          cache: 'npm'
-
-      - name: Install dependencies
-        if: steps.db.outputs.ready == 'true'
-        run: npm ci
+          nx-shas: 'false'
 
       - name: Migrations Drizzle
         if: steps.db.outputs.ready == 'true'
