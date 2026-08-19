@@ -12,6 +12,8 @@ type PopoverArgs = {
   placement: PopoverPlacement;
   trigger: PopoverTrigger;
   overlayClickable: boolean;
+  mobileSheet: boolean;
+  sheetHeader: string;
 };
 
 const meta: Meta<PopoverArgs> = {
@@ -25,7 +27,7 @@ const meta: Meta<PopoverArgs> = {
     docs: {
       description: {
         component:
-          "`appPopover` est une directive posée sur le déclencheur ; le contenu est un `ng-template` passé via `content`, projeté dans un overlay CDK. `app-popover` n'est que la surface stylée du panneau — utile pour garder le style du DS sur un contenu libre.",
+          "`appPopover` est une directive posée sur le déclencheur ; le contenu est un `ng-template` passé via `content`, projeté dans un overlay CDK. `app-popover` n'est que la surface stylée du panneau — utile pour garder le style du DS sur un contenu libre. Sur mobile (< sm), le panneau s'ouvre en bottom sheet ancré en bas — avec une poignée (glisser vers le haut pour agrandir, vers le bas pour fermer), un en-tête optionnel (`sheetHeader`) et des animations d'ouverture/fermeture — au lieu du popover ancré. `[mobileSheet]=\"false\"` sur la directive rétablit le popover ancré partout.",
       },
     },
   },
@@ -36,14 +38,28 @@ const meta: Meta<PopoverArgs> = {
       control: 'boolean',
       description: 'Un clic en dehors ferme le popover.',
     },
+    mobileSheet: {
+      control: 'boolean',
+      description: 'Sur mobile (< sm), présente le panneau en bottom sheet avec poignée.',
+    },
+    sheetHeader: {
+      control: 'text',
+      description: 'En-tête affiché sous la poignée, en mode bottom sheet uniquement.',
+    },
   },
-  args: { placement: 'bottom', trigger: 'click', overlayClickable: true },
+  args: {
+    placement: 'bottom',
+    trigger: 'click',
+    overlayClickable: true,
+    mobileSheet: true,
+    sheetHeader: '',
+  },
   render: args => ({
     props: args,
     template: `
       <div class="flex min-h-64 items-center justify-center">
         <ng-template #panel>
-          <app-popover class="w-64 p-4">
+          <app-popover class="w-64 p-4" [sheetHeader]="sheetHeader">
             <p class="text-sm font-medium">Dimensions</p>
             <p class="mt-1 text-sm text-muted-foreground">
               Réglez la largeur et la hauteur du calque sélectionné.
@@ -59,6 +75,7 @@ const meta: Meta<PopoverArgs> = {
           [placement]="placement"
           [trigger]="trigger"
           [overlayClickable]="overlayClickable"
+          [mobileSheet]="mobileSheet"
         >
           Ouvrir le popover
         </button>

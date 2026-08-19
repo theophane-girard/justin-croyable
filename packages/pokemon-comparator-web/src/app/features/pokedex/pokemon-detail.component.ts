@@ -247,7 +247,6 @@ function toDetail(pokemon: Pokemon, config: EnhanceConfig): DetailView {
                             size="sm"
                             appPopover
                             [content]="abilityPopover"
-                            [mobileSheet]="true"
                             (click)="selectedAbility.set(ability)"
                           >
                             {{ ability.name }}

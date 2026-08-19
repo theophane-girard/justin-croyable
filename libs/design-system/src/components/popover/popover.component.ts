@@ -10,6 +10,8 @@ import {
   Directive,
   ElementRef,
   inject,
+  InjectionToken,
+  Injector,
   input,
   type OnDestroy,
   type OnInit,
@@ -17,6 +19,7 @@ import {
   PLATFORM_ID,
   Renderer2,
   signal,
+  type Signal,
   type TemplateRef,
   ViewContainerRef,
 } from '@angular/core';
@@ -25,15 +28,27 @@ import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { filter, type Subscription } from 'rxjs';
 
 import {
+  MOBILE_SHEET_CONTENT_CLASSES,
+  MOBILE_SHEET_ENTER_CLASSES,
   runMobileSheetCloseAnimation,
   ViewportService,
 } from '../../core/services/viewport.service';
 import { mergeClasses } from '../../utils/merge-classes';
+import { SheetHandleComponent } from '../sheet-handle';
 
 import { popoverVariants } from './popover.variants';
 
 export type PopoverTrigger = 'click' | 'hover' | null;
 export type PopoverPlacement = 'top' | 'bottom' | 'left' | 'right';
+
+export interface PopoverSheetContext {
+  readonly isSheet: Signal<boolean>;
+  readonly dismiss: () => void;
+}
+
+export const POPOVER_SHEET_CONTEXT = new InjectionToken<PopoverSheetContext>(
+  'POPOVER_SHEET_CONTEXT',
+);
 
 const POPOVER_POSITIONS_MAP: { [key: string]: ConnectedPosition } = {
   top: {
@@ -84,11 +99,25 @@ export class PopoverDirective implements OnInit, OnDestroy {
   private readonly viewContainerRef = inject(ViewContainerRef);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly viewport = inject(ViewportService);
+  private readonly injector = inject(Injector);
 
   private overlayRef?: OverlayRef;
   private overlayRefSubscription?: Subscription;
-  private overlayIsSheet = false;
+  private readonly overlayIsSheet = signal(false);
   private listeners: (() => void)[] = [];
+
+  private readonly sheetInjector = Injector.create({
+    parent: this.injector,
+    providers: [
+      {
+        provide: POPOVER_SHEET_CONTEXT,
+        useValue: {
+          isSheet: this.overlayIsSheet.asReadonly(),
+          dismiss: () => this.hide(false),
+        } satisfies PopoverSheetContext,
+      },
+    ],
+  });
 
   readonly trigger = input<PopoverTrigger>('click');
   readonly content = input.required<TemplateRef<unknown>>();
@@ -96,11 +125,7 @@ export class PopoverDirective implements OnInit, OnDestroy {
   readonly origin = input<ElementRef>();
   readonly visible = input<boolean>(false);
   readonly overlayClickable = input<boolean>(true);
-  /**
-   * Opt-in : sur mobile (< sm), présente le contenu en bottom sheet plein écran
-   * plutôt qu'en popover ancré. N'affecte que les consommateurs qui l'activent.
-   */
-  readonly mobileSheet = input(false, { transform: booleanAttribute });
+  readonly mobileSheet = input(true, { transform: booleanAttribute });
   readonly visibleChange = output<boolean>();
 
   private readonly isVisible = signal(false);
@@ -152,7 +177,7 @@ export class PopoverDirective implements OnInit, OnDestroy {
     }
 
     const sheet = this.sheetMode();
-    if (this.overlayRef && this.overlayIsSheet !== sheet) {
+    if (this.overlayRef && this.overlayIsSheet() !== sheet) {
       this.overlayRefSubscription?.unsubscribe();
       this.overlayRefSubscription = undefined;
       this.overlayRef.dispose();
@@ -166,7 +191,12 @@ export class PopoverDirective implements OnInit, OnDestroy {
       }
     }
 
-    const templatePortal = new TemplatePortal(this.content(), this.viewContainerRef);
+    const templatePortal = new TemplatePortal(
+      this.content(),
+      this.viewContainerRef,
+      undefined,
+      this.sheetInjector,
+    );
     this.overlayRef?.attach(templatePortal);
     this.isVisible.set(true);
     this.visibleChange.emit(true);
@@ -181,7 +211,7 @@ export class PopoverDirective implements OnInit, OnDestroy {
       return;
     }
 
-    if (animate && this.overlayIsSheet && this.overlayRef?.hasAttached()) {
+    if (animate && this.overlayIsSheet() && this.overlayRef?.hasAttached()) {
       const overlayRef = this.overlayRef;
       const content = overlayRef.overlayElement.firstElementChild as HTMLElement | null;
       if (content) {
@@ -214,9 +244,9 @@ export class PopoverDirective implements OnInit, OnDestroy {
       return;
     }
 
-    this.overlayIsSheet = this.sheetMode();
+    this.overlayIsSheet.set(this.sheetMode());
 
-    if (this.overlayIsSheet) {
+    if (this.overlayIsSheet()) {
       this.overlayRef = this.overlay.create({
         positionStrategy: this.overlay.position().global(),
         hasBackdrop: true,
@@ -406,20 +436,50 @@ export class PopoverDirective implements OnInit, OnDestroy {
 
 @Component({
   selector: 'app-popover',
-  imports: [],
+  imports: [SheetHandleComponent],
   standalone: true,
   template: `
+    @if (isSheet()) {
+      <div class="bg-popover sticky top-0 z-10">
+        <app-sheet-handle [sheetElement]="hostElement" (dismissed)="onSheetDismiss()" />
+        @if (sheetHeader()) {
+          <div class="text-foreground border-b px-3 py-3 text-sm font-medium">
+            {{ sheetHeader() }}
+          </div>
+        }
+      </div>
+    }
     <ng-content />
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     '[class]': 'classes()',
+    '[attr.data-sheet]': 'isSheet() || null',
   },
 })
 export class PopoverComponent {
   readonly elementRef = inject(ElementRef<HTMLElement>);
 
-  readonly class = input<string>('');
+  readonly #sheetContext = inject(POPOVER_SHEET_CONTEXT, { optional: true });
 
-  protected readonly classes = computed(() => mergeClasses(popoverVariants(), this.class()));
+  readonly class = input<string>('');
+  readonly sheetHeader = input<string>('');
+  readonly sheetDismissed = output<void>();
+
+  protected readonly hostElement = this.elementRef.nativeElement;
+
+  protected readonly isSheet = computed(() => this.#sheetContext?.isSheet() ?? false);
+
+  protected readonly classes = computed(() =>
+    mergeClasses(
+      popoverVariants(),
+      this.class(),
+      this.isSheet() ? `${MOBILE_SHEET_CONTENT_CLASSES} ${MOBILE_SHEET_ENTER_CLASSES}` : '',
+    ),
+  );
+
+  protected onSheetDismiss(): void {
+    this.sheetDismissed.emit();
+    this.#sheetContext?.dismiss();
+  }
 }
