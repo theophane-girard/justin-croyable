@@ -24,6 +24,7 @@ function toVariety(row: ApiVariety): Variety {
     slug: row.slug,
     gardenId: row.gardenId,
     referenceVarietyId: row.referenceVarietyId,
+    pricingFactor: row.pricingFactor,
     isCustom: row.gardenId !== null,
     pricingVarietyId: row.referenceVarietyId ?? row.id,
   };
@@ -105,6 +106,19 @@ export class CatalogStore {
 
   async removeCustom(id: VarietyId): Promise<boolean> {
     const response = await this.#api.removeVariety(id);
+    if (response.status !== 200) {
+      return false;
+    }
+    await this.reload();
+    return true;
+  }
+
+  async updatePricingRule(
+    id: VarietyId,
+    referenceVarietyId: VarietyId | null,
+    pricingFactor: number | null,
+  ): Promise<boolean> {
+    const response = await this.#api.updateVarietyPricing(id, { referenceVarietyId, pricingFactor });
     if (response.status !== 200) {
       return false;
     }

@@ -1,0 +1,37 @@
+name: Projets affectés
+description: >
+  Détermine, à partir de NX_BASE / NX_HEAD, lesquels des projets déployables du
+  monorepo sont impactés par le diff. En cas d'échec de détection, tout est
+  déclaré affecté pour ne rien manquer.
+
+outputs:
+  storybook:
+    description: Le Storybook web est-il affecté ?
+    value: ${{ steps.detect.outputs.storybook }}
+  potager:
+    description: L'app potager-web est-elle affectée ?
+    value: ${{ steps.detect.outputs.potager }}
+  pokemon:
+    description: L'app pokemon-comparator-web est-elle affectée ?
+    value: ${{ steps.detect.outputs.pokemon }}
+  api:
+    description: Le backend potager-api est-il affecté ?
+    value: ${{ steps.detect.outputs.api }}
+
+runs:
+  using: composite
+  steps:
+    - id: detect
+      shell: bash
+      run: |
+        if AFFECTED=$(npx nx show projects --affected --json 2>/dev/null); then
+          echo "storybook=$(echo "$AFFECTED" | grep -q 'storybook-web' && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "potager=$(echo "$AFFECTED" | grep -q 'potager-web' && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "pokemon=$(echo "$AFFECTED" | grep -q 'pokemon-comparator-web' && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "api=$(echo "$AFFECTED" | grep -q 'potager-api' && echo true || echo false)" >> "$GITHUB_OUTPUT"
+        else
+          echo "storybook=true" >> "$GITHUB_OUTPUT"
+          echo "potager=true" >> "$GITHUB_OUTPUT"
+          echo "pokemon=true" >> "$GITHUB_OUTPUT"
+          echo "api=true" >> "$GITHUB_OUTPUT"
+        fi

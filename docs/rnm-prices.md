@@ -70,8 +70,9 @@ pour la planification, hors Firebase, protégé par un **jeton secret** :
 `POST /api/variety-prices/refresh-cron` — en-tête `X-Refresh-Token: <secret>`.
 
 Le secret est la variable d'environnement Cloud Run **`RNM_REFRESH_TOKEN`** ;
-si elle est absente, l'endpoint refuse tout (403). Le workflow `deploy-api.yml`
-l'injecte depuis le secret GitHub **`GARDEN_HARVEST_RNM_REFRESH_TOKEN`**.
+si elle est absente, l'endpoint refuse tout (403). Le job **Build & déploiement
+backend** de `ci.yml` l'injecte depuis le secret GitHub
+**`GARDEN_HARVEST_RNM_REFRESH_TOKEN`**.
 
 Mise en place (une fois) :
 

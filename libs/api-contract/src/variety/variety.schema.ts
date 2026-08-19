@@ -7,6 +7,7 @@ export const varietySchema = z.object({
   cropId: z.string().min(1),
   label: z.string().min(1),
   referenceVarietyId: z.string().uuid().nullable(),
+  pricingFactor: z.number().positive().nullable(),
   createdAt: z.string().datetime(),
 });
 
@@ -18,3 +19,10 @@ export const createVarietySchema = z.object({
 });
 
 export type CreateVarietyPayload = z.infer<typeof createVarietySchema>;
+
+export const updateVarietyPricingSchema = z.object({
+  referenceVarietyId: z.string().uuid().nullable(),
+  pricingFactor: z.number().positive().nullable(),
+});
+
+export type UpdateVarietyPricingPayload = z.infer<typeof updateVarietyPricingSchema>;

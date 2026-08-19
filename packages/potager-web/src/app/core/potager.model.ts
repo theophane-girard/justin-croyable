@@ -180,12 +180,15 @@ export type Variety = {
   readonly slug: string | null;
   readonly gardenId: string | null;
   readonly referenceVarietyId: VarietyId | null;
+  readonly pricingFactor: number | null;
   readonly isCustom: boolean;
   readonly pricingVarietyId: VarietyId;
 };
 
 export const PRICE_ORIGIN = {
   rnm: 'rnm',
+  manuel: 'manuel',
+  estimation: 'estimation',
   fallback: 'fallback',
   reference: 'reference',
 } as const;
@@ -199,12 +202,11 @@ export type PriceRow = {
   readonly cropLabel: string;
   readonly categoryLabel: string;
   readonly conventionalPricePerKg: number;
-  readonly conventionalOrigin: PriceOrigin;
-  readonly conventionalSourceLabel: string;
   readonly bioPricePerKg: number;
-  readonly bioOrigin: PriceOrigin;
-  readonly bioSourceLabel: string;
   readonly bioPremiumPct: number;
+  readonly origin: PriceOrigin;
+  readonly natureLabel: string;
+  readonly editable: boolean;
   readonly priceDate: Date | null;
 };
 

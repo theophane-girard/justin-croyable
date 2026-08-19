@@ -7,7 +7,7 @@ import {
 
 import { AuthService } from './auth.service';
 import { ApiService } from './api.service';
-import { type VarietyId } from './potager.model';
+import { PRICE_ORIGIN, type PriceOrigin, type VarietyId } from './potager.model';
 import { CatalogStore } from './catalog-store';
 
 type ResolvedPrice = {
@@ -19,10 +19,24 @@ type ResolvedPrice = {
 
 export type CurrentPrice = {
   readonly price: ResolvedPrice;
-  readonly viaFallback: boolean;
+  readonly kind: PriceOrigin;
+  readonly parentVarietyId: VarietyId | null;
+  readonly factor: number | null;
 };
 
 type PriceIndex = ReadonlyMap<VarietyId, readonly ResolvedPrice[]>;
+
+type PriceSelector = (records: readonly ResolvedPrice[] | undefined) => ResolvedPrice | null;
+
+function originForSource(source: string): PriceOrigin {
+  if (source === PRICE_ORIGIN.rnm) {
+    return PRICE_ORIGIN.rnm;
+  }
+  if (source === PRICE_ORIGIN.manuel) {
+    return PRICE_ORIGIN.manuel;
+  }
+  return PRICE_ORIGIN.reference;
+}
 
 @Injectable({ providedIn: 'root' })
 export class PriceStore {
@@ -106,31 +120,61 @@ export class PriceStore {
     return resolved?.bioPricePerKg ?? resolved?.conventionalPricePerKg ?? 0;
   }
 
-  latestFor(varietyId: VarietyId): ResolvedPrice | null {
-    const pricingId = this.#catalog.pricingVarietyIdFor(varietyId) ?? varietyId;
-    return this.#index().get(pricingId)?.at(0) ?? null;
-  }
-
   currentFor(varietyId: VarietyId): CurrentPrice | null {
-    const pricingId = this.#catalog.pricingVarietyIdFor(varietyId) ?? varietyId;
-    const direct = this.#index().get(pricingId)?.at(0);
-    if (direct) {
-      return { price: direct, viaFallback: false };
-    }
-    const fallbackId = this.#fallbackId(varietyId);
-    const fallback = fallbackId ? this.#index().get(fallbackId)?.at(0) : undefined;
-    return fallback ? { price: fallback, viaFallback: true } : null;
+    return this.#chase(varietyId, records => records?.at(0) ?? null, new Set());
   }
 
   #resolve(varietyId: VarietyId, atDate: Date): ResolvedPrice | null {
     const timestamp = atDate.getTime();
-    const pricingId = this.#catalog.pricingVarietyIdFor(varietyId) ?? varietyId;
-    const direct = this.#pickAt(this.#index().get(pricingId), timestamp);
-    if (direct) {
-      return direct;
+    return this.#chase(varietyId, records => this.#pickAt(records, timestamp), new Set())?.price ?? null;
+  }
+
+  #chase(varietyId: VarietyId, pick: PriceSelector, seen: Set<VarietyId>): CurrentPrice | null {
+    if (seen.has(varietyId)) {
+      return null;
     }
-    const fallbackId = this.#fallbackId(varietyId);
-    return fallbackId ? this.#pickAt(this.#index().get(fallbackId), timestamp) : null;
+    seen.add(varietyId);
+    const variety = this.#catalog.byId().get(varietyId);
+    const parentVarietyId = variety?.referenceVarietyId ?? null;
+    const factor = variety?.pricingFactor ?? null;
+    if (parentVarietyId) {
+      const parent = this.#chase(parentVarietyId, pick, seen);
+      if (!parent) {
+        return null;
+      }
+      return {
+        price: factor !== null ? this.#scale(parent.price, factor) : parent.price,
+        kind: factor !== null ? PRICE_ORIGIN.estimation : PRICE_ORIGIN.fallback,
+        parentVarietyId,
+        factor,
+      };
+    }
+    const direct = pick(this.#index().get(varietyId));
+    if (direct) {
+      return {
+        price: direct,
+        kind: originForSource(direct.source),
+        parentVarietyId: null,
+        factor: null,
+      };
+    }
+    const cropFallbackId = this.#fallbackId(varietyId);
+    const cropFallback = cropFallbackId ? pick(this.#index().get(cropFallbackId)) : null;
+    return cropFallback
+      ? { price: cropFallback, kind: PRICE_ORIGIN.fallback, parentVarietyId: cropFallbackId, factor: null }
+      : null;
+  }
+
+  #scale(price: ResolvedPrice, factor: number): ResolvedPrice {
+    return {
+      ...price,
+      conventionalPricePerKg: this.#round(price.conventionalPricePerKg * factor),
+      bioPricePerKg: this.#round(price.bioPricePerKg * factor),
+    };
+  }
+
+  #round(value: number): number {
+    return Math.round(value * 1000) / 1000;
   }
 
   #fallbackId(varietyId: VarietyId): VarietyId | null {

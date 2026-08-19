@@ -1,12 +1,15 @@
 import {
   varietyContract,
   type CreateVarietyPayload,
+  type UpdateVarietyPricingPayload,
   type Variety,
 } from '@justin-croyable/api-contract';
 import { Controller, Inject, Injectable, Module, UseGuards } from '@nestjs/common';
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { and, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 
+import { ACTION, type AppAbility, SUBJECT } from '../auth/ability';
+import { CurrentAbility } from '../auth/current-ability.decorator';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { FirebaseAuthGuard } from '../auth/firebase-auth.guard';
 import { type Database, DRIZZLE } from '../db/drizzle';
@@ -21,6 +24,7 @@ function toVariety(record: VarietyRecord): Variety {
     cropId: record.cropId,
     label: record.label,
     referenceVarietyId: record.referenceVarietyId ?? null,
+    pricingFactor: record.pricingFactor ?? null,
     createdAt: record.createdAt.toISOString(),
   };
 }
@@ -75,6 +79,38 @@ export class VarietyService {
     return toVariety(created);
   }
 
+  async updatePricing(
+    id: string,
+    payload: UpdateVarietyPricingPayload,
+  ): Promise<Variety | 'not-found' | 'invalid'> {
+    const variety = await this.db.query.varieties.findFirst({ where: eq(varieties.id, id) });
+    if (!variety) {
+      return 'not-found';
+    }
+    const referenceVarietyId = payload.referenceVarietyId;
+    if (referenceVarietyId) {
+      if (referenceVarietyId === id) {
+        return 'invalid';
+      }
+      const reference = await this.db.query.varieties.findFirst({
+        where: eq(varieties.id, referenceVarietyId),
+      });
+      if (!reference || reference.gardenId !== null) {
+        return 'invalid';
+      }
+    }
+    const [updated] = await this.db
+      .update(varieties)
+      .set({
+        referenceVarietyId,
+        pricingFactor: referenceVarietyId ? payload.pricingFactor : null,
+        updatedAt: new Date(),
+      })
+      .where(eq(varieties.id, id))
+      .returning();
+    return toVariety(updated);
+  }
+
   async remove(user: UserRecord, id: string): Promise<'ok' | 'not-found' | 'forbidden' | 'in-use'> {
     const variety = await this.db.query.varieties.findFirst({ where: eq(varieties.id, id) });
     if (!variety) {
@@ -112,7 +148,7 @@ export class VarietyController {
   constructor(private readonly varieties: VarietyService) {}
 
   @TsRestHandler(varietyContract)
-  async handler(@CurrentUser() user: UserRecord) {
+  async handler(@CurrentUser() user: UserRecord, @CurrentAbility() ability: AppAbility) {
     return tsRestHandler(varietyContract, {
       list: async () => ({ status: 200, body: await this.varieties.list(user) }),
       create: async ({ body }) => {
@@ -121,6 +157,19 @@ export class VarietyController {
           return { status: 400, body: { message: 'Variété de référence invalide.' } };
         }
         return { status: 201, body: created };
+      },
+      updatePricing: async ({ params, body }) => {
+        if (ability.cannot(ACTION.update, SUBJECT.varietyPrice)) {
+          return { status: 403, body: { message: 'Édition des prix réservée aux administrateurs.' } };
+        }
+        const outcome = await this.varieties.updatePricing(params.id, body);
+        if (outcome === 'not-found') {
+          return { status: 404, body: { message: 'Variété introuvable.' } };
+        }
+        if (outcome === 'invalid') {
+          return { status: 400, body: { message: 'Variété de repli invalide.' } };
+        }
+        return { status: 200, body: outcome };
       },
       remove: async ({ params }) => {
         const outcome = await this.varieties.remove(user, params.id);
