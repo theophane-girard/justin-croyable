@@ -4,8 +4,9 @@ Objectif : mettre l'API `potager-api` en ligne pour qu'une URL `https://…`
 publique y réponde (au lieu de `localhost:3000`).
 
 Tout le mécanisme (build de l'image Docker, envoi, déploiement) est **déjà
-automatisé** dans [`/.github/workflows/deploy-api.yml`](../.github/workflows/deploy-api.yml).
-Il se déclenche tout seul :
+automatisé** dans le job **Build & déploiement backend** de
+[`/.github/workflows/ci.yml`](../.github/workflows/ci.yml). Il se déclenche tout
+seul, après le job de vérifications (rien n'est déployé si la CI est rouge) :
 
 - **push sur `master`** → l'API en ligne (version « live ») ;
 - **pull request** → une URL de prévisualisation dédiée, commentée sur la PR.
@@ -112,8 +113,8 @@ secret**. Crée :
 
 ## Étape 5 — Déclencher et récupérer l'URL
 
-Une fois les secrets en place, relance le workflow **Deploy API** (onglet
-Actions → Deploy API → *Re-run*), ou pousse un commit. À la fin :
+Une fois les secrets en place, relance le workflow **CI** (onglet Actions → CI
+→ *Re-run*), ou pousse un commit. À la fin :
 
 - version live : `gcloud run services describe potager-api --region europe-west1 --format='value(status.url)'` ;
 - prévisualisation : l'URL est **commentée automatiquement sur la PR**.
