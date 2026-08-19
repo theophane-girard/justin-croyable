@@ -76,7 +76,7 @@ export class SheetOptions<T, U> {
     }
 
     @if (config.title || config.description) {
-      <header data-slot="sheet-header" class="flex flex-col gap-1.5 p-4">
+      <header data-slot="sheet-header" class="flex shrink-0 flex-col gap-1.5 p-4">
         @if (config.title) {
           <h4 data-testid="app-title" data-slot="sheet-title" class="text-lg leading-none font-semibold tracking-tight">
             {{ config.title }}
@@ -91,7 +91,7 @@ export class SheetOptions<T, U> {
       </header>
     }
 
-    <main class="flex w-full flex-col space-y-4">
+    <main class="flex w-full min-h-0 flex-1 flex-col space-y-4 overflow-y-auto overscroll-y-contain">
       <ng-template cdkPortalOutlet />
 
       @if (isStringContent) {
@@ -100,7 +100,7 @@ export class SheetOptions<T, U> {
     </main>
 
     @if (!config.hideFooter) {
-      <footer data-slot="sheet-footer" class="mt-auto flex flex-col gap-2 p-4">
+      <footer data-slot="sheet-footer" class="mt-auto flex shrink-0 flex-col gap-2 p-4">
         @if (config.okText !== null) {
           <button
             type="button"
