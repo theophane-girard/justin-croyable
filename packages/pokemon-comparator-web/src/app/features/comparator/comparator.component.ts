@@ -198,14 +198,40 @@ const DISPLAY_MODE_ITEMS: readonly SegmentItem[] = [
               </div>
 
               <div class="flex flex-col gap-2">
-                <span class="text-muted-foreground text-xs font-medium">Statistiques affichées</span>
-                <app-toggle-group
-                  mode="multiple"
-                  size="sm"
-                  [items]="statItems"
-                  [defaultValue]="defaultVisibleStats"
-                  (valueChange)="onVisibleStatsChange($event)"
-                />
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <span class="text-muted-foreground text-xs font-medium">Statistiques affichées</span>
+                  <div class="flex items-center gap-1">
+                    <button
+                      appButton
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      [buttonDisabled]="allStatsShown()"
+                      (click)="showAllStats()"
+                    >
+                      Tout afficher
+                    </button>
+                    <button
+                      appButton
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      [buttonDisabled]="noStatsShown()"
+                      (click)="hideAllStats()"
+                    >
+                      Tout masquer
+                    </button>
+                  </div>
+                </div>
+                @for (tick of statResetKeys(); track tick) {
+                  <app-toggle-group
+                    mode="multiple"
+                    size="sm"
+                    [items]="statItems"
+                    [defaultValue]="visibleStats()"
+                    (valueChange)="onVisibleStatsChange($event)"
+                  />
+                }
               </div>
 
               @if (visibleStats().length === 0) {
@@ -330,8 +356,13 @@ export class ComparatorComponent {
     ariaLabel: STAT_META[stat].label,
   }));
 
-  protected readonly defaultVisibleStats: Stat[] = [...STAT_ORDER];
   protected readonly visibleStats = signal<Stat[]>([...STAT_ORDER]);
+  readonly #statResetKey = signal(0);
+  protected readonly statResetKeys = computed(() => [this.#statResetKey()]);
+  protected readonly allStatsShown = computed(
+    () => this.visibleStats().length === STAT_ORDER.length,
+  );
+  protected readonly noStatsShown = computed(() => this.visibleStats().length === 0);
   readonly #visibleStatSet = computed(() => new Set(this.visibleStats()));
   readonly #visibleStatOrder = computed<readonly Stat[]>(() =>
     STAT_ORDER.filter(stat => this.#visibleStatSet().has(stat)),
@@ -474,6 +505,16 @@ export class ComparatorComponent {
   protected onVisibleStatsChange(value: string | string[]): void {
     const selected = Array.isArray(value) ? value : [value];
     this.visibleStats.set(STAT_ORDER.filter(stat => selected.includes(stat)));
+  }
+
+  protected showAllStats(): void {
+    this.visibleStats.set([...STAT_ORDER]);
+    this.#statResetKey.update(key => key + 1);
+  }
+
+  protected hideAllStats(): void {
+    this.visibleStats.set([]);
+    this.#statResetKey.update(key => key + 1);
   }
 
   protected reload(): void {

@@ -73,6 +73,7 @@ interface MoveView {
   readonly powerLabel: string;
   readonly accuracy: number | null;
   readonly accuracyLabel: string;
+  readonly description: string;
 }
 
 function asArray(value: string | string[]): string[] {
@@ -93,6 +94,7 @@ function toMoveView(move: PokemonMove): MoveView {
     powerLabel: move.power === null ? '—' : `${move.power}`,
     accuracy: move.accuracy,
     accuracyLabel: move.accuracy === null ? '—' : `${move.accuracy}%`,
+    description: move.description,
   };
 }
 
@@ -245,6 +247,9 @@ function toMoveView(move: PokemonMove): MoveView {
                 {{ move.damageLabel }}
               </span>
             </div>
+            @if (move.description) {
+              <p class="text-muted-foreground text-sm">{{ move.description }}</p>
+            }
             <dl class="flex flex-col gap-1 text-sm">
               <div class="flex items-center justify-between gap-4">
                 <dt class="text-muted-foreground">Puissance</dt>
