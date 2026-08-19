@@ -141,12 +141,23 @@ export function parsePokemonDetail(value: unknown): PokemonDetailData {
   return { abilities, moves };
 }
 
+const FRENCH_LANGUAGE_ID = 5;
+const ENGLISH_LANGUAGE_ID = 9;
+
 export const MOVE_EFFECTS_QUERY = `
 query PokemonComparatorMoveEffects($moves: [String!]!) {
   move(where: { name: { _in: $moves } }) {
     name
+    move_effect_chance
+    moveflavortexts(
+      where: { language_id: { _eq: ${FRENCH_LANGUAGE_ID} } }
+      order_by: { version_group_id: desc }
+      limit: 1
+    ) {
+      flavor_text
+    }
     moveeffect {
-      moveeffecteffecttexts(where: { language: { name: { _in: ["en"] } } }) {
+      moveeffecteffecttexts(where: { language_id: { _eq: ${ENGLISH_LANGUAGE_ID} } }) {
         short_effect
         effect
       }
@@ -159,8 +170,14 @@ interface RawMoveEffectText {
   readonly effect: string | null;
 }
 
+interface RawMoveFlavor {
+  readonly flavor_text: string | null;
+}
+
 interface RawMoveEffect {
   readonly name: string;
+  readonly move_effect_chance: number | null;
+  readonly moveflavortexts: readonly RawMoveFlavor[];
   readonly moveeffect: { readonly moveeffecteffecttexts: readonly RawMoveEffectText[] } | null;
 }
 
@@ -168,17 +185,29 @@ interface MoveEffectsResponse {
   readonly data?: { readonly move?: readonly RawMoveEffect[] };
 }
 
+function normalizeWhitespace(text: string): string {
+  return text.replace(/\s+/g, ' ').trim();
+}
+
+function moveDescription(move: RawMoveEffect): string {
+  const flavor = move.moveflavortexts[0]?.flavor_text;
+  if (flavor) {
+    return normalizeWhitespace(flavor);
+  }
+  const technical = move.moveeffect?.moveeffecteffecttexts?.[0];
+  const raw = technical?.short_effect ?? technical?.effect ?? '';
+  const chance = move.move_effect_chance != null ? String(move.move_effect_chance) : '';
+  return normalizeWhitespace(raw.replace(/\$effect_chance/g, chance));
+}
+
 export function parseMoveEffects(value: unknown): ReadonlyMap<string, string> {
   const moves = (value as MoveEffectsResponse).data?.move ?? [];
   const descriptions = new Map<string, string>();
   moves.forEach(move => {
-    const text = move.moveeffect?.moveeffecteffecttexts?.[0];
-    const raw = text?.short_effect ?? text?.effect ?? '';
-    const cleaned = raw.replace(/\$effect_chance%?\s*/g, '').trim();
-    if (!cleaned) {
-      return;
+    const description = moveDescription(move);
+    if (description) {
+      descriptions.set(move.name, description);
     }
-    descriptions.set(move.name, cleaned);
   });
   return descriptions;
 }
