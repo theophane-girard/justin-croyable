@@ -99,10 +99,24 @@ jobs:
         run: npx playwright install --with-deps chromium
         working-directory: packages/storybook-web
 
+      # `install-deps` lance un apt-get qui se fige par intermittence sur les
+      # runners (miroir lent ou lock), et sans borne il bloquait tout le job
+      # jusqu'au timeout global. On borne chaque tentative, on réessaie, et en
+      # dernier recours on poursuit : l'image ubuntu-latest fournit déjà les
+      # libs système de Chromium, cette étape n'est qu'une ceinture-bretelles.
       - name: Dépendances système du navigateur
         if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium
+        timeout-minutes: 8
         working-directory: packages/storybook-web
+        run: |
+          for attempt in 1 2 3; do
+            if timeout 150 npx playwright install-deps chromium; then
+              exit 0
+            fi
+            echo "::warning::install-deps tentative $attempt échouée ou figée, nouvel essai…"
+            sleep 5
+          done
+          echo "::warning::install-deps toujours en échec — poursuite (ubuntu-latest fournit déjà les libs Chromium)."
 
       # Le mode navigateur Vitest est sujet à des flakes du dev-server (module
       # non servi, iframe déconnectée) qui font échouer le CHARGEMENT d'une
