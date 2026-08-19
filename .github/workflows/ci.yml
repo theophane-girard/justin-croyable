@@ -84,9 +84,8 @@ jobs:
           npx nx affected -t lint -- --format json --output-file eslint-report.json
           node tools/check-eslint-warnings.mjs
 
-      # Le binaire du navigateur est mis en cache entre les runs. Les
-      # dépendances système (apt) sont réinstallées à chaque run car l'OS du
-      # runner ne persiste pas.
+      # Seul le binaire du navigateur est installé, et il est mis en cache entre
+      # les runs : sur un hit, aucune des deux étapes suivantes ne tourne.
       - name: Cache du navigateur Playwright
         id: playwright-cache
         uses: actions/cache@v4
@@ -97,29 +96,17 @@ jobs:
       # Les stories du DS web s'exécutent comme tests Vitest dans un vrai
       # navigateur : AG Grid mesure des dimensions et ECharts peint dans un
       # canvas, ce qu'un DOM simulé ne fait pas.
+      #
+      # Volontairement SANS `--with-deps` : l'apt-get des dépendances système
+      # coûtait ~2,8 min à CHAQUE run (un tiers du job) alors que l'image
+      # ubuntu-latest fournit déjà les libs Chromium — l'ancienne version
+      # tolérait d'ailleurs son échec complet et les tests passaient quand même.
+      # Si une lib venait à manquer, les tests échoueraient au lancement du
+      # navigateur avec un message explicite : rétablir `--with-deps` ici suffit.
       - name: Installation du navigateur de test
         if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
         working-directory: packages/storybook-web
-
-      # `install-deps` lance un apt-get qui se fige par intermittence sur les
-      # runners (miroir lent ou lock), et sans borne il bloquait tout le job
-      # jusqu'au timeout global. On borne chaque tentative, on réessaie, et en
-      # dernier recours on poursuit : l'image ubuntu-latest fournit déjà les
-      # libs système de Chromium, cette étape n'est qu'une ceinture-bretelles.
-      - name: Dépendances système du navigateur
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        timeout-minutes: 8
-        working-directory: packages/storybook-web
-        run: |
-          for attempt in 1 2 3; do
-            if timeout 150 npx playwright install-deps chromium; then
-              exit 0
-            fi
-            echo "::warning::install-deps tentative $attempt échouée ou figée, nouvel essai…"
-            sleep 5
-          done
-          echo "::warning::install-deps toujours en échec — poursuite (ubuntu-latest fournit déjà les libs Chromium)."
 
       # Le mode navigateur Vitest est sujet à des flakes du dev-server (module
       # non servi, iframe déconnectée) qui font échouer le CHARGEMENT d'une
