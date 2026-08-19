@@ -145,9 +145,8 @@ export const MOVE_EFFECTS_QUERY = `
 query PokemonComparatorMoveEffects($moves: [String!]!) {
   move(where: { name: { _in: $moves } }) {
     name
-    effect_chance
     moveeffect {
-      moveeffecteffecttexts(where: { language_id: { _eq: 9 } }) {
+      moveeffecteffecttexts(where: { language: { name: { _in: ["en"] } } }) {
         short_effect
         effect
       }
@@ -162,7 +161,6 @@ interface RawMoveEffectText {
 
 interface RawMoveEffect {
   readonly name: string;
-  readonly effect_chance: number | null;
   readonly moveeffect: { readonly moveeffecteffecttexts: readonly RawMoveEffectText[] } | null;
 }
 
@@ -176,11 +174,11 @@ export function parseMoveEffects(value: unknown): ReadonlyMap<string, string> {
   moves.forEach(move => {
     const text = move.moveeffect?.moveeffecteffecttexts?.[0];
     const raw = text?.short_effect ?? text?.effect ?? '';
-    if (!raw) {
+    const cleaned = raw.replace(/\$effect_chance%?\s*/g, '').trim();
+    if (!cleaned) {
       return;
     }
-    const chance = move.effect_chance != null ? String(move.effect_chance) : '';
-    descriptions.set(move.name, raw.replace(/\$effect_chance/g, chance));
+    descriptions.set(move.name, cleaned);
   });
   return descriptions;
 }
