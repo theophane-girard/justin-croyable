@@ -184,6 +184,10 @@ export function offensiveMatchups(attackingType: string): readonly TypeMatchup[]
   return TYPE_SLUGS.map(type => toMatchup(type, multiplierAgainst(attackingType, [type])));
 }
 
+export function typeMultiplier(attackingType: string, defenderTypes: readonly string[]): number {
+  return multiplierAgainst(attackingType, defenderTypes);
+}
+
 export function typeWeaknesses(defenderTypes: readonly string[]): readonly TypeMatchup[] {
   return defensiveMatchups(defenderTypes)
     .filter(matchup => matchup.multiplier > 1)
