@@ -31,6 +31,8 @@ const PER_PIECE: UnitWeightsKg = { [RNM_SUPPORTED_UNITS.perPiece]: 1 };
 
 const RADISH_KILOGRAMS_PER_BUNCH = 0.2;
 
+const BIO_TO_CONVENTIONAL_DIVISOR = 1.6;
+
 const VARIETY_MATCHERS: readonly VarietyMatcher[] = [
   { slug: 'tomate-grappe', pattern: /tomate\b.*grappe/i },
   { slug: 'tomate-ronde', pattern: /tomate ronde/i, exclude: /grappe/i },
@@ -41,9 +43,13 @@ const VARIETY_MATCHERS: readonly VarietyMatcher[] = [
   { slug: 'carotte', pattern: /carotte/i },
   { slug: 'pomme-de-terre', pattern: /pomme de terre/i },
   { slug: 'poivron', pattern: /poivron/i },
+  { slug: 'poivron-rouge', pattern: /poivron rouge/i },
+  { slug: 'poivron-vert', pattern: /poivron vert/i },
   { slug: 'aubergine', pattern: /aubergine/i },
   { slug: 'oignon', pattern: /oignon/i },
   { slug: 'poireau', pattern: /poireau/i },
+  { slug: 'epinard', pattern: /[ée]pinard/i },
+  { slug: 'haricot-vert', pattern: /haricot vert/i },
   { slug: 'courge', pattern: /\bcourge\b/i },
   { slug: 'salade', pattern: /laitue|salade/i, unitWeightsKg: PER_PIECE },
   { slug: 'concombre', pattern: /concombre/i, unitWeightsKg: PER_PIECE },
@@ -58,11 +64,19 @@ const VARIETY_MATCHERS: readonly VarietyMatcher[] = [
   { slug: 'fraise', pattern: /fraise/i },
   { slug: 'framboise', pattern: /framboise/i },
   { slug: 'pomme', pattern: /\bpomme\b/i, exclude: /pomme de terre/i },
+  { slug: 'pomme-gala', pattern: /pomme gala/i },
+  { slug: 'pomme-golden', pattern: /pomme golden/i },
+  { slug: 'pomme-granny', pattern: /pomme granny/i },
   { slug: 'poire', pattern: /\bpoire\b/i },
   { slug: 'prune', pattern: /prune/i },
+  { slug: 'prune-rouge', pattern: /prune rouge/i },
+  { slug: 'prune-jaune', pattern: /prune jaune/i },
+  { slug: 'prune-verte', pattern: /prune verte/i },
   { slug: 'cerise', pattern: /cerise/i, exclude: /tomate/i },
   { slug: 'abricot', pattern: /abricot/i },
   { slug: 'peche', pattern: /p[êe]che/i },
+  { slug: 'peche-jaune', pattern: /p[êe]che.*jaune/i },
+  { slug: 'peche-blanche', pattern: /p[êe]che.*blanche/i },
   { slug: 'raisin', pattern: /raisin/i },
 ];
 
@@ -134,18 +148,22 @@ function resolveMatcher(
     .map(observation => toPricedObservation(matcher, observation))
     .filter((observation): observation is PricedObservation => observation !== null);
   const conventional = aggregate(matched.filter(observation => !observation.isOrganic));
-  if (!conventional) {
-    return null;
-  }
   const bio = aggregateByPriority(
     matched.filter(observation => observation.isOrganic),
     BIO_MARKET_PRIORITY,
   );
+  const reference = conventional ?? bio;
+  if (!reference) {
+    return null;
+  }
+  const conventionalPricePerKg = conventional
+    ? conventional.pricePerKg
+    : roundPrice(reference.pricePerKg / BIO_TO_CONVENTIONAL_DIVISOR);
   return {
     varietyId: matcher.slug,
-    conventionalPricePerKg: conventional.pricePerKg,
+    conventionalPricePerKg,
     bioPricePerKg: bio?.pricePerKg ?? null,
-    effectiveFrom: conventional.observedOn,
+    effectiveFrom: reference.observedOn,
   };
 }
 
