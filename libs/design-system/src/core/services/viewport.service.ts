@@ -18,7 +18,7 @@ export const MOBILE_MEDIA_QUERY = '(max-width: 639.98px)';
  * la feuille Tailwind qui trancherait, et `max-w-xs` gagnerait.
  */
 export const MOBILE_SHEET_CONTENT_CLASSES =
-  'fixed inset-x-0 bottom-0 z-50 max-h-[85vh] w-auto! max-w-none! overflow-y-auto rounded-t-xl rounded-b-none border-x-0 border-b-0';
+  'fixed inset-x-0 bottom-0 z-50 max-h-[85dvh] w-auto! max-w-none! overflow-y-auto overscroll-contain rounded-t-xl rounded-b-none border-x-0 border-b-0';
 
 /** Animation d'entrée du bottom sheet (glisse depuis le bas). */
 export const MOBILE_SHEET_ENTER_CLASSES = 'animate-in slide-in-from-bottom duration-300';

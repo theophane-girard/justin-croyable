@@ -3,6 +3,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 export const dialogVariants = cva(
   [
     'fixed inset-x-0 bottom-0 z-50 grid w-full gap-4 rounded-t-xl',
+    'max-h-[85dvh] overflow-y-auto overscroll-contain',
     'bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 outline-none',
     'sm:inset-x-auto sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:max-w-sm sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl',
   ].join(' '),

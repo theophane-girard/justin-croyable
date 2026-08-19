@@ -26,6 +26,7 @@ export class SheetRef<T = any, R = any, U = any> {
   ) {
     this.containerInstance.cancelTriggered.subscribe(() => this.trigger(TRIGGER_ACTION.CANCEL));
     this.containerInstance.okTriggered.subscribe(() => this.trigger(TRIGGER_ACTION.OK));
+    this.containerInstance.dismissTriggered.subscribe(() => this.dismissImmediately());
 
     if ((this.config.maskClosable ?? true) && isPlatformBrowser(this.platformId)) {
       this.overlayRef
@@ -72,6 +73,16 @@ export class SheetRef<T = any, R = any, U = any> {
     } else {
       this.closeCleanup();
     }
+  }
+
+  private dismissImmediately(): void {
+    if (this.isClosing) {
+      return;
+    }
+
+    this.isClosing = true;
+    this.containerInstance.state.set('closed');
+    this.closeCleanup();
   }
 
   private trigger(action: TriggerAction) {
