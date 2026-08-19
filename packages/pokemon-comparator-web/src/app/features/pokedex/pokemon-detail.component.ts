@@ -29,6 +29,7 @@ import { APP_PATHS } from '../../app.routes';
 import {
   EMPTY_DETAIL,
   MOVE_EFFECTS_QUERY,
+  type MoveEffectInfo,
   POKEAPI_GRAPHQL_URL,
   POKEMON_DETAIL_QUERY,
   type PokemonAbility,
@@ -409,7 +410,7 @@ export class PokemonDetailComponent {
     { parse: parsePokemonDetail, defaultValue: EMPTY_DETAIL },
   );
 
-  readonly #moveEffectsResource = httpResource<ReadonlyMap<string, string>>(
+  readonly #moveEffectsResource = httpResource<ReadonlyMap<string, MoveEffectInfo>>(
     () => {
       const slugs = this.#detailResource.value().moves.map(move => move.slug);
       return slugs.length > 0
@@ -420,15 +421,20 @@ export class PokemonDetailComponent {
           }
         : undefined;
     },
-    { parse: parseMoveEffects, defaultValue: new Map<string, string>() },
+    { parse: parseMoveEffects, defaultValue: new Map<string, MoveEffectInfo>() },
   );
 
   protected readonly abilities = computed(() => this.#detailResource.value().abilities);
   protected readonly moves = computed<readonly PokemonMove[]>(() => {
     const effects = this.#moveEffectsResource.value();
-    return this.#detailResource
-      .value()
-      .moves.map(move => ({ ...move, description: effects.get(move.slug) ?? move.description }));
+    return this.#detailResource.value().moves.map(move => {
+      const info = effects.get(move.slug);
+      return {
+        ...move,
+        description: info?.flavor || move.description,
+        effect: info?.effect || move.effect,
+      };
+    });
   });
   protected readonly detailLoading = this.#detailResource.isLoading;
 

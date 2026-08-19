@@ -14,6 +14,7 @@ export interface PokemonMove {
   readonly type: string;
   readonly damageClass: string;
   readonly description: string;
+  readonly effect: string;
 }
 
 export interface PokemonDetailData {
@@ -136,6 +137,7 @@ export function parsePokemonDetail(value: unknown): PokemonDetailData {
       type: entry.move.type?.name ?? '',
       damageClass: entry.move.movedamageclass?.name ?? '',
       description: '',
+      effect: '',
     }));
 
   return { abilities, moves };
@@ -185,29 +187,34 @@ interface MoveEffectsResponse {
   readonly data?: { readonly move?: readonly RawMoveEffect[] };
 }
 
+export interface MoveEffectInfo {
+  readonly flavor: string;
+  readonly effect: string;
+}
+
 function normalizeWhitespace(text: string): string {
   return text.replace(/\s+/g, ' ').trim();
 }
 
-function moveDescription(move: RawMoveEffect): string {
-  const flavor = move.moveflavortexts[0]?.flavor_text;
-  if (flavor) {
-    return normalizeWhitespace(flavor);
-  }
+function moveEffectInfo(move: RawMoveEffect): MoveEffectInfo {
+  const flavor = move.moveflavortexts[0]?.flavor_text ?? '';
   const technical = move.moveeffect?.moveeffecteffecttexts?.[0];
-  const raw = technical?.short_effect ?? technical?.effect ?? '';
+  const rawEffect = technical?.short_effect ?? technical?.effect ?? '';
   const chance = move.move_effect_chance != null ? String(move.move_effect_chance) : '';
-  return normalizeWhitespace(raw.replace(/\$effect_chance/g, chance));
+  return {
+    flavor: normalizeWhitespace(flavor),
+    effect: normalizeWhitespace(rawEffect.replace(/\$effect_chance/g, chance)),
+  };
 }
 
-export function parseMoveEffects(value: unknown): ReadonlyMap<string, string> {
+export function parseMoveEffects(value: unknown): ReadonlyMap<string, MoveEffectInfo> {
   const moves = (value as MoveEffectsResponse).data?.move ?? [];
-  const descriptions = new Map<string, string>();
+  const effects = new Map<string, MoveEffectInfo>();
   moves.forEach(move => {
-    const description = moveDescription(move);
-    if (description) {
-      descriptions.set(move.name, description);
+    const info = moveEffectInfo(move);
+    if (info.flavor || info.effect) {
+      effects.set(move.name, info);
     }
   });
-  return descriptions;
+  return effects;
 }

@@ -74,6 +74,7 @@ interface MoveView {
   readonly accuracy: number | null;
   readonly accuracyLabel: string;
   readonly description: string;
+  readonly effect: string;
 }
 
 function asArray(value: string | string[]): string[] {
@@ -95,6 +96,7 @@ function toMoveView(move: PokemonMove): MoveView {
     accuracy: move.accuracy,
     accuracyLabel: move.accuracy === null ? '—' : `${move.accuracy}%`,
     description: move.description,
+    effect: move.effect,
   };
 }
 
@@ -249,6 +251,12 @@ function toMoveView(move: PokemonMove): MoveView {
             </div>
             @if (move.description) {
               <p class="text-muted-foreground text-sm">{{ move.description }}</p>
+            }
+            @if (move.effect) {
+              <div class="border-border/60 flex flex-col gap-0.5 border-t pt-2">
+                <span class="text-muted-foreground text-xs font-medium">Effet (en)</span>
+                <p class="text-muted-foreground text-sm">{{ move.effect }}</p>
+              </div>
             }
             <dl class="flex flex-col gap-1 text-sm">
               <div class="flex items-center justify-between gap-4">
