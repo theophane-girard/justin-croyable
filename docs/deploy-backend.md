@@ -108,7 +108,7 @@ secret**. Crée :
 | `GARDEN_HARVEST_GCP_PROJECT_ID` | `justin-croyable-story` |
 | `GARDEN_HARVEST_GCP_SA_KEY` | tout le JSON copié à l'étape 2 |
 | `GARDEN_HARVEST_API_CORS_ORIGIN` | l'URL de ton front (ex. `https://justin-croyable-potager.web.app`) |
-| `GARDEN_HARVEST_API_CORS_ORIGIN_REGEX` | `^https://justin-croyable-potager--[a-z0-9-]+\.web\.app$` (autorise les previews) |
+| `GARDEN_HARVEST_API_CORS_ORIGIN_REGEX` | optionnel : motif d'origine supplémentaire. Les canaux live et de prévisualisation de Firebase Hosting sont déjà reconnus par l'API |
 | `GARDEN_HARVEST_DATABASE_URL` | *(optionnel)* même valeur que `DATABASE_URL` → applique les migrations Drizzle avant chaque déploiement |
 
 ## Étape 5 — Déclencher et récupérer l'URL
