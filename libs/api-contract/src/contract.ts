@@ -3,7 +3,13 @@ import { z } from 'zod';
 
 import { deletedSchema, errorSchema, idParamSchema } from './crud';
 import { createExpenseSchema, expenseSchema, updateExpenseSchema } from './expense/expense.schema';
-import { gardenSchema } from './garden/garden.schema';
+import {
+  gardenMemberParamsSchema,
+  gardenMemberSchema,
+  gardenSchema,
+  inviteMemberSchema,
+  updateMemberSchema,
+} from './garden/garden.schema';
 import { createHarvestSchema, harvestSchema, updateHarvestSchema } from './harvest/harvest.schema';
 import { createPlantSchema, plantSchema, updatePlantSchema } from './plant/plant.schema';
 import {
@@ -133,6 +139,49 @@ export const gardenContract = contract.router({
     method: 'GET',
     path: '/gardens/current',
     responses: { 200: gardenSchema, 401: errorSchema },
+  },
+  members: {
+    method: 'GET',
+    path: '/gardens/:id/members',
+    pathParams: idParamSchema,
+    responses: {
+      200: z.array(gardenMemberSchema),
+      401: errorSchema,
+      403: errorSchema,
+      404: errorSchema,
+    },
+  },
+  invite: {
+    method: 'POST',
+    path: '/gardens/:id/members',
+    pathParams: idParamSchema,
+    body: inviteMemberSchema,
+    responses: {
+      201: gardenMemberSchema,
+      400: errorSchema,
+      401: errorSchema,
+      403: errorSchema,
+      404: errorSchema,
+    },
+  },
+  updateMember: {
+    method: 'PATCH',
+    path: '/gardens/:id/members/:memberId',
+    pathParams: gardenMemberParamsSchema,
+    body: updateMemberSchema,
+    responses: {
+      200: gardenMemberSchema,
+      400: errorSchema,
+      401: errorSchema,
+      403: errorSchema,
+      404: errorSchema,
+    },
+  },
+  removeMember: {
+    method: 'DELETE',
+    path: '/gardens/:id/members/:memberId',
+    pathParams: gardenMemberParamsSchema,
+    responses: { 200: deletedSchema, 401: errorSchema, 403: errorSchema, 404: errorSchema },
   },
 });
 

@@ -5,6 +5,8 @@ import {
   type CreateHarvestPayload,
   type CreatePlantPayload,
   type CreateVarietyPayload,
+  type InviteMemberPayload,
+  type UpdateMemberPayload,
   type UpdateVarietyPricingPayload,
   type CreateVarietyPricePayload,
   type UpdateExpensePayload,
@@ -105,6 +107,22 @@ export class ApiService {
 
   currentGarden() {
     return this.#client.gardens.current();
+  }
+
+  gardenMembers(id: string) {
+    return this.#client.gardens.members({ params: { id } });
+  }
+
+  inviteGardenMember(id: string, body: InviteMemberPayload) {
+    return this.#client.gardens.invite({ params: { id }, body });
+  }
+
+  updateGardenMember(id: string, memberId: string, body: UpdateMemberPayload) {
+    return this.#client.gardens.updateMember({ params: { id, memberId }, body });
+  }
+
+  removeGardenMember(id: string, memberId: string) {
+    return this.#client.gardens.removeMember({ params: { id, memberId } });
   }
 
   listVarietyPrices() {

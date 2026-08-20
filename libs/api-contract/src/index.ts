@@ -12,9 +12,16 @@ export {
   gardenRoleSchema,
   gardenSchema,
   gardenMemberSchema,
+  shareableRoleSchema,
+  inviteMemberSchema,
+  updateMemberSchema,
+  gardenMemberParamsSchema,
   type GardenRole,
   type Garden,
   type GardenMember,
+  type ShareableRole,
+  type InviteMemberPayload,
+  type UpdateMemberPayload,
 } from './garden/garden.schema';
 export {
   varietySchema,
