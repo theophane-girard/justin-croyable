@@ -20,11 +20,11 @@ import { clampLevel, DEFAULT_LEVEL, MAX_LEVEL, MIN_LEVEL } from '../../core/poke
           type="button"
           variant="outline"
           size="sm"
-          aria-label="Niveau minimum"
-          [buttonDisabled]="level() === min"
-          (click)="emit(min)"
+          aria-label="Diminuer le niveau"
+          [buttonDisabled]="level() <= min"
+          (click)="emit(level() - 1)"
         >
-          <ng-icon name="phosphorCaretLineLeft" class="size-4" />
+          <ng-icon name="phosphorMinus" class="size-4" />
         </button>
         <app-slider
           class="flex-1"
@@ -39,11 +39,11 @@ import { clampLevel, DEFAULT_LEVEL, MAX_LEVEL, MIN_LEVEL } from '../../core/poke
           type="button"
           variant="outline"
           size="sm"
-          aria-label="Niveau maximum"
-          [buttonDisabled]="level() === max"
-          (click)="emit(max)"
+          aria-label="Augmenter le niveau"
+          [buttonDisabled]="level() >= max"
+          (click)="emit(level() + 1)"
         >
-          <ng-icon name="phosphorCaretLineRight" class="size-4" />
+          <ng-icon name="phosphorPlus" class="size-4" />
         </button>
       </div>
     </div>

@@ -96,7 +96,7 @@ export class SheetOptions<T, U> {
       </header>
     }
 
-    <main class="flex w-full min-h-0 flex-1 flex-col space-y-4 overflow-y-auto overscroll-y-contain">
+    <main class="flex w-full min-h-0 flex-1 flex-col space-y-4 overflow-y-auto overscroll-y-contain pr-2">
       <ng-template cdkPortalOutlet />
 
       @if (isStringContent) {
