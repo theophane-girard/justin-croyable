@@ -54,8 +54,20 @@ export function natureEffectLabel(nature: Nature): string {
 
 export interface EnhanceConfig {
   readonly level100: boolean;
+  readonly level: number;
   readonly nature: string;
   readonly evs: Readonly<Record<Stat, number>>;
+}
+
+export const MIN_LEVEL = 1;
+export const MAX_LEVEL = 100;
+export const DEFAULT_LEVEL = 100;
+
+export function clampLevel(level: number): number {
+  if (!Number.isFinite(level)) {
+    return DEFAULT_LEVEL;
+  }
+  return Math.min(MAX_LEVEL, Math.max(MIN_LEVEL, Math.round(level)));
 }
 
 export const MAX_EV_PER_STAT = 252;
@@ -70,20 +82,26 @@ const ZERO_EVS: Readonly<Record<Stat, number>> = STAT_ORDER.reduce(
 
 export const DEFAULT_ENHANCE_CONFIG: EnhanceConfig = {
   level100: false,
+  level: DEFAULT_LEVEL,
   nature: NEUTRAL_NATURE_ID,
   evs: ZERO_EVS,
 };
 
-const SIMULATED_LEVEL = 100;
 const PERFECT_IV = 31;
 const INCREASED_NATURE_MULTIPLIER = 1.1;
 const DECREASED_NATURE_MULTIPLIER = 0.9;
 const NEUTRAL_NATURE_MULTIPLIER = 1;
 
-export const MAX_STAT_AT_LEVEL_100 =
-  Math.floor(((2 * MAX_BASE_STAT + PERFECT_IV + MAX_EV_PER_STAT / 4) * SIMULATED_LEVEL) / 100) +
-  SIMULATED_LEVEL +
-  10;
+export function maxStatAtLevel(level: number): number {
+  const bounded = clampLevel(level);
+  return (
+    Math.floor(((2 * MAX_BASE_STAT + PERFECT_IV + MAX_EV_PER_STAT / 4) * bounded) / 100) +
+    bounded +
+    10
+  );
+}
+
+export const MAX_STAT_AT_LEVEL_100 = maxStatAtLevel(MAX_LEVEL);
 
 function natureMultiplier(nature: Nature, stat: Stat): number {
   if (nature.increased === stat) {
@@ -95,15 +113,21 @@ function natureMultiplier(nature: Nature, stat: Stat): number {
   return NEUTRAL_NATURE_MULTIPLIER;
 }
 
-function commonStatBase(base: number, ev: number): number {
-  return Math.floor(((2 * base + PERFECT_IV + Math.floor(ev / 4)) * SIMULATED_LEVEL) / 100);
+function commonStatBase(base: number, ev: number, level: number): number {
+  return Math.floor(((2 * base + PERFECT_IV + Math.floor(ev / 4)) * level) / 100);
 }
 
-function computeStatAtLevel100(stat: Stat, base: number, ev: number, nature: Nature): number {
+function computeStatAtLevel(
+  stat: Stat,
+  base: number,
+  ev: number,
+  nature: Nature,
+  level: number,
+): number {
   if (stat === STAT.hp) {
-    return commonStatBase(base, ev) + SIMULATED_LEVEL + 10;
+    return commonStatBase(base, ev, level) + level + 10;
   }
-  return Math.floor((commonStatBase(base, ev) + 5) * natureMultiplier(nature, stat));
+  return Math.floor((commonStatBase(base, ev, level) + 5) * natureMultiplier(nature, stat));
 }
 
 export function applyEnhancedStats(
@@ -113,15 +137,16 @@ export function applyEnhancedStats(
   if (!config.level100) {
     return base;
   }
+  const level = clampLevel(config.level);
   const nature = natureById(config.nature);
   const entries = STAT_ORDER.map(
-    stat => [stat, computeStatAtLevel100(stat, base[stat], config.evs[stat], nature)] as const,
+    stat => [stat, computeStatAtLevel(stat, base[stat], config.evs[stat], nature, level)] as const,
   );
   return Object.fromEntries(entries) as Record<Stat, number>;
 }
 
 export function enhancedStatScaleMax(config: EnhanceConfig): number {
-  return config.level100 ? MAX_STAT_AT_LEVEL_100 : MAX_BASE_STAT;
+  return config.level100 ? maxStatAtLevel(config.level) : MAX_BASE_STAT;
 }
 
 export function statsTotal(stats: Readonly<Record<Stat, number>>): number {

@@ -1,8 +1,7 @@
 import { type Stat, STAT } from './pokemon.model';
-import { applyEnhancedStats, type EnhanceConfig } from './pokemon-stats';
+import { applyEnhancedStats, clampLevel, type EnhanceConfig } from './pokemon-stats';
 import { typeMultiplier } from './pokemon-type';
 
-const SIMULATED_LEVEL = 100;
 const STAB_MULTIPLIER = 1.5;
 const MIN_RANDOM_FACTOR = 0.85;
 const CRITICAL_MULTIPLIER = 1.5;
@@ -97,7 +96,7 @@ export interface DamageResult {
   readonly burnReduced: boolean;
 }
 
-function level100Stats(combatant: Combatant): Readonly<Record<Stat, number>> {
+function leveledStats(combatant: Combatant): Readonly<Record<Stat, number>> {
   return applyEnhancedStats(combatant.baseStats, { ...combatant.config, level100: true });
 }
 
@@ -107,7 +106,7 @@ function effectiveStat(
   ignoreNegativeStage: boolean,
   ignorePositiveStage: boolean,
 ): number {
-  const value = level100Stats(combatant)[stat];
+  const value = leveledStats(combatant)[stat];
   const rawStage = combatant.stages[stat] ?? 0;
   const ignored =
     (ignoreNegativeStage && rawStage < 0) || (ignorePositiveStage && rawStage > 0);
@@ -149,12 +148,12 @@ export function computeDamage(
     (critical ? CRITICAL_MULTIPLIER : 1) *
     (burnReduced ? BURN_MULTIPLIER : 1);
 
-  const base =
-    Math.floor((((2 * SIMULATED_LEVEL) / 5 + 2) * move.power * (attack / defense)) / 50) + 2;
+  const level = clampLevel(attacker.config.level);
+  const base = Math.floor((((2 * level) / 5 + 2) * move.power * (attack / defense)) / 50) + 2;
   const maxDamage = Math.floor(base * modifier);
   const minDamage = Math.floor(base * modifier * MIN_RANDOM_FACTOR);
 
-  const hp = level100Stats(defender)[STAT.hp];
+  const hp = leveledStats(defender)[STAT.hp];
   const toPercent = (damage: number): number => (hp > 0 ? Math.round((damage / hp) * 100) : 0);
 
   return {

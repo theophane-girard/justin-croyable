@@ -374,11 +374,20 @@ export class ComparatorComponent {
     this.store.selected().map(pokemon => ({ id: pokemon.id, name: pokemonName(pokemon, LANG.fr) })),
   );
 
-  protected readonly statsHeading = computed(() =>
-    this.store.selected().some(pokemon => this.store.enhanceFor(pokemon.id).level100)
-      ? 'Statistiques (niveau 100)'
-      : 'Statistiques de base',
-  );
+  protected readonly statsHeading = computed(() => {
+    const enhancedLevels = this.store
+      .selected()
+      .map(pokemon => this.store.enhanceFor(pokemon.id))
+      .filter(config => config.level100)
+      .map(config => config.level);
+    if (enhancedLevels.length === 0) {
+      return 'Statistiques de base';
+    }
+    const distinctLevels = new Set(enhancedLevels);
+    return distinctLevels.size === 1
+      ? `Statistiques (niveau ${enhancedLevels[0]})`
+      : 'Statistiques (niveaux variés)';
+  });
 
   readonly #scaleMax = computed(() =>
     this.store

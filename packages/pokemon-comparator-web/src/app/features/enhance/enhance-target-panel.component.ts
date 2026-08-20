@@ -6,6 +6,7 @@ import { NgIcon } from '@ng-icons/core';
 import { type Stat, STAT_META, STAT_ORDER } from '../../core/pokemon.model';
 import {
   applyEnhancedStats,
+  DEFAULT_LEVEL,
   EV_STEP,
   evsTotal,
   MAX_EV_PER_STAT,
@@ -16,6 +17,7 @@ import {
   NEUTRAL_NATURE_ID,
   USABLE_EV_TOTAL,
 } from '../../core/pokemon-stats';
+import { LevelSelectorComponent } from './level-selector.component';
 
 interface NatureOption {
   readonly id: string;
@@ -30,9 +32,11 @@ export interface EvChange {
 
 @Component({
   selector: 'app-enhance-target-panel',
-  imports: [NgIcon, ButtonComponent, SliderComponent, ...SelectImports],
+  imports: [NgIcon, ButtonComponent, SliderComponent, LevelSelectorComponent, ...SelectImports],
   template: `
     <div class="flex flex-col gap-5">
+      <app-level-selector [level]="level()" (levelChange)="levelChange.emit($event)" />
+
       <section class="flex flex-col gap-2">
         <h3 class="text-sm font-semibold">Nature</h3>
         <app-select
@@ -111,11 +115,13 @@ export interface EvChange {
 export class EnhanceTargetPanelComponent {
   readonly nature = input.required<string>();
   readonly evs = input.required<Readonly<Record<Stat, number>>>();
+  readonly level = input<number>(DEFAULT_LEVEL);
   readonly displayStats = input(false);
   readonly baseStats = input<Readonly<Record<Stat, number>> | null>(null);
 
   readonly natureChange = output<string>();
   readonly evChange = output<EvChange>();
+  readonly levelChange = output<number>();
 
   protected readonly statOrder = STAT_ORDER;
   protected readonly statMeta = STAT_META;
@@ -134,7 +140,12 @@ export class EnhanceTargetPanelComponent {
     if (!this.displayStats() || !base) {
       return null;
     }
-    return applyEnhancedStats(base, { level100: true, nature: this.nature(), evs: this.evs() });
+    return applyEnhancedStats(base, {
+      level100: true,
+      level: this.level(),
+      nature: this.nature(),
+      evs: this.evs(),
+    });
   });
   protected readonly evTotal = computed(() => evsTotal(this.evs()));
   protected readonly evValues = computed<Record<Stat, number[]>>(() => {

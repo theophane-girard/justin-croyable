@@ -407,9 +407,10 @@ export class PokemonDetailComponent {
     return pokemon ? [{ id: pokemon.id, name: pokemonName(pokemon, LANG.fr) }] : [];
   });
 
-  protected readonly statsHeading = computed(() =>
-    this.enhanceConfig().level100 ? 'Statistiques (niveau 100)' : 'Statistiques de base',
-  );
+  protected readonly statsHeading = computed(() => {
+    const config = this.enhanceConfig();
+    return config.level100 ? `Statistiques (niveau ${config.level})` : 'Statistiques de base';
+  });
 
   protected readonly detail = computed<DetailView | undefined>(() => {
     const pokemon = this.#pokemon();
