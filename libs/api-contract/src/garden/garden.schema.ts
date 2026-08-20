@@ -22,6 +22,7 @@ export const gardenSchema = z.object({
   id: z.string().uuid(),
   name: z.string().min(1),
   role: gardenRoleSchema,
+  ownerEmail: z.string().email().nullable(),
   createdAt: z.string().datetime(),
 });
 

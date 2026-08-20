@@ -1,55 +1,31 @@
-import { computed, effect, inject, Injectable, signal } from '@angular/core';
-import {
-  GARDEN_ROLE,
-  type Garden,
-  type GardenMember,
-  type GardenRole,
-  type ShareableRole,
-} from '@justin-croyable/api-contract';
+import { effect, inject, Injectable, signal } from '@angular/core';
+import { type GardenMember, type ShareableRole } from '@justin-croyable/api-contract';
 
 import { ApiService } from './api.service';
-import { AuthService } from './auth.service';
-
-const MANAGER_ROLES: ReadonlySet<GardenRole> = new Set([GARDEN_ROLE.owner, GARDEN_ROLE.coOwner]);
+import { GardenAccessStore } from './garden-access-store';
 
 @Injectable({ providedIn: 'root' })
 export class SharingStore {
   readonly #api = inject(ApiService);
-  readonly #auth = inject(AuthService);
+  readonly #access = inject(GardenAccessStore);
 
-  readonly #garden = signal<Garden | null>(null);
   readonly #members = signal<readonly GardenMember[]>([]);
-
-  readonly garden = this.#garden.asReadonly();
   readonly members = this.#members.asReadonly();
-
-  readonly canManage = computed(() => {
-    const role = this.#garden()?.role;
-    return role !== undefined && MANAGER_ROLES.has(role);
-  });
+  readonly canManage = this.#access.canManageActive;
 
   constructor() {
     effect(() => {
-      if (this.#auth.isAuthenticated()) {
-        void this.reload();
+      const garden = this.#access.active();
+      if (garden && this.#access.canManageActive()) {
+        void this.#reloadMembers(garden.id);
         return;
       }
-      this.#garden.set(null);
       this.#members.set([]);
     });
   }
 
-  async reload(): Promise<void> {
-    const response = await this.#api.currentGarden();
-    if (response.status !== 200) {
-      return;
-    }
-    this.#garden.set(response.body);
-    await this.#reloadMembers(response.body.id);
-  }
-
   async invite(email: string, role: ShareableRole): Promise<boolean> {
-    const gardenId = this.#garden()?.id;
+    const gardenId = this.#access.active()?.id;
     if (!gardenId) {
       return false;
     }
@@ -62,7 +38,7 @@ export class SharingStore {
   }
 
   async remove(memberId: string): Promise<boolean> {
-    const gardenId = this.#garden()?.id;
+    const gardenId = this.#access.active()?.id;
     if (!gardenId) {
       return false;
     }

@@ -8,9 +8,11 @@ import { Controller, Inject, Injectable, Module, UseGuards } from '@nestjs/commo
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { and, eq } from 'drizzle-orm';
 
+import { ActiveGardenId } from '../auth/active-garden.decorator';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { FirebaseAuthGuard } from '../auth/firebase-auth.guard';
 import { type Database, DRIZZLE } from '../db/drizzle';
+import { GardenModule, GardenService } from '../gardens/garden.module';
 import { expenses, type ExpenseRecord, type UserRecord } from '../db/schema';
 
 function toExpense(record: ExpenseRecord): Expense {
@@ -77,12 +79,21 @@ export class ExpenseService {
 @Controller()
 @UseGuards(FirebaseAuthGuard)
 export class ExpenseController {
-  constructor(private readonly expenses: ExpenseService) {}
+  constructor(
+    private readonly expenses: ExpenseService,
+    private readonly gardens: GardenService,
+  ) {}
 
   @TsRestHandler(expenseContract)
-  async handler(@CurrentUser() user: UserRecord) {
+  async handler(
+    @CurrentUser() user: UserRecord,
+    @ActiveGardenId() activeGardenId: string | null,
+  ) {
     return tsRestHandler(expenseContract, {
-      list: async () => ({ status: 200, body: await this.expenses.list(user.id) }),
+      list: async () => {
+        const ownerId = await this.gardens.resolveDataOwnerId(user, activeGardenId);
+        return { status: 200, body: ownerId ? await this.expenses.list(ownerId) : [] };
+      },
       create: async ({ body }) => ({ status: 201, body: await this.expenses.create(user.id, body) }),
       update: async ({ params, body }) => {
         const updated = await this.expenses.update(user.id, params.id, body);
@@ -102,5 +113,5 @@ export class ExpenseController {
   }
 }
 
-@Module({ controllers: [ExpenseController], providers: [ExpenseService] })
+@Module({ imports: [GardenModule], controllers: [ExpenseController], providers: [ExpenseService] })
 export class ExpenseModule {}

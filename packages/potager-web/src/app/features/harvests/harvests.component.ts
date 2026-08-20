@@ -40,6 +40,7 @@ import {
   varietyFilterOptions,
 } from '../../core/catalog-filter';
 import { CatalogStore } from '../../core/catalog-store';
+import { GardenAccessStore } from '../../core/garden-access-store';
 import { HarvestStore } from '../../core/harvest-store';
 import { TagCellComponent } from '../../shared/tag-cell.component';
 import { CATEGORY_TAG_COLOR } from '../../shared/table-badges';
@@ -180,7 +181,7 @@ const BOTTOM_SHEET_SIDE = 'bottom';
           <p class="text-muted-foreground text-sm">Économies estimées au prix moyen français.</p>
         </div>
         <div class="hidden items-center gap-2 sm:flex">
-          @if (store.rows().length > 0) {
+          @if (store.rows().length > 0 && canWrite()) {
             <button
               appButton
               variant="outline"
@@ -200,10 +201,12 @@ const BOTTOM_SHEET_SIDE = 'bottom';
             <ng-icon name="phosphorArrowsDownUp" class="size-4" />
             Trier
           </button>
-          <a appButton size="sm" [routerLink]="addLink">
-            <ng-icon name="phosphorPlus" class="size-4" />
-            Ajouter
-          </a>
+          @if (canWrite()) {
+            <a appButton size="sm" [routerLink]="addLink">
+              <ng-icon name="phosphorPlus" class="size-4" />
+              Ajouter
+            </a>
+          }
         </div>
       </div>
 
@@ -221,10 +224,12 @@ const BOTTOM_SHEET_SIDE = 'bottom';
           title="Aucune récolte"
           description="Ajoutez une récolte pour la voir apparaître ici."
         >
-          <a appButton [routerLink]="addLink">
-            <ng-icon name="phosphorPlus" class="size-4" />
-            Ajouter une récolte
-          </a>
+          @if (canWrite()) {
+            <a appButton [routerLink]="addLink">
+              <ng-icon name="phosphorPlus" class="size-4" />
+              Ajouter une récolte
+            </a>
+          }
         </app-empty>
       } @else {
         <app-table
@@ -245,9 +250,11 @@ const BOTTOM_SHEET_SIDE = 'bottom';
         triggerLabel="Actions sur les récoltes"
       >
         <app-fab-list>
-          <a appFabButton [routerLink]="addLink" aria-label="Ajouter une récolte">
-            <ng-icon name="phosphorPlus" />
-          </a>
+          @if (canWrite()) {
+            <a appFabButton [routerLink]="addLink" aria-label="Ajouter une récolte">
+              <ng-icon name="phosphorPlus" />
+            </a>
+          }
           <button appFabButton type="button" variant="secondary" (click)="openFilter()" aria-label="Filtrer">
             <ng-icon name="phosphorFunnel" />
           </button>
@@ -320,7 +327,10 @@ const BOTTOM_SHEET_SIDE = 'bottom';
 export class HarvestsComponent {
   protected readonly store = inject(HarvestStore);
   readonly #catalog = inject(CatalogStore);
+  readonly #access = inject(GardenAccessStore);
   readonly #sheet = inject(SheetService);
+
+  protected readonly canWrite = this.#access.canWriteActive;
 
   private readonly filterSheetTemplate = viewChild.required<TemplateRef<unknown>>('filterSheet');
   private readonly sortSheetTemplate = viewChild.required<TemplateRef<unknown>>('sortSheet');
