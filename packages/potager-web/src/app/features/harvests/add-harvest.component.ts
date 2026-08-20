@@ -38,8 +38,12 @@ import { HARVESTS_LINK } from '../../app.routes';
         </div>
         <div class="flex items-center gap-2">
           <a appButton variant="outline" [routerLink]="harvestsLink">Annuler</a>
-          <button appButton [buttonDisabled]="!canSubmit()" (click)="onSave()">
+          <button appButton variant="outline" [buttonDisabled]="!canSubmit()" (click)="onSaveAndAddAnother()">
             <ng-icon name="phosphorPlus" class="size-4" />
+            Ajouter un autre
+          </button>
+          <button appButton [buttonDisabled]="!canSubmit()" (click)="onSave()">
+            <ng-icon name="phosphorFloppyDisk" class="size-4" />
             Enregistrer
           </button>
         </div>
@@ -222,13 +226,26 @@ export class AddHarvestComponent {
   }
 
   protected onSave(): void {
+    if (this.#persist()) {
+      this.#router.navigateByUrl(HARVESTS_LINK);
+    }
+  }
+
+  protected onSaveAndAddAnother(): void {
+    if (this.#persist()) {
+      this.varietyId.set('');
+      this.weightInput.set('');
+    }
+  }
+
+  #persist(): boolean {
     const varietyId = this.varietyId();
     const weightKg = this.weightKg();
     const harvestedOn = this.date();
     if (!this.#catalog.isKnown(varietyId) || weightKg === null || harvestedOn === null) {
-      return;
+      return false;
     }
     this.store.add({ varietyId, weightKg, harvestedOn });
-    this.#router.navigateByUrl(HARVESTS_LINK);
+    return true;
   }
 }

@@ -8,6 +8,7 @@ import {
   gardenMemberSchema,
   gardenSchema,
   inviteMemberSchema,
+  updateGardenSchema,
   updateMemberSchema,
 } from './garden/garden.schema';
 import { createHarvestSchema, harvestSchema, updateHarvestSchema } from './harvest/harvest.schema';
@@ -144,6 +145,19 @@ export const gardenContract = contract.router({
     method: 'GET',
     path: '/gardens',
     responses: { 200: z.array(gardenSchema), 401: errorSchema },
+  },
+  update: {
+    method: 'PATCH',
+    path: '/gardens/:id',
+    pathParams: idParamSchema,
+    body: updateGardenSchema,
+    responses: {
+      200: gardenSchema,
+      400: errorSchema,
+      401: errorSchema,
+      403: errorSchema,
+      404: errorSchema,
+    },
   },
   remove: {
     method: 'DELETE',

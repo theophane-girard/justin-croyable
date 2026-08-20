@@ -210,6 +210,10 @@ const INVITE_ROLE_OPTIONS: readonly { readonly value: ShareableRole; readonly la
             (valueChange)="onSeasonChange($event)"
           />
           @if (canManage()) {
+            <button appButton variant="outline" size="sm" (click)="openRename()">
+              <ng-icon name="phosphorPencilSimple" class="size-4" />
+              Renommer
+            </button>
             <button appButton variant="outline" size="sm" (click)="openShare()">
               <ng-icon name="phosphorUsersThree" class="size-4" />
               Partager
@@ -308,6 +312,20 @@ const INVITE_ROLE_OPTIONS: readonly { readonly value: ShareableRole; readonly la
       </div>
     </ng-template>
 
+    <ng-template #renameSheet>
+      <div class="flex flex-col gap-4 p-4">
+        <app-input-group label="Nom du jardin" [required]="true">
+          <input
+            app-input
+            type="text"
+            placeholder="Ex. Potager de la maison"
+            [value]="renameInput()"
+            (input)="onRenameInput($event)"
+          />
+        </app-input-group>
+      </div>
+    </ng-template>
+
     <ng-template #shareSheet>
       <div class="flex flex-col gap-4 p-4">
         <div class="flex flex-col gap-3">
@@ -385,6 +403,7 @@ export class GardenComponent {
 
   private readonly filterSheetTemplate = viewChild.required<TemplateRef<unknown>>('filterSheet');
   private readonly shareSheetTemplate = viewChild.required<TemplateRef<unknown>>('shareSheet');
+  private readonly renameSheetTemplate = viewChild.required<TemplateRef<unknown>>('renameSheet');
 
   protected readonly columns = PLANT_COLUMNS;
   protected readonly gridOptions = PLANT_GRID_OPTIONS;
@@ -398,6 +417,7 @@ export class GardenComponent {
   protected readonly inviteEmail = signal<string>('');
   protected readonly inviteRole = signal<ShareableRole>(GARDEN_ROLE.viewer);
   protected readonly inviteError = signal<string | null>(null);
+  protected readonly renameInput = signal<string>('');
 
   protected readonly memberRows = computed<MemberRow[]>(() =>
     this.sharing.members().map(member => ({
@@ -438,6 +458,30 @@ export class GardenComponent {
       cancelText: null,
       content: this.filterSheetTemplate(),
     });
+  }
+
+  protected openRename(): void {
+    this.renameInput.set(this.#access.active()?.name ?? '');
+    this.#sheet.create({
+      title: 'Renommer le jardin',
+      side: 'bottom',
+      okText: 'Enregistrer',
+      cancelText: 'Annuler',
+      content: this.renameSheetTemplate(),
+      onOk: () => void this.#saveRename(),
+    });
+  }
+
+  protected onRenameInput(event: Event): void {
+    this.renameInput.set((event.target as HTMLInputElement).value);
+  }
+
+  async #saveRename(): Promise<void> {
+    const name = this.renameInput().trim();
+    if (name === '') {
+      return;
+    }
+    await this.#access.rename(name);
   }
 
   protected openShare(): void {

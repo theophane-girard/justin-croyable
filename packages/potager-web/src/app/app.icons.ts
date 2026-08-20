@@ -42,8 +42,10 @@ import {
   phosphorUserCircle,
   phosphorUsersThree,
 } from '@ng-icons/phosphor-icons/regular';
+import { phosphorStarFill } from '@ng-icons/phosphor-icons/fill';
 
 export const APP_ICONS = {
+  phosphorStarFill,
   phosphorArrowsDownUp,
   phosphorArrowSquareOut,
   phosphorBasket,
