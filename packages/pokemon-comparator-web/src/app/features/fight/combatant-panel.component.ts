@@ -4,6 +4,7 @@ import {
   Component,
   computed,
   inject,
+  input,
   signal,
   type TemplateRef,
   ViewContainerRef,
@@ -20,6 +21,7 @@ import {
 import { NgIcon } from '@ng-icons/core';
 
 import { ComparatorStore } from '../../core/comparator-store';
+import { type FightSlot, FightStore } from '../../core/fight-store';
 import {
   type Combatant,
   DAMAGE_STAGE_STATS,
@@ -50,7 +52,7 @@ import {
 } from '../../core/pokemon-stats';
 import { EnhanceTargetPanelComponent, type EvChange } from '../enhance/enhance-target-panel.component';
 import { PokedexGridComponent } from '../pokedex/pokedex-grid.component';
-import { PokemonDetailComponent } from '../pokedex/pokemon-detail.component';
+import { type DetailAction, PokemonDetailComponent } from '../pokedex/pokemon-detail.component';
 import { PokemonMovesComponent } from '../pokedex/pokemon-moves.component';
 import { PokemonSpriteComponent } from '../pokedex/pokemon-sprite.component';
 
@@ -186,7 +188,7 @@ const ZERO_STAGES: Readonly<Record<Stat, number>> = DAMAGE_STAGE_STATS.reduce(
     </ng-template>
 
     <ng-template #detailSheet>
-      <app-pokemon-detail [id]="pokemonIdString()" [embedded]="true" />
+      <app-pokemon-detail [id]="pokemonIdString()" [embedded]="true" [actions]="detailActions()" />
     </ng-template>
 
     <ng-template #movesSheet>
@@ -204,15 +206,18 @@ const ZERO_STAGES: Readonly<Record<Stat, number>> = DAMAGE_STAGE_STATS.reduce(
 })
 export class CombatantPanelComponent {
   protected readonly store = inject(ComparatorStore);
+  readonly #fight = inject(FightStore);
   readonly #sheet = inject(SheetService);
   readonly #viewContainerRef = inject(ViewContainerRef);
+
+  readonly slot = input.required<FightSlot>();
 
   private readonly pokedexTemplate = viewChild.required<TemplateRef<unknown>>('pokedexSheet');
   private readonly detailTemplate = viewChild.required<TemplateRef<unknown>>('detailSheet');
   private readonly movesTemplate = viewChild.required<TemplateRef<unknown>>('movesSheet');
   #sheetRef: { close: () => void } | undefined;
 
-  readonly #id = signal<number | null>(null);
+  readonly #id = computed(() => this.#fight.slotValue(this.slot()));
   readonly #config = signal<EnhanceConfig>({
     level100: true,
     nature: NEUTRAL_NATURE_ID,
@@ -271,6 +276,21 @@ export class CombatantPanelComponent {
   protected readonly spriteUrl = computed(() => {
     const id = this.#id();
     return id === null ? '' : pokemonImageUrl(id);
+  });
+  protected readonly detailActions = computed<readonly DetailAction[]>(() => {
+    const id = this.#id();
+    if (id === null) {
+      return [];
+    }
+    const selected = this.store.selectedIdSet().has(id);
+    return [
+      {
+        label: selected ? 'Ajouté au comparateur' : 'Ajouter au comparateur',
+        icon: selected ? 'phosphorCheck' : 'phosphorPlus',
+        disabled: selected || this.store.isFull(),
+        action: () => this.store.add(id),
+      },
+    ];
   });
 
   protected readonly stageControls = computed<readonly StageControl[]>(() => {
@@ -363,7 +383,7 @@ export class CombatantPanelComponent {
   }
 
   protected onPickPokemon(id: number): void {
-    this.#id.set(id);
+    this.#fight.setSlot(this.slot(), id);
     this.#selectedMoveSlugs.set([]);
     this.#sheetRef?.close();
   }

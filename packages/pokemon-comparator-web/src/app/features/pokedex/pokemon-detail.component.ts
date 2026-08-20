@@ -13,6 +13,7 @@ import { ActivatedRoute, type Params, Router, RouterLink } from '@angular/router
 import {
   BadgeComponent,
   ButtonComponent,
+  type ButtonVariant,
   DetailSkeletonComponent,
   EmptyComponent,
   PopoverComponent,
@@ -25,6 +26,7 @@ import {
 import { NgIcon } from '@ng-icons/core';
 
 import { ComparatorStore } from '../../core/comparator-store';
+import { FightStore } from '../../core/fight-store';
 import { APP_PATHS } from '../../app.routes';
 import {
   EMPTY_DETAIL,
@@ -73,6 +75,14 @@ const TAG_STAGE = 'border-transparent bg-sky-500/15 text-sky-700 dark:text-sky-3
 const TAG_LEGENDARY = 'border-transparent bg-amber-500/20 text-amber-700 dark:text-amber-300';
 const TAG_ORDINARY = 'border-transparent bg-slate-500/15 text-slate-700 dark:text-slate-300';
 const TAG_TOTAL = 'border-transparent bg-violet-500/15 text-violet-700 dark:text-violet-300';
+
+export interface DetailAction {
+  readonly label: string;
+  readonly action: () => void;
+  readonly icon?: string;
+  readonly variant?: ButtonVariant;
+  readonly disabled?: boolean;
+}
 
 interface InfoTag {
   readonly label: string;
@@ -283,22 +293,24 @@ function toDetail(pokemon: Pokemon, config: EnhanceConfig): DetailView {
                     </div>
                   </section>
 
-                  @if (isSelected()) {
-                    <app-badge type="secondary" class="w-fit gap-1">
-                      <ng-icon name="phosphorCheck" class="size-3" />
-                      Ajouté au comparateur
-                    </app-badge>
-                  } @else {
-                    <button
-                      appButton
-                      type="button"
-                      class="w-fit"
-                      [buttonDisabled]="store.isFull()"
-                      (click)="add(view.id)"
-                    >
-                      <ng-icon name="phosphorPlus" class="size-4" />
-                      Ajouter au comparateur
-                    </button>
+                  @if (resolvedActions().length > 0) {
+                    <div class="flex flex-wrap gap-2">
+                      @for (action of resolvedActions(); track action.label) {
+                        <button
+                          appButton
+                          type="button"
+                          [variant]="action.variant ?? 'default'"
+                          class="w-fit"
+                          [buttonDisabled]="action.disabled === true"
+                          (click)="action.action()"
+                        >
+                          @if (action.icon) {
+                            <ng-icon [name]="action.icon" class="size-4" />
+                          }
+                          {{ action.label }}
+                        </button>
+                      }
+                    </div>
                   }
                 </div>
               </app-tab>
@@ -335,11 +347,13 @@ function toDetail(pokemon: Pokemon, config: EnhanceConfig): DetailView {
 })
 export class PokemonDetailComponent {
   protected readonly store = inject(ComparatorStore);
+  readonly #fight = inject(FightStore);
   readonly #router = inject(Router);
   readonly #route = inject(ActivatedRoute);
 
   readonly id = input.required<string>();
   readonly embedded = input(false);
+  readonly actions = input<readonly DetailAction[] | null>(null);
 
   constructor() {
     this.#restoreFromUrl();
@@ -404,6 +418,38 @@ export class PokemonDetailComponent {
 
   protected readonly isSelected = computed(() => this.store.selectedIdSet().has(this.#numericId()));
 
+  readonly #defaultActions = computed<readonly DetailAction[]>(() => {
+    const pokemon = this.#pokemon();
+    if (!pokemon) {
+      return [];
+    }
+    const id = pokemon.id;
+    const selected = this.isSelected();
+    return [
+      {
+        label: selected ? 'Ajouté au comparateur' : 'Ajouter au comparateur',
+        icon: selected ? 'phosphorCheck' : 'phosphorPlus',
+        disabled: selected || this.store.isFull(),
+        action: () => this.store.add(id),
+      },
+      {
+        label: 'Ajouter au simulateur',
+        icon: 'phosphorSword',
+        variant: 'outline',
+        action: () => this.#addToSimulator(id),
+      },
+    ];
+  });
+
+  protected readonly resolvedActions = computed<readonly DetailAction[]>(
+    () => this.actions() ?? this.#defaultActions(),
+  );
+
+  #addToSimulator(id: number): void {
+    this.#fight.addPokemon(id);
+    void this.#router.navigate([`/${APP_PATHS.fight}`]);
+  }
+
   readonly #detailResource = httpResource(
     () => {
       const id = this.#numericId();
@@ -445,8 +491,4 @@ export class PokemonDetailComponent {
     });
   });
   protected readonly detailLoading = this.#detailResource.isLoading;
-
-  protected add(id: number): void {
-    this.store.add(id);
-  }
 }
