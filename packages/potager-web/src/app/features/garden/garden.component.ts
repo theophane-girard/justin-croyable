@@ -185,7 +185,6 @@ const INVITE_ROLE_OPTIONS: readonly { readonly value: ShareableRole; readonly la
     <div class="flex flex-col gap-4">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex flex-col">
-          <h2 class="text-foreground text-lg font-semibold">Mon jardin</h2>
           <p class="text-muted-foreground text-sm">
             Plants cultivés, rendement et économie nette par plant.
           </p>

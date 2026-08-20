@@ -125,6 +125,14 @@ export class ApiService {
     return this.#client.gardens.list();
   }
 
+  removeGarden(id: string) {
+    return this.#client.gardens.remove({ params: { id } });
+  }
+
+  setDefaultGarden(gardenId: string | null) {
+    return this.#client.users.setDefaultGarden({ body: { gardenId } });
+  }
+
   gardenMembers(id: string) {
     return this.#client.gardens.members({ params: { id } });
   }

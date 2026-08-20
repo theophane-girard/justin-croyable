@@ -15,8 +15,11 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import { FirebaseAuthGuard } from '../auth/firebase-auth.guard';
 import { type Database, DRIZZLE } from '../db/drizzle';
 import {
+  expenses,
   gardenMembers,
   gardens,
+  harvests,
+  plants,
   users,
   type GardenMemberRecord,
   type GardenRecord,
@@ -39,6 +42,13 @@ function toMember(record: GardenMemberRecord): GardenMember {
 
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
+}
+
+function membershipOfUser(user: UserRecord) {
+  return or(
+    eq(gardenMembers.userId, user.id),
+    sql`lower(trim(${gardenMembers.email})) = ${normalizeEmail(user.email)}`,
+  );
 }
 
 export function effectiveRole(
@@ -104,7 +114,7 @@ export class GardenService {
     const memberships = await this.db
       .select({ gardenId: gardenMembers.gardenId, role: gardenMembers.role, expiresAt: gardenMembers.expiresAt })
       .from(gardenMembers)
-      .where(or(eq(gardenMembers.userId, user.id), eq(gardenMembers.email, user.email)));
+      .where(membershipOfUser(user));
     const now = new Date();
     const shared = memberships
       .filter(member => effectiveRole(member.role, member.expiresAt, now) !== null)
@@ -115,7 +125,7 @@ export class GardenService {
   async listAccessibleGardens(user: UserRecord): Promise<Garden[]> {
     const personal = await this.currentGarden(user);
     const memberships = await this.db.query.gardenMembers.findMany({
-      where: or(eq(gardenMembers.userId, user.id), eq(gardenMembers.email, user.email)),
+      where: membershipOfUser(user),
     });
     const now = new Date();
     const shared = await Promise.all(
@@ -144,6 +154,44 @@ export class GardenService {
     ];
   }
 
+  async removeForUser(
+    user: UserRecord,
+    gardenId: string,
+  ): Promise<'ok' | 'not-found' | 'last'> {
+    const role = await this.roleFor(user, gardenId);
+    if (role === null) {
+      return 'not-found';
+    }
+    const accessible = await this.accessibleGardenIds(user);
+    if (accessible.length <= 1) {
+      return 'last';
+    }
+    const garden = await this.db.query.gardens.findFirst({ where: eq(gardens.id, gardenId) });
+    if (!garden) {
+      return 'not-found';
+    }
+    if (garden.ownerUserId === user.id) {
+      await this.#deleteOwnedGarden(garden);
+      return 'ok';
+    }
+    await this.db
+      .delete(gardenMembers)
+      .where(
+        and(
+          eq(gardenMembers.gardenId, gardenId),
+          membershipOfUser(user),
+        ),
+      );
+    return 'ok';
+  }
+
+  async #deleteOwnedGarden(garden: GardenRecord): Promise<void> {
+    await this.db.delete(harvests).where(eq(harvests.userId, garden.ownerUserId));
+    await this.db.delete(plants).where(eq(plants.userId, garden.ownerUserId));
+    await this.db.delete(expenses).where(eq(expenses.userId, garden.ownerUserId));
+    await this.db.delete(gardens).where(eq(gardens.id, garden.id));
+  }
+
   async resolveDataOwnerId(user: UserRecord, activeGardenId: string | null): Promise<string | null> {
     if (activeGardenId === null) {
       return user.id;
@@ -166,7 +214,7 @@ export class GardenService {
     const membership = await this.db.query.gardenMembers.findFirst({
       where: and(
         eq(gardenMembers.gardenId, gardenId),
-        or(eq(gardenMembers.userId, user.id), eq(gardenMembers.email, user.email)),
+        membershipOfUser(user),
       ),
     });
     if (!membership) {
@@ -311,6 +359,16 @@ export class GardenController {
         return { status: 200, body: this.gardens.toGarden(garden, GARDEN_ROLE.owner) };
       },
       list: async () => ({ status: 200, body: await this.gardens.listAccessibleGardens(user) }),
+      remove: async ({ params }) => {
+        const outcome = await this.gardens.removeForUser(user, params.id);
+        if (outcome === 'not-found') {
+          return { status: 404, body: { message: 'Jardin introuvable.' } };
+        }
+        if (outcome === 'last') {
+          return { status: 400, body: { message: 'Impossible de supprimer votre dernier jardin.' } };
+        }
+        return { status: 200, body: { id: params.id } };
+      },
       members: async ({ params }) => {
         const outcome = await this.gardens.listMembers(user, params.id);
         if (outcome === 'not-found') {

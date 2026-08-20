@@ -12,6 +12,7 @@ export const userProfileSchema = z.object({
   displayName: z.string().nullable(),
   photoUrl: z.string().url().nullable(),
   role: userRoleSchema,
+  defaultGardenId: z.string().uuid().nullable(),
   createdAt: z.string().datetime(),
 });
 
@@ -22,3 +23,9 @@ export const updateProfileSchema = z.object({
 });
 
 export type UpdateProfilePayload = z.infer<typeof updateProfileSchema>;
+
+export const setDefaultGardenSchema = z.object({
+  gardenId: z.string().uuid().nullable(),
+});
+
+export type SetDefaultGardenPayload = z.infer<typeof setDefaultGardenSchema>;

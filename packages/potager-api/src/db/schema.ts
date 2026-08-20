@@ -16,6 +16,9 @@ export const users = pgTable('users', {
   displayName: text('display_name'),
   photoUrl: text('photo_url'),
   role: text('role').$type<UserRole>().notNull().default(USER_ROLE.user),
+  defaultGardenId: uuid('default_garden_id').references((): AnyPgColumn => gardens.id, {
+    onDelete: 'set null',
+  }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

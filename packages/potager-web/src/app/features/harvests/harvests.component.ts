@@ -177,7 +177,6 @@ const BOTTOM_SHEET_SIDE = 'bottom';
     <div class="flex flex-col gap-4">
       <div class="flex items-center justify-between gap-2">
         <div class="flex flex-col">
-          <h2 class="text-foreground text-lg font-semibold">Récoltes</h2>
           <p class="text-muted-foreground text-sm">Économies estimées au prix moyen français.</p>
         </div>
         <div class="hidden items-center gap-2 sm:flex">
