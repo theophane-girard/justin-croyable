@@ -200,7 +200,7 @@ function initialsOf(label: string): string {
               <span class="text-muted-foreground truncate text-xs">{{ email() }}</span>
             </div>
           </div>
-          <div class="flex flex-col gap-2">
+          <div class="flex items-center justify-between gap-2">
             <span class="text-sm font-medium">Thème</span>
             <app-segment
               variant="accent"
@@ -327,8 +327,7 @@ export class AppComponent {
     this.#sheet.create({
       title: 'Mon compte',
       side: 'bottom',
-      okText: 'Fermer',
-      cancelText: null,
+      hideFooter: true,
       content: this.userSheetTemplate(),
     });
   }
