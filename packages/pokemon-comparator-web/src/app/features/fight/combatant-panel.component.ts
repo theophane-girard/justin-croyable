@@ -1,8 +1,20 @@
 import { httpResource } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  input,
+  signal,
+  type TemplateRef,
+  ViewContainerRef,
+  viewChild,
+} from '@angular/core';
 
-import { SelectImports, SkeletonComponent } from '@justin-croyable/design-system';
+import { ButtonComponent, SelectImports, SheetService } from '@justin-croyable/design-system';
+import { NgIcon } from '@ng-icons/core';
 
+import { ComparatorStore } from '../../core/comparator-store';
 import {
   type Combatant,
   DAMAGE_STAGE_STATS,
@@ -16,29 +28,17 @@ import {
   type PokemonMove,
   parsePokemonDetail,
 } from '../../core/pokemon-detail';
+import { LANG, pokemonName, type Stat, STAT_META } from '../../core/pokemon.model';
 import {
-  LANG,
-  type Pokemon,
-  pokemonName,
-  type Stat,
-  STAT_META,
-  STAT_ORDER,
-} from '../../core/pokemon.model';
-import { DEFAULT_ENHANCE_CONFIG, type EnhanceConfig, evsTotal, maxEvForStat, NEUTRAL_NATURE_ID } from '../../core/pokemon-stats';
-import { normalizeText } from '../../core/pokemon-search';
+  DEFAULT_ENHANCE_CONFIG,
+  type EnhanceConfig,
+  evsTotal,
+  maxEvForStat,
+  NEUTRAL_NATURE_ID,
+} from '../../core/pokemon-stats';
 import { EnhanceTargetPanelComponent, type EvChange } from '../enhance/enhance-target-panel.component';
-
-interface PokemonOption {
-  readonly value: string;
-  readonly name: string;
-  readonly searchText: string;
-}
-
-interface MoveOption {
-  readonly slug: string;
-  readonly name: string;
-  readonly searchText: string;
-}
+import { PokedexGridComponent } from '../pokedex/pokedex-grid.component';
+import { PokemonMovesComponent } from '../pokedex/pokemon-moves.component';
 
 interface StageControl {
   readonly stat: Stat;
@@ -46,59 +46,42 @@ interface StageControl {
   readonly value: string;
 }
 
-const ZERO_STAGES: Readonly<Record<Stat, number>> = STAT_ORDER.reduce(
+const ZERO_STAGES: Readonly<Record<Stat, number>> = DAMAGE_STAGE_STATS.reduce(
   (stages, stat) => ({ ...stages, [stat]: 0 }),
   {} as Record<Stat, number>,
 );
 
 @Component({
   selector: 'app-combatant-panel',
-  imports: [SkeletonComponent, EnhanceTargetPanelComponent, ...SelectImports],
+  imports: [
+    NgIcon,
+    ButtonComponent,
+    EnhanceTargetPanelComponent,
+    PokedexGridComponent,
+    PokemonMovesComponent,
+    ...SelectImports,
+  ],
   template: `
     <div class="flex flex-col gap-5">
       <section class="flex flex-col gap-2">
         <h3 class="text-sm font-semibold">Pokémon</h3>
-        <app-select
-          withSearch
-          class="w-full"
-          placeholder="Choisir un Pokémon"
-          searchPlaceholder="Rechercher un Pokémon"
-          emptyText="Aucun Pokémon trouvé."
-          [value]="selectedId()"
-          (selectionChange)="onPokemonChange($event)"
-        >
-          @for (option of pokemonOptions(); track option.value) {
-            <app-select-item [value]="option.value" [searchKeywords]="option.searchText">
-              {{ option.name }}
-            </app-select-item>
-          }
-        </app-select>
+        <button appButton type="button" variant="outline" full (click)="openPokedex()">
+          <ng-icon name="phosphorMagnifyingGlass" class="size-4" />
+          {{ displayName() || 'Choisir un Pokémon' }}
+        </button>
       </section>
 
       @if (hasPokemon()) {
         <section class="flex flex-col gap-2">
           <h3 class="text-sm font-semibold">Attaques</h3>
-          @if (movesLoading()) {
-            <app-skeleton class="h-9 w-full" />
-          } @else {
-            <app-select
-              [multiple]="true"
-              withSearch
-              class="w-full"
-              placeholder="Choisir des attaques"
-              searchPlaceholder="Rechercher une attaque"
-              emptyText="Aucune attaque trouvée."
-              [maxLabelCount]="2"
-              [value]="selectedMoveSlugs()"
-              (selectionChange)="onMovesChange($event)"
-            >
-              @for (move of moveOptions(); track move.slug) {
-                <app-select-item [value]="move.slug" [searchKeywords]="move.searchText">
-                  {{ move.name }}
-                </app-select-item>
-              }
-            </app-select>
-          }
+          <app-pokemon-moves
+            selectable
+            [moves]="availableMoves()"
+            [loading]="movesLoading()"
+            [selected]="selectedMoveSlugs()"
+            [fabPosition]="fabPosition()"
+            (selectedChange)="onMovesChange($event)"
+          />
         </section>
 
         <section class="flex flex-col gap-2">
@@ -126,17 +109,36 @@ const ZERO_STAGES: Readonly<Record<Stat, number>> = STAT_ORDER.reduce(
           <app-enhance-target-panel
             [nature]="config().nature"
             [evs]="config().evs"
+            [displayStats]="true"
+            [baseStats]="pokemonStats()"
             (natureChange)="onNatureChange($event)"
             (evChange)="onEvChange($event)"
           />
         </section>
       }
     </div>
+
+    <ng-template #pokedexSheet>
+      <app-pokedex-grid
+        [pokemons]="store.pokemons()"
+        [abilities]="store.abilities()"
+        [moves]="store.moves()"
+        viewportClass="h-[calc(100dvh-9rem)]"
+        (select)="onPickPokemon($event)"
+      />
+    </ng-template>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CombatantPanelComponent {
-  readonly pokemons = input.required<readonly Pokemon[]>();
+  readonly fabPosition = input<'bottom-right' | 'bottom-left'>('bottom-right');
+
+  protected readonly store = inject(ComparatorStore);
+  readonly #sheet = inject(SheetService);
+  readonly #viewContainerRef = inject(ViewContainerRef);
+
+  private readonly pokedexTemplate = viewChild.required<TemplateRef<unknown>>('pokedexSheet');
+  #sheetRef: { close: () => void } | undefined;
 
   readonly #id = signal<number | null>(null);
   readonly #config = signal<EnhanceConfig>({
@@ -152,22 +154,16 @@ export class CombatantPanelComponent {
     label: stageLabel(stage),
   }));
 
-  protected readonly selectedId = computed(() => {
-    const id = this.#id();
-    return id === null ? '' : String(id);
-  });
   protected readonly config = this.#config.asReadonly();
   protected readonly selectedMoveSlugs = computed(() => [...this.#selectedMoveSlugs()]);
 
-  protected readonly pokemonOptions = computed<readonly PokemonOption[]>(() =>
-    this.pokemons().map(pokemon => {
-      const name = pokemonName(pokemon, LANG.fr);
-      return { value: String(pokemon.id), name, searchText: normalizeText(name) };
-    }),
+  readonly #pokemon = computed(() =>
+    this.store.pokemons().find(pokemon => pokemon.id === this.#id()),
   );
-
-  readonly #pokemon = computed(() => this.pokemons().find(pokemon => pokemon.id === this.#id()));
   protected readonly hasPokemon = computed(() => this.#pokemon() !== undefined);
+  protected readonly pokemonStats = computed<Readonly<Record<Stat, number>> | null>(
+    () => this.#pokemon()?.stats ?? null,
+  );
 
   protected readonly stageControls = computed<readonly StageControl[]>(() => {
     const stages = this.#stages();
@@ -193,15 +189,7 @@ export class CombatantPanelComponent {
   );
 
   protected readonly movesLoading = this.#movesResource.isLoading;
-  readonly #availableMoves = computed(() => this.#movesResource.value().moves);
-
-  protected readonly moveOptions = computed<readonly MoveOption[]>(() =>
-    this.#availableMoves().map(move => ({
-      slug: move.slug,
-      name: move.name,
-      searchText: normalizeText(move.name),
-    })),
-  );
+  protected readonly availableMoves = computed(() => this.#movesResource.value().moves);
 
   readonly displayName = computed(() => {
     const pokemon = this.#pokemon();
@@ -223,14 +211,26 @@ export class CombatantPanelComponent {
 
   readonly selectedMoves = computed<readonly PokemonMove[]>(() => {
     const selected = new Set(this.#selectedMoveSlugs());
-    return this.#availableMoves().filter(move => selected.has(move.slug));
+    return this.availableMoves().filter(move => selected.has(move.slug));
   });
 
-  protected onPokemonChange(value: string | string[]): void {
-    const raw = Array.isArray(value) ? (value[0] ?? '') : value;
-    const id = raw ? Number(raw) : null;
-    this.#id.set(id !== null && Number.isFinite(id) ? id : null);
+  protected openPokedex(): void {
+    this.#sheetRef = this.#sheet.create({
+      content: this.pokedexTemplate(),
+      side: 'bottom',
+      title: 'Choisir un Pokémon',
+      height: '100dvh',
+      hideFooter: true,
+      maskClosable: true,
+      viewContainerRef: this.#viewContainerRef,
+      customClasses: 'p-4',
+    });
+  }
+
+  protected onPickPokemon(id: number): void {
+    this.#id.set(id);
     this.#selectedMoveSlugs.set([]);
+    this.#sheetRef?.close();
   }
 
   protected onNatureChange(nature: string): void {
@@ -251,7 +251,7 @@ export class CombatantPanelComponent {
     this.#stages.update(stages => ({ ...stages, [stat]: Number.isFinite(stage) ? stage : 0 }));
   }
 
-  protected onMovesChange(value: string | string[]): void {
-    this.#selectedMoveSlugs.set(Array.isArray(value) ? value : [value]);
+  protected onMovesChange(slugs: string[]): void {
+    this.#selectedMoveSlugs.set(slugs);
   }
 }

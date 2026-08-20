@@ -1,9 +1,11 @@
+import { NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
   computed,
   inject,
   input,
+  output,
   signal,
   type TemplateRef,
   ViewContainerRef,
@@ -62,6 +64,8 @@ const DIRECTION_ITEMS: ToggleGroupItem[] = [
 
 interface MoveView {
   readonly key: string;
+  readonly slug: string;
+  readonly selected: boolean;
   readonly name: string;
   readonly type: string;
   readonly typeLabel: string;
@@ -81,9 +85,11 @@ function asArray(value: string | string[]): string[] {
   return Array.isArray(value) ? value : [value];
 }
 
-function toMoveView(move: PokemonMove): MoveView {
+function toMoveView(move: PokemonMove, selected: boolean): MoveView {
   return {
     key: `${move.name}-${move.type}-${move.damageClass}`,
+    slug: move.slug,
+    selected,
     name: move.name,
     type: move.type,
     typeLabel: typeLabel(move.type),
@@ -106,6 +112,7 @@ function toMoveView(move: PokemonMove): MoveView {
     NgIcon,
     ButtonComponent,
     EmptyComponent,
+    NgTemplateOutlet,
     FabButtonComponent,
     FabContainerComponent,
     FabListComponent,
@@ -132,30 +139,34 @@ function toMoveView(move: PokemonMove): MoveView {
         <span class="text-muted-foreground text-sm">{{ visibleMoves().length }} attaque(s)</span>
         <div class="flex max-h-[26rem] flex-col gap-2 overflow-y-auto pr-1">
           @for (move of visibleMoves(); track move.key) {
-            <button
-              type="button"
-              class="border-border hover:bg-muted/50 flex w-full items-center gap-2 rounded-lg border p-2 text-left transition-colors"
-              appPopover
-              [content]="movePopover"
-              (click)="selectedMove.set(move)"
-            >
-              <span class="min-w-0 flex-1 truncate text-sm font-medium">{{ move.name }}</span>
-              <span [class]="move.typeClass" class="rounded-full px-2 py-0.5 text-xs font-medium">
-                {{ move.typeLabel }}
-              </span>
-              <span [class]="move.damageTag" class="rounded-full px-2 py-0.5 text-xs font-medium">
-                {{ move.damageLabel }}
-              </span>
-              <span class="w-9 shrink-0 text-right text-sm tabular-nums">{{ move.powerLabel }}</span>
-              <span class="text-muted-foreground w-12 shrink-0 text-right text-sm tabular-nums">
-                {{ move.accuracyLabel }}
-              </span>
-            </button>
+            @if (selectable()) {
+              <button
+                type="button"
+                [class]="move.selected ? selectedRowClass : rowClass"
+                (click)="toggleMove(move)"
+              >
+                <ng-container [ngTemplateOutlet]="moveRow" [ngTemplateOutletContext]="{ $implicit: move }" />
+              </button>
+            } @else {
+              <button
+                type="button"
+                [class]="rowClass"
+                appPopover
+                [content]="movePopover"
+                (click)="selectedMove.set(move)"
+              >
+                <ng-container [ngTemplateOutlet]="moveRow" [ngTemplateOutletContext]="{ $implicit: move }" />
+              </button>
+            }
           }
         </div>
       </div>
 
-      <app-fab triggerIcon="phosphorSliders" triggerLabel="Filtrer et trier les attaques">
+      <app-fab
+        triggerIcon="phosphorSliders"
+        triggerLabel="Filtrer et trier les attaques"
+        [position]="fabPosition()"
+      >
         <app-fab-list>
           <button appFabButton type="button" aria-label="Filtrer les attaques" (click)="openFilters()">
             <ng-icon name="phosphorFunnel" class="size-5" />
@@ -271,12 +282,34 @@ function toMoveView(move: PokemonMove): MoveView {
         }
       </app-popover>
     </ng-template>
+
+    <ng-template #moveRow let-move>
+      @if (move.selected) {
+        <ng-icon name="phosphorCheck" class="text-primary size-4 shrink-0" />
+      }
+      <span class="min-w-0 flex-1 truncate text-sm font-medium">{{ move.name }}</span>
+      <span [class]="move.typeClass" class="rounded-full px-2 py-0.5 text-xs font-medium">
+        {{ move.typeLabel }}
+      </span>
+      <span [class]="move.damageTag" class="rounded-full px-2 py-0.5 text-xs font-medium">
+        {{ move.damageLabel }}
+      </span>
+      <span class="w-9 shrink-0 text-right text-sm tabular-nums">{{ move.powerLabel }}</span>
+      <span class="text-muted-foreground w-12 shrink-0 text-right text-sm tabular-nums">
+        {{ move.accuracyLabel }}
+      </span>
+    </ng-template>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PokemonMovesComponent {
   readonly moves = input.required<readonly PokemonMove[]>();
   readonly loading = input<boolean>(false);
+  readonly selectable = input<boolean>(false);
+  readonly selected = input<readonly string[]>([]);
+  readonly fabPosition = input<'bottom-right' | 'bottom-left'>('bottom-right');
+
+  readonly selectedChange = output<string[]>();
 
   readonly #sheet = inject(SheetService);
   readonly #viewContainerRef = inject(ViewContainerRef);
@@ -285,6 +318,11 @@ export class PokemonMovesComponent {
   private readonly sortTemplate = viewChild.required<TemplateRef<unknown>>('sortSheet');
 
   protected readonly selectedMove = signal<MoveView | undefined>(undefined);
+
+  protected readonly rowClass =
+    'border-border hover:bg-muted/50 flex w-full items-center gap-2 rounded-lg border p-2 text-left transition-colors';
+  protected readonly selectedRowClass =
+    'border-primary bg-primary/10 flex w-full items-center gap-2 rounded-lg border p-2 text-left transition-colors';
 
   protected readonly typeItems = TYPE_ITEMS;
   protected readonly damageItems = DAMAGE_ITEMS;
@@ -307,6 +345,7 @@ export class PokemonMovesComponent {
   protected readonly visibleMoves = computed<readonly MoveView[]>(() => {
     const types = new Set(this.#selectedTypes());
     const damage = new Set(this.#selectedDamage());
+    const selectedSlugs = new Set(this.selected());
     const field = this.#sortField();
     const ascending = this.#sortDirection() === 'asc';
 
@@ -335,8 +374,16 @@ export class PokemonMovesComponent {
       return ascending ? powerA - powerB : powerB - powerA;
     });
 
-    return sorted.map(toMoveView);
+    return sorted.map(move => toMoveView(move, selectedSlugs.has(move.slug)));
   });
+
+  protected toggleMove(move: MoveView): void {
+    const current = this.selected();
+    const next = current.includes(move.slug)
+      ? current.filter(slug => slug !== move.slug)
+      : [...current, move.slug];
+    this.selectedChange.emit(next);
+  }
 
   protected openFilters(): void {
     this.#sheet.create({
