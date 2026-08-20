@@ -162,11 +162,7 @@ function toMoveView(move: PokemonMove, selected: boolean): MoveView {
         </div>
       </div>
 
-      <app-fab
-        triggerIcon="phosphorSliders"
-        triggerLabel="Filtrer et trier les attaques"
-        [position]="fabPosition()"
-      >
+      <app-fab triggerIcon="phosphorSliders" triggerLabel="Filtrer et trier les attaques">
         <app-fab-list>
           <button appFabButton type="button" aria-label="Filtrer les attaques" (click)="openFilters()">
             <ng-icon name="phosphorFunnel" class="size-5" />
@@ -307,7 +303,6 @@ export class PokemonMovesComponent {
   readonly loading = input<boolean>(false);
   readonly selectable = input<boolean>(false);
   readonly selected = input<readonly string[]>([]);
-  readonly fabPosition = input<'bottom-right' | 'bottom-left'>('bottom-right');
 
   readonly selectedChange = output<string[]>();
 

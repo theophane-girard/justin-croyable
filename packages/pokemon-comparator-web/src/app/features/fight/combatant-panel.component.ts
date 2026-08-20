@@ -4,7 +4,6 @@ import {
   Component,
   computed,
   inject,
-  input,
   signal,
   type TemplateRef,
   ViewContainerRef,
@@ -74,14 +73,10 @@ const ZERO_STAGES: Readonly<Record<Stat, number>> = DAMAGE_STAGE_STATS.reduce(
       @if (hasPokemon()) {
         <section class="flex flex-col gap-2">
           <h3 class="text-sm font-semibold">Attaques</h3>
-          <app-pokemon-moves
-            selectable
-            [moves]="availableMoves()"
-            [loading]="movesLoading()"
-            [selected]="selectedMoveSlugs()"
-            [fabPosition]="fabPosition()"
-            (selectedChange)="onMovesChange($event)"
-          />
+          <button appButton type="button" variant="outline" full (click)="openMoves()">
+            <ng-icon name="phosphorSword" class="size-4" />
+            {{ movesButtonLabel() }}
+          </button>
         </section>
 
         <section class="flex flex-col gap-2">
@@ -127,17 +122,26 @@ const ZERO_STAGES: Readonly<Record<Stat, number>> = DAMAGE_STAGE_STATS.reduce(
         (select)="onPickPokemon($event)"
       />
     </ng-template>
+
+    <ng-template #movesSheet>
+      <app-pokemon-moves
+        selectable
+        [moves]="availableMoves()"
+        [loading]="movesLoading()"
+        [selected]="selectedMoveSlugs()"
+        (selectedChange)="onMovesChange($event)"
+      />
+    </ng-template>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CombatantPanelComponent {
-  readonly fabPosition = input<'bottom-right' | 'bottom-left'>('bottom-right');
-
   protected readonly store = inject(ComparatorStore);
   readonly #sheet = inject(SheetService);
   readonly #viewContainerRef = inject(ViewContainerRef);
 
   private readonly pokedexTemplate = viewChild.required<TemplateRef<unknown>>('pokedexSheet');
+  private readonly movesTemplate = viewChild.required<TemplateRef<unknown>>('movesSheet');
   #sheetRef: { close: () => void } | undefined;
 
   readonly #id = signal<number | null>(null);
@@ -156,6 +160,10 @@ export class CombatantPanelComponent {
 
   protected readonly config = this.#config.asReadonly();
   protected readonly selectedMoveSlugs = computed(() => [...this.#selectedMoveSlugs()]);
+  protected readonly movesButtonLabel = computed(() => {
+    const count = this.#selectedMoveSlugs().length;
+    return count > 0 ? `Attaques (${count})` : 'Choisir des attaques';
+  });
 
   readonly #pokemon = computed(() =>
     this.store.pokemons().find(pokemon => pokemon.id === this.#id()),
@@ -231,6 +239,19 @@ export class CombatantPanelComponent {
     this.#id.set(id);
     this.#selectedMoveSlugs.set([]);
     this.#sheetRef?.close();
+  }
+
+  protected openMoves(): void {
+    this.#sheet.create({
+      content: this.movesTemplate(),
+      side: 'bottom',
+      title: 'Choisir les attaques',
+      height: '100dvh',
+      hideFooter: true,
+      maskClosable: true,
+      viewContainerRef: this.#viewContainerRef,
+      customClasses: 'p-4',
+    });
   }
 
   protected onNatureChange(nature: string): void {

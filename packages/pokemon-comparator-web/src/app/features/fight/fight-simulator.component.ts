@@ -122,10 +122,10 @@ function toRow(move: PokemonMove, damage: DamageResult | null): DamageRow {
       } @else {
         <div class="grid gap-4 md:grid-cols-2">
           <app-card title="Combattant A">
-            <app-combatant-panel #a fabPosition="bottom-left" />
+            <app-combatant-panel #a />
           </app-card>
           <app-card title="Combattant B">
-            <app-combatant-panel #b fabPosition="bottom-right" />
+            <app-combatant-panel #b />
           </app-card>
         </div>
 
