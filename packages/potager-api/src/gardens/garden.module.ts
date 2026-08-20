@@ -154,6 +154,31 @@ export class GardenService {
     ];
   }
 
+  async rename(
+    user: UserRecord,
+    gardenId: string,
+    name: string,
+  ): Promise<Garden | 'not-found' | 'forbidden'> {
+    const garden = await this.db.query.gardens.findFirst({ where: eq(gardens.id, gardenId) });
+    if (!garden) {
+      return 'not-found';
+    }
+    const role = await this.roleFor(user, gardenId);
+    if (role === null || !roleCanManageMembers(role)) {
+      return 'forbidden';
+    }
+    const [updated] = await this.db
+      .update(gardens)
+      .set({ name: name.trim(), updatedAt: new Date() })
+      .where(eq(gardens.id, gardenId))
+      .returning();
+    const owner =
+      updated.ownerUserId === user.id
+        ? null
+        : await this.db.query.users.findFirst({ where: eq(users.id, updated.ownerUserId) });
+    return this.toGarden(updated, role, owner?.email ?? null);
+  }
+
   async removeForUser(
     user: UserRecord,
     gardenId: string,
@@ -359,6 +384,16 @@ export class GardenController {
         return { status: 200, body: this.gardens.toGarden(garden, GARDEN_ROLE.owner) };
       },
       list: async () => ({ status: 200, body: await this.gardens.listAccessibleGardens(user) }),
+      update: async ({ params, body }) => {
+        const outcome = await this.gardens.rename(user, params.id, body.name);
+        if (outcome === 'not-found') {
+          return { status: 404, body: { message: 'Jardin introuvable.' } };
+        }
+        if (outcome === 'forbidden') {
+          return { status: 403, body: { message: 'Renommage non autorisé.' } };
+        }
+        return { status: 200, body: outcome };
+      },
       remove: async ({ params }) => {
         const outcome = await this.gardens.removeForUser(user, params.id);
         if (outcome === 'not-found') {

@@ -91,6 +91,19 @@ export class GardenAccessStore {
     return succeeded;
   }
 
+  async rename(name: string): Promise<boolean> {
+    const gardenId = this.active()?.id;
+    if (!gardenId) {
+      return false;
+    }
+    const response = await this.#api.updateGarden(gardenId, name);
+    if (response.status !== 200) {
+      return false;
+    }
+    await this.reload();
+    return true;
+  }
+
   async remove(gardenId: string): Promise<boolean> {
     const response = await this.#api.removeGarden(gardenId);
     if (response.status !== 200) {

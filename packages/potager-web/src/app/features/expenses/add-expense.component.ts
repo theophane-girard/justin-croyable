@@ -38,8 +38,12 @@ import { EXPENSES_LINK } from '../../app.routes';
         </div>
         <div class="flex items-center gap-2">
           <a appButton variant="outline" [routerLink]="expensesLink">Annuler</a>
-          <button appButton [buttonDisabled]="!canSubmit()" (click)="onSave()">
+          <button appButton variant="outline" [buttonDisabled]="!canSubmit()" (click)="onSaveAndAddAnother()">
             <ng-icon name="phosphorPlus" class="size-4" />
+            Ajouter un autre
+          </button>
+          <button appButton [buttonDisabled]="!canSubmit()" (click)="onSave()">
+            <ng-icon name="phosphorFloppyDisk" class="size-4" />
             Enregistrer
           </button>
         </div>
@@ -189,18 +193,31 @@ export class AddExpenseComponent {
   }
 
   protected onSave(): void {
+    if (this.#persist()) {
+      this.#router.navigateByUrl(EXPENSES_LINK);
+    }
+  }
+
+  protected onSaveAndAddAnother(): void {
+    if (this.#persist()) {
+      this.label.set('');
+      this.amountInput.set('');
+    }
+  }
+
+  #persist(): boolean {
     const label = this.label().trim();
     const category = this.category();
     const amountEur = this.amountEur();
     const spentOn = this.date();
     if (!label || !isExpenseCategoryId(category) || amountEur === null || spentOn === null) {
-      return;
+      return false;
     }
     const plantIds = this.allPlants() ? [] : this.selectedPlantIds();
     if (!this.allPlants() && plantIds.length === 0) {
-      return;
+      return false;
     }
     this.store.add({ label, category, amountEur, spentOn, plantIds });
-    this.#router.navigateByUrl(EXPENSES_LINK);
+    return true;
   }
 }
