@@ -19,6 +19,7 @@ import {
   FabContainerComponent,
   FabListComponent,
   InputDirective,
+  InputGroupComponent,
   PopoverComponent,
   PopoverDirective,
   SheetService,
@@ -129,6 +130,7 @@ function toMoveView(move: PokemonMove, selected: boolean): MoveView {
     FabContainerComponent,
     FabListComponent,
     InputDirective,
+    InputGroupComponent,
     PopoverComponent,
     PopoverDirective,
     SkeletonComponent,
@@ -149,18 +151,15 @@ function toMoveView(move: PokemonMove, selected: boolean): MoveView {
       />
     } @else {
       <div class="flex flex-col gap-2">
-        <div class="border-border flex items-center gap-2 rounded-lg border px-3">
-          <ng-icon name="phosphorMagnifyingGlass" class="text-muted-foreground size-4 shrink-0" />
+        <app-input-group [addonBefore]="searchIcon">
           <input
             app-input
-            borderless
             type="text"
             placeholder="Rechercher une attaque (fr, en, de, ja…)"
-            class="flex-1"
             [value]="search()"
             (input)="onSearchInput($event)"
           />
-        </div>
+        </app-input-group>
         <span class="text-muted-foreground text-sm">{{ visibleMoves().length }} attaque(s)</span>
         <div class="flex flex-col gap-2 overflow-y-auto pr-1" [class]="viewportClass()">
           @if (visibleMoves().length === 0) {
@@ -215,6 +214,10 @@ function toMoveView(move: PokemonMove, selected: boolean): MoveView {
         </app-fab-list>
       </app-fab>
     }
+
+    <ng-template #searchIcon>
+      <ng-icon name="phosphorMagnifyingGlass" class="text-muted-foreground size-4" />
+    </ng-template>
 
     <ng-template #filtersSheet>
       <div class="flex flex-col gap-5">

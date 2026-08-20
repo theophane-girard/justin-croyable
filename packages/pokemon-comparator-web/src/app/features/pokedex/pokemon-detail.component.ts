@@ -151,18 +151,20 @@ function toDetail(pokemon: Pokemon, config: EnhanceConfig): DetailView {
   ],
   template: `
     <div class="mx-auto flex w-full max-w-3xl flex-col gap-4">
-      <a
-        appButton
-        type="button"
-        variant="ghost"
-        size="sm"
-        class="w-fit"
-        [routerLink]="pokedexLink"
-        queryParamsHandling="preserve"
-      >
-        <ng-icon name="phosphorArrowLeft" class="size-4" />
-        Retour au Pokédex
-      </a>
+      @if (!embedded()) {
+        <a
+          appButton
+          type="button"
+          variant="ghost"
+          size="sm"
+          class="w-fit"
+          [routerLink]="pokedexLink"
+          queryParamsHandling="preserve"
+        >
+          <ng-icon name="phosphorArrowLeft" class="size-4" />
+          Retour au Pokédex
+        </a>
+      }
 
       @let view = detail();
       @if (store.isLoading()) {
@@ -337,6 +339,7 @@ export class PokemonDetailComponent {
   readonly #route = inject(ActivatedRoute);
 
   readonly id = input.required<string>();
+  readonly embedded = input(false);
 
   constructor() {
     this.#restoreFromUrl();
@@ -344,6 +347,9 @@ export class PokemonDetailComponent {
   }
 
   #restoreFromUrl(): void {
+    if (this.embedded()) {
+      return;
+    }
     const raw = this.#route.snapshot.queryParamMap.get(CONFIG_PARAM_PREFIX);
     if (!raw) {
       return;
@@ -356,6 +362,9 @@ export class PokemonDetailComponent {
   }
 
   #syncToUrl(): void {
+    if (this.embedded()) {
+      return;
+    }
     const config = this.enhanceConfig();
     const queryParams: Params = {
       [CONFIG_PARAM_PREFIX]: config.level100 ? encodeEnhanceConfig(config) : null,

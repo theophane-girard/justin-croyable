@@ -40,7 +40,7 @@ import {
   parseMoveEffects,
   parsePokemonDetail,
 } from '../../core/pokemon-detail';
-import { LANG, pokemonName, type Stat, STAT_META } from '../../core/pokemon.model';
+import { LANG, pokemonImageUrl, pokemonName, type Stat, STAT_META } from '../../core/pokemon.model';
 import {
   DEFAULT_ENHANCE_CONFIG,
   type EnhanceConfig,
@@ -50,7 +50,9 @@ import {
 } from '../../core/pokemon-stats';
 import { EnhanceTargetPanelComponent, type EvChange } from '../enhance/enhance-target-panel.component';
 import { PokedexGridComponent } from '../pokedex/pokedex-grid.component';
+import { PokemonDetailComponent } from '../pokedex/pokemon-detail.component';
 import { PokemonMovesComponent } from '../pokedex/pokemon-moves.component';
+import { PokemonSpriteComponent } from '../pokedex/pokemon-sprite.component';
 
 interface StageControl {
   readonly stat: Stat;
@@ -72,7 +74,9 @@ const ZERO_STAGES: Readonly<Record<Stat, number>> = DAMAGE_STAGE_STATS.reduce(
     ButtonComponent,
     EnhanceTargetPanelComponent,
     PokedexGridComponent,
+    PokemonDetailComponent,
     PokemonMovesComponent,
+    PokemonSpriteComponent,
     ToggleGroupComponent,
     ...SelectImports,
   ],
@@ -80,10 +84,31 @@ const ZERO_STAGES: Readonly<Record<Stat, number>> = DAMAGE_STAGE_STATS.reduce(
     <div class="flex flex-col gap-5">
       <section class="flex flex-col gap-2">
         <h3 class="text-sm font-semibold">Pokémon</h3>
-        <button appButton type="button" variant="outline" full (click)="openPokedex()">
-          <ng-icon name="phosphorMagnifyingGlass" class="size-4" />
-          {{ displayName() || 'Choisir un Pokémon' }}
-        </button>
+        @if (hasPokemon()) {
+          <div class="border-border flex items-center gap-3 rounded-lg border p-2">
+            <app-pokemon-sprite class="size-12" [src]="spriteUrl()" [alt]="displayName()" />
+            <span class="min-w-0 flex-1 truncate text-sm font-medium">{{ displayName() }}</span>
+            <button
+              appButton
+              type="button"
+              variant="ghost"
+              size="sm"
+              aria-label="Détail du Pokémon"
+              (click)="openDetail()"
+            >
+              <ng-icon name="phosphorInfo" class="size-5" />
+            </button>
+            <button appButton type="button" variant="outline" size="sm" (click)="openPokedex()">
+              <ng-icon name="phosphorArrowClockwise" class="size-4" />
+              Changer
+            </button>
+          </div>
+        } @else {
+          <button appButton type="button" variant="outline" full (click)="openPokedex()">
+            <ng-icon name="phosphorMagnifyingGlass" class="size-4" />
+            Choisir un Pokémon
+          </button>
+        }
       </section>
 
       @if (hasPokemon()) {
@@ -160,6 +185,10 @@ const ZERO_STAGES: Readonly<Record<Stat, number>> = DAMAGE_STAGE_STATS.reduce(
       />
     </ng-template>
 
+    <ng-template #detailSheet>
+      <app-pokemon-detail [id]="pokemonIdString()" [embedded]="true" />
+    </ng-template>
+
     <ng-template #movesSheet>
       <app-pokemon-moves
         [selectable]="true"
@@ -179,6 +208,7 @@ export class CombatantPanelComponent {
   readonly #viewContainerRef = inject(ViewContainerRef);
 
   private readonly pokedexTemplate = viewChild.required<TemplateRef<unknown>>('pokedexSheet');
+  private readonly detailTemplate = viewChild.required<TemplateRef<unknown>>('detailSheet');
   private readonly movesTemplate = viewChild.required<TemplateRef<unknown>>('movesSheet');
   #sheetRef: { close: () => void } | undefined;
 
@@ -234,6 +264,14 @@ export class CombatantPanelComponent {
   protected readonly pokemonStats = computed<Readonly<Record<Stat, number>> | null>(
     () => this.#pokemon()?.stats ?? null,
   );
+  protected readonly pokemonIdString = computed(() => {
+    const id = this.#id();
+    return id === null ? '' : String(id);
+  });
+  protected readonly spriteUrl = computed(() => {
+    const id = this.#id();
+    return id === null ? '' : pokemonImageUrl(id);
+  });
 
   protected readonly stageControls = computed<readonly StageControl[]>(() => {
     const stages = this.#stages();
@@ -328,6 +366,19 @@ export class CombatantPanelComponent {
     this.#id.set(id);
     this.#selectedMoveSlugs.set([]);
     this.#sheetRef?.close();
+  }
+
+  protected openDetail(): void {
+    this.#sheet.create({
+      content: this.detailTemplate(),
+      side: 'bottom',
+      title: this.displayName(),
+      height: '100dvh',
+      hideFooter: true,
+      maskClosable: true,
+      viewContainerRef: this.#viewContainerRef,
+      customClasses: 'p-4',
+    });
   }
 
   protected openMoves(): void {
