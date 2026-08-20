@@ -62,10 +62,21 @@ const DIRECTION_ITEMS: ToggleGroupItem[] = [
   { value: 'asc', label: 'Croissant' },
 ];
 
+const ROW_BASE = 'flex items-center gap-2 rounded-lg border p-2 text-left transition-colors';
+const ROW_UNSELECTED = 'border-border hover:bg-muted/50';
+const ROW_SELECTED = 'border-primary bg-primary/10';
+
+function rowClassFor(selected: boolean, selectable: boolean): string {
+  const state = selected ? ROW_SELECTED : ROW_UNSELECTED;
+  const width = selectable ? 'min-w-0 flex-1' : 'w-full';
+  return `${ROW_BASE} ${state} ${width}`;
+}
+
 interface MoveView {
   readonly key: string;
   readonly slug: string;
   readonly selected: boolean;
+  readonly rowClass: string;
   readonly name: string;
   readonly type: string;
   readonly typeLabel: string;
@@ -85,11 +96,12 @@ function asArray(value: string | string[]): string[] {
   return Array.isArray(value) ? value : [value];
 }
 
-function toMoveView(move: PokemonMove, selected: boolean): MoveView {
+function toMoveView(move: PokemonMove, selected: boolean, selectable: boolean): MoveView {
   return {
     key: `${move.name}-${move.type}-${move.damageClass}`,
     slug: move.slug,
     selected,
+    rowClass: rowClassFor(selected, selectable),
     name: move.name,
     type: move.type,
     typeLabel: typeLabel(move.type),
@@ -137,20 +149,28 @@ function toMoveView(move: PokemonMove, selected: boolean): MoveView {
     } @else {
       <div class="flex flex-col gap-2">
         <span class="text-muted-foreground text-sm">{{ visibleMoves().length }} attaque(s)</span>
-        <div class="flex max-h-[26rem] flex-col gap-2 overflow-y-auto pr-1">
+        <div class="flex flex-col gap-2 overflow-y-auto pr-1" [class]="viewportClass()">
           @for (move of visibleMoves(); track move.key) {
             @if (selectable()) {
-              <button
-                type="button"
-                [class]="move.selected ? selectedRowClass : rowClass"
-                (click)="toggleMove(move)"
-              >
-                <ng-container [ngTemplateOutlet]="moveRow" [ngTemplateOutletContext]="{ $implicit: move }" />
-              </button>
+              <div class="flex items-center gap-1">
+                <button type="button" [class]="move.rowClass" (click)="toggleMove(move)">
+                  <ng-container [ngTemplateOutlet]="moveRow" [ngTemplateOutletContext]="{ $implicit: move }" />
+                </button>
+                <button
+                  type="button"
+                  class="border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground flex size-9 shrink-0 items-center justify-center rounded-lg border transition-colors"
+                  aria-label="Détail de l'attaque"
+                  appPopover
+                  [content]="movePopover"
+                  (click)="selectedMove.set(move)"
+                >
+                  <ng-icon name="phosphorInfo" class="size-5" />
+                </button>
+              </div>
             } @else {
               <button
                 type="button"
-                [class]="rowClass"
+                [class]="move.rowClass"
                 appPopover
                 [content]="movePopover"
                 (click)="selectedMove.set(move)"
@@ -303,6 +323,7 @@ export class PokemonMovesComponent {
   readonly loading = input<boolean>(false);
   readonly selectable = input<boolean>(false);
   readonly selected = input<readonly string[]>([]);
+  readonly viewportClass = input<string>('max-h-[26rem]');
 
   readonly selectedChange = output<string[]>();
 
@@ -313,11 +334,6 @@ export class PokemonMovesComponent {
   private readonly sortTemplate = viewChild.required<TemplateRef<unknown>>('sortSheet');
 
   protected readonly selectedMove = signal<MoveView | undefined>(undefined);
-
-  protected readonly rowClass =
-    'border-border hover:bg-muted/50 flex w-full items-center gap-2 rounded-lg border p-2 text-left transition-colors';
-  protected readonly selectedRowClass =
-    'border-primary bg-primary/10 flex w-full items-center gap-2 rounded-lg border p-2 text-left transition-colors';
 
   protected readonly typeItems = TYPE_ITEMS;
   protected readonly damageItems = DAMAGE_ITEMS;
@@ -369,7 +385,8 @@ export class PokemonMovesComponent {
       return ascending ? powerA - powerB : powerB - powerA;
     });
 
-    return sorted.map(move => toMoveView(move, selectedSlugs.has(move.slug)));
+    const selectable = this.selectable();
+    return sorted.map(move => toMoveView(move, selectedSlugs.has(move.slug), selectable));
   });
 
   protected toggleMove(move: MoveView): void {

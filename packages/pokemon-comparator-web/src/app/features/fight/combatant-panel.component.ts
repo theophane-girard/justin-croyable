@@ -125,7 +125,8 @@ const ZERO_STAGES: Readonly<Record<Stat, number>> = DAMAGE_STAGE_STATS.reduce(
 
     <ng-template #movesSheet>
       <app-pokemon-moves
-        selectable
+        [selectable]="true"
+        viewportClass="h-[calc(100dvh-13rem)]"
         [moves]="availableMoves()"
         [loading]="movesLoading()"
         [selected]="selectedMoveSlugs()"
