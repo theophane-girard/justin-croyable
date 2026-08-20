@@ -1,4 +1,4 @@
-import { inject, Injectable } from '@angular/core';
+import { inject, Injectable, signal } from '@angular/core';
 import {
   apiContract,
   type CreateExpensePayload,
@@ -23,12 +23,24 @@ import { AuthService } from './auth.service';
 export class ApiService {
   readonly #auth = inject(AuthService);
 
+  readonly #activeGardenId = signal<string | null>(null);
+  readonly activeGardenId = this.#activeGardenId.asReadonly();
+
+  setActiveGardenId(gardenId: string | null): void {
+    this.#activeGardenId.set(gardenId);
+  }
+
   readonly #client = initClient(apiContract, {
     baseUrl: `${API_BASE_URL}/api`,
     baseHeaders: {},
     api: async (args: ApiFetcherArgs) => {
       const token = await this.#auth.idToken();
-      const headers = token ? { ...args.headers, authorization: `Bearer ${token}` } : args.headers;
+      const gardenId = this.#activeGardenId();
+      const headers = {
+        ...args.headers,
+        ...(token ? { authorization: `Bearer ${token}` } : {}),
+        ...(gardenId ? { 'x-garden-id': gardenId } : {}),
+      };
       return tsRestFetchApi({ ...args, headers });
     },
   });
@@ -107,6 +119,10 @@ export class ApiService {
 
   currentGarden() {
     return this.#client.gardens.current();
+  }
+
+  listGardens() {
+    return this.#client.gardens.list();
   }
 
   gardenMembers(id: string) {

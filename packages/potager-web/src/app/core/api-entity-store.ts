@@ -19,6 +19,7 @@ export abstract class ApiEntityStore<T extends { readonly id: string }> {
 
   constructor() {
     effect(() => {
+      this.api.activeGardenId();
       if (this.#auth.isAuthenticated()) {
         void this.reload();
       }

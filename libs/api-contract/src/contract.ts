@@ -140,6 +140,11 @@ export const gardenContract = contract.router({
     path: '/gardens/current',
     responses: { 200: gardenSchema, 401: errorSchema },
   },
+  list: {
+    method: 'GET',
+    path: '/gardens',
+    responses: { 200: z.array(gardenSchema), 401: errorSchema },
+  },
   members: {
     method: 'GET',
     path: '/gardens/:id/members',

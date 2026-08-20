@@ -8,9 +8,11 @@ import { Controller, Inject, Injectable, Module, UseGuards } from '@nestjs/commo
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { and, eq } from 'drizzle-orm';
 
+import { ActiveGardenId } from '../auth/active-garden.decorator';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { FirebaseAuthGuard } from '../auth/firebase-auth.guard';
 import { type Database, DRIZZLE } from '../db/drizzle';
+import { GardenModule, GardenService } from '../gardens/garden.module';
 import { harvests, type HarvestRecord, type UserRecord } from '../db/schema';
 
 function toHarvest(record: HarvestRecord): Harvest {
@@ -73,12 +75,21 @@ export class HarvestService {
 @Controller()
 @UseGuards(FirebaseAuthGuard)
 export class HarvestController {
-  constructor(private readonly harvests: HarvestService) {}
+  constructor(
+    private readonly harvests: HarvestService,
+    private readonly gardens: GardenService,
+  ) {}
 
   @TsRestHandler(harvestContract)
-  async handler(@CurrentUser() user: UserRecord) {
+  async handler(
+    @CurrentUser() user: UserRecord,
+    @ActiveGardenId() activeGardenId: string | null,
+  ) {
     return tsRestHandler(harvestContract, {
-      list: async () => ({ status: 200, body: await this.harvests.list(user.id) }),
+      list: async () => {
+        const ownerId = await this.gardens.resolveDataOwnerId(user, activeGardenId);
+        return { status: 200, body: ownerId ? await this.harvests.list(ownerId) : [] };
+      },
       create: async ({ body }) => ({ status: 201, body: await this.harvests.create(user.id, body) }),
       update: async ({ params, body }) => {
         const updated = await this.harvests.update(user.id, params.id, body);
@@ -98,5 +109,5 @@ export class HarvestController {
   }
 }
 
-@Module({ controllers: [HarvestController], providers: [HarvestService] })
+@Module({ imports: [GardenModule], controllers: [HarvestController], providers: [HarvestService] })
 export class HarvestModule {}
