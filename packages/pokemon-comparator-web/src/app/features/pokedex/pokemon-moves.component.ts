@@ -18,6 +18,7 @@ import {
   FabButtonComponent,
   FabContainerComponent,
   FabListComponent,
+  InputDirective,
   PopoverComponent,
   PopoverDirective,
   SheetService,
@@ -28,6 +29,7 @@ import {
 import { NgIcon } from '@ng-icons/core';
 
 import { type PokemonMove } from '../../core/pokemon-detail';
+import { normalizeText } from '../../core/pokemon-search';
 import { typeLabel, TYPE_SLUGS, typeTileClass } from '../../core/pokemon-type';
 
 const DAMAGE_CLASS_LABEL = new Map<string, string>([
@@ -126,6 +128,7 @@ function toMoveView(move: PokemonMove, selected: boolean): MoveView {
     FabButtonComponent,
     FabContainerComponent,
     FabListComponent,
+    InputDirective,
     PopoverComponent,
     PopoverDirective,
     SkeletonComponent,
@@ -146,8 +149,25 @@ function toMoveView(move: PokemonMove, selected: boolean): MoveView {
       />
     } @else {
       <div class="flex flex-col gap-2">
+        <div class="border-border flex items-center gap-2 rounded-lg border px-3">
+          <ng-icon name="phosphorMagnifyingGlass" class="text-muted-foreground size-4 shrink-0" />
+          <input
+            app-input
+            borderless
+            type="text"
+            placeholder="Rechercher une attaque (fr, en, de, ja…)"
+            class="flex-1"
+            [value]="search()"
+            (input)="onSearchInput($event)"
+          />
+        </div>
         <span class="text-muted-foreground text-sm">{{ visibleMoves().length }} attaque(s)</span>
         <div class="flex flex-col gap-2 overflow-y-auto pr-1" [class]="viewportClass()">
+          @if (visibleMoves().length === 0) {
+            <p class="text-muted-foreground py-6 text-center text-sm">
+              Aucune attaque ne correspond à votre recherche.
+            </p>
+          }
           @for (move of visibleMoves(); track move.key) {
             @if (selectable()) {
               <div [class]="move.rowClass">
@@ -343,12 +363,14 @@ export class PokemonMovesComponent {
   protected readonly directionItems = DIRECTION_ITEMS;
   protected readonly skeletonRows = [0, 1, 2, 3, 4, 5];
 
+  readonly #search = signal('');
   readonly #selectedTypes = signal<string[]>([]);
   readonly #selectedDamage = signal<string[]>([]);
   readonly #sortField = signal<string>('type');
   readonly #sortDirection = signal<string>('asc');
   readonly #resetKey = signal(0);
 
+  protected readonly search = this.#search.asReadonly();
   protected readonly selectedTypes = this.#selectedTypes.asReadonly();
   protected readonly selectedDamage = this.#selectedDamage.asReadonly();
   protected readonly sortField = this.#sortField.asReadonly();
@@ -359,12 +381,14 @@ export class PokemonMovesComponent {
     const types = new Set(this.#selectedTypes());
     const damage = new Set(this.#selectedDamage());
     const selectedSlugs = new Set(this.selected());
+    const needle = normalizeText(this.#search());
     const field = this.#sortField();
     const ascending = this.#sortDirection() === 'asc';
 
     const filtered = this.moves()
       .filter(move => types.size === 0 || types.has(move.type))
-      .filter(move => damage.size === 0 || damage.has(move.damageClass));
+      .filter(move => damage.size === 0 || damage.has(move.damageClass))
+      .filter(move => needle.length === 0 || move.searchNames.some(name => name.includes(needle)));
 
     const sorted = [...filtered].sort((a, b) => {
       if (field === 'type') {
@@ -396,6 +420,10 @@ export class PokemonMovesComponent {
       ? current.filter(slug => slug !== move.slug)
       : [...current, move.slug];
     this.selectedChange.emit(next);
+  }
+
+  protected onSearchInput(event: Event): void {
+    this.#search.set((event.target as HTMLInputElement).value);
   }
 
   protected openFilters(): void {
