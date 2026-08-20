@@ -43,6 +43,7 @@ export class GardenAccessStore {
     return this.#gardens().find(garden => garden.id === id) ?? null;
   });
 
+  readonly hasGardens = computed(() => this.#gardens().length > 0);
   readonly hasMultiple = computed(() => this.#gardens().length > 1);
 
   readonly canManageActive = computed(() => {
