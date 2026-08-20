@@ -10,12 +10,16 @@ import {
 import { RouterLink } from '@angular/router';
 
 import {
+  BadgeComponent,
   ButtonComponent,
+  DividerComponent,
   EmptyComponent,
   FabButtonComponent,
   FabContainerComponent,
   FabListComponent,
   injectQueryFilters,
+  InputDirective,
+  InputGroupComponent,
   SegmentComponent,
   type SegmentItem,
   SelectImports,
@@ -23,6 +27,7 @@ import {
   stringFilter,
   TableComponent,
 } from '@justin-croyable/design-system';
+import { GARDEN_ROLE, type GardenRole, type ShareableRole } from '@justin-croyable/api-contract';
 import { NgIcon } from '@ng-icons/core';
 import type { ColDef, GridOptions, RowSelectedEvent, ValueFormatterParams } from 'ag-grid-community';
 
@@ -41,6 +46,7 @@ import { buildYearOptions, parseYearValue, yearFilterToValue } from '../../core/
 import { GardenStore } from '../../core/garden-store';
 import { HarvestStore } from '../../core/harvest-store';
 import { SeasonStore } from '../../core/season-store';
+import { SharingStore } from '../../core/sharing-store';
 import { TagCellComponent } from '../../shared/tag-cell.component';
 import { CATEGORY_TAG_COLOR } from '../../shared/table-badges';
 import { GARDEN_ADD_LINK } from '../../app.routes';
@@ -133,16 +139,43 @@ const SEASON_FILTER_ITEMS: SegmentItem[] = [
   { value: SEASON.winter, label: SEASON_META.winter.label, icon: SEASON_META.winter.icon },
 ];
 
+const ROLE_LABEL: Readonly<Record<GardenRole, string>> = {
+  [GARDEN_ROLE.owner]: 'Propriétaire',
+  [GARDEN_ROLE.coOwner]: 'Co-propriétaire',
+  [GARDEN_ROLE.tempEditorViewer]: 'Éditeur temporaire',
+  [GARDEN_ROLE.tempEditorRevoked]: 'Éditeur (révoqué)',
+  [GARDEN_ROLE.viewer]: 'Lecteur',
+};
+
+type MemberBadgeType = 'secondary' | 'outline';
+
+type MemberRow = {
+  readonly id: string;
+  readonly email: string;
+  readonly roleLabel: string;
+  readonly badgeType: MemberBadgeType;
+  readonly removable: boolean;
+};
+
+const INVITE_ROLE_OPTIONS: readonly { readonly value: ShareableRole; readonly label: string }[] = [
+  { value: GARDEN_ROLE.viewer, label: ROLE_LABEL[GARDEN_ROLE.viewer] },
+  { value: GARDEN_ROLE.coOwner, label: ROLE_LABEL[GARDEN_ROLE.coOwner] },
+];
+
 @Component({
   selector: 'app-garden',
   imports: [
     RouterLink,
     NgIcon,
+    BadgeComponent,
     ButtonComponent,
+    DividerComponent,
     SegmentComponent,
     FabButtonComponent,
     FabContainerComponent,
     FabListComponent,
+    InputDirective,
+    InputGroupComponent,
     TableComponent,
     EmptyComponent,
     ...SelectImports,
@@ -176,6 +209,12 @@ const SEASON_FILTER_ITEMS: SegmentItem[] = [
             [value]="season.season()"
             (valueChange)="onSeasonChange($event)"
           />
+          @if (canManage()) {
+            <button appButton variant="outline" size="sm" (click)="openShare()">
+              <ng-icon name="phosphorUsersThree" class="size-4" />
+              Partager
+            </button>
+          }
           @if (store.rows().length > 0) {
             <button
               appButton
@@ -260,24 +299,104 @@ const SEASON_FILTER_ITEMS: SegmentItem[] = [
         </app-select>
       </div>
     </ng-template>
+
+    <ng-template #shareSheet>
+      <div class="flex flex-col gap-4 p-4">
+        <div class="flex flex-col gap-3">
+          <app-input-group label="Inviter par email">
+            <input
+              app-input
+              type="email"
+              inputmode="email"
+              autocomplete="email"
+              placeholder="ami@exemple.fr"
+              [value]="inviteEmail()"
+              (input)="onInviteEmailInput($event)"
+            />
+          </app-input-group>
+          <app-select
+            label="Rôle"
+            [value]="inviteRole()"
+            (valueChange)="onInviteRoleChange($event)"
+          >
+            @for (option of inviteRoleOptions; track option.value) {
+              <app-select-item [value]="option.value">{{ option.label }}</app-select-item>
+            }
+          </app-select>
+          @if (inviteError()) {
+            <p class="text-destructive text-sm">{{ inviteError() }}</p>
+          }
+          <button
+            appButton
+            size="sm"
+            class="self-start"
+            [buttonDisabled]="!inviteEmail()"
+            (click)="onInvite()"
+          >
+            <ng-icon name="phosphorPaperPlaneTilt" class="size-4" />
+            Inviter
+          </button>
+        </div>
+
+        <app-divider />
+
+        <div class="flex flex-col gap-1">
+          <p class="text-sm font-medium">Membres</p>
+          @for (member of memberRows(); track member.id) {
+            <div class="flex items-center justify-between gap-3 py-2">
+              <span class="text-foreground min-w-0 flex-1 truncate text-sm">{{ member.email }}</span>
+              <app-badge [type]="member.badgeType">{{ member.roleLabel }}</app-badge>
+              @if (member.removable) {
+                <button
+                  appButton
+                  variant="ghost"
+                  size="sm"
+                  aria-label="Retirer le membre"
+                  (click)="onRemoveMember(member.id)"
+                >
+                  <ng-icon name="phosphorTrash" class="size-4" />
+                </button>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    </ng-template>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class GardenComponent {
   protected readonly store = inject(GardenStore);
   protected readonly season = inject(SeasonStore);
+  protected readonly sharing = inject(SharingStore);
   readonly #harvests = inject(HarvestStore);
   readonly #sheet = inject(SheetService);
 
   private readonly filterSheetTemplate = viewChild.required<TemplateRef<unknown>>('filterSheet');
+  private readonly shareSheetTemplate = viewChild.required<TemplateRef<unknown>>('shareSheet');
 
   protected readonly columns = PLANT_COLUMNS;
   protected readonly gridOptions = PLANT_GRID_OPTIONS;
   protected readonly addLink = GARDEN_ADD_LINK;
   protected readonly seasonItems = SEASON_FILTER_ITEMS;
   protected readonly cultureOptions = CULTURE_FILTER_OPTIONS;
+  protected readonly inviteRoleOptions = INVITE_ROLE_OPTIONS;
+  protected readonly canManage = this.sharing.canManage;
 
   protected readonly selectedId = signal<string | null>(null);
+  protected readonly inviteEmail = signal<string>('');
+  protected readonly inviteRole = signal<ShareableRole>(GARDEN_ROLE.viewer);
+  protected readonly inviteError = signal<string | null>(null);
+
+  protected readonly memberRows = computed<MemberRow[]>(() =>
+    this.sharing.members().map(member => ({
+      id: member.id,
+      email: member.email,
+      roleLabel: ROLE_LABEL[member.role],
+      badgeType: member.role === GARDEN_ROLE.owner ? 'secondary' : 'outline',
+      removable: member.role !== GARDEN_ROLE.owner,
+    })),
+  );
   protected readonly filters = injectQueryFilters({
     culture: stringFilter(CULTURE_FILTER_ALL),
   });
@@ -308,6 +427,46 @@ export class GardenComponent {
       cancelText: null,
       content: this.filterSheetTemplate(),
     });
+  }
+
+  protected openShare(): void {
+    this.inviteError.set(null);
+    this.#sheet.create({
+      title: 'Partager le jardin',
+      side: 'bottom',
+      okText: 'Fermer',
+      cancelText: null,
+      content: this.shareSheetTemplate(),
+    });
+  }
+
+  protected onInviteEmailInput(event: Event): void {
+    this.inviteEmail.set((event.target as HTMLInputElement).value);
+  }
+
+  protected onInviteRoleChange(value: string | string[] | null): void {
+    if (value === GARDEN_ROLE.viewer || value === GARDEN_ROLE.coOwner) {
+      this.inviteRole.set(value);
+    }
+  }
+
+  protected onInvite(): void {
+    const email = this.inviteEmail().trim();
+    if (email === '') {
+      return;
+    }
+    this.inviteError.set(null);
+    void this.sharing.invite(email, this.inviteRole()).then(succeeded => {
+      if (succeeded) {
+        this.inviteEmail.set('');
+        return;
+      }
+      this.inviteError.set("L'invitation a échoué. Vérifie l'adresse ou réessaie.");
+    });
+  }
+
+  protected onRemoveMember(id: string): void {
+    void this.sharing.remove(id);
   }
 
   protected onCultureChange(value: string | string[] | null): void {

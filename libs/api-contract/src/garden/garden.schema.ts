@@ -38,3 +38,25 @@ export const gardenMemberSchema = z.object({
 });
 
 export type GardenMember = z.infer<typeof gardenMemberSchema>;
+
+export const shareableRoleSchema = z.enum([GARDEN_ROLE.coOwner, GARDEN_ROLE.viewer]);
+
+export type ShareableRole = z.infer<typeof shareableRoleSchema>;
+
+export const inviteMemberSchema = z.object({
+  email: z.string().email(),
+  role: shareableRoleSchema,
+});
+
+export type InviteMemberPayload = z.infer<typeof inviteMemberSchema>;
+
+export const updateMemberSchema = z.object({
+  role: shareableRoleSchema,
+});
+
+export type UpdateMemberPayload = z.infer<typeof updateMemberSchema>;
+
+export const gardenMemberParamsSchema = z.object({
+  id: z.string().uuid(),
+  memberId: z.string().uuid(),
+});
