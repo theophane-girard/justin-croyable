@@ -7,7 +7,9 @@ import {
   TemplateRef,
   viewChild,
 } from '@angular/core';
-import { RouterLink, RouterOutlet } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { NavigationEnd, NavigationStart, Router, RouterLink, RouterOutlet } from '@angular/router';
+import { filter, map } from 'rxjs';
 
 import {
   AvatarComponent,
@@ -55,6 +57,11 @@ const PAGE_TITLES: Readonly<Record<string, string>> = {
   [`${APP_PATHS.garden}/${APP_PATHS.add}`]: 'Ajouter un plant',
   [APP_PATHS.prices]: 'Prix',
 };
+
+function normalizeUrlPath(url: string): string {
+  const path = url.split('?')[0]?.split('#')[0] ?? url;
+  return path.replace(/^\/+/, '');
+}
 
 const THEME_VALUE = { light: 'light', dark: 'dark' } as const;
 
@@ -124,11 +131,11 @@ function initialsOf(label: string): string {
                         appButton
                         variant="ghost"
                         size="sm"
+                        aria-label="Définir comme jardin par défaut"
                         [buttonDisabled]="access.activeIsDefault()"
                         (click)="onSetDefault()"
                       >
                         <ng-icon name="phosphorStar" class="size-4" />
-                        Par défaut
                       </button>
                       <button appButton variant="ghost" size="sm" (click)="openDeleteGarden()">
                         <ng-icon name="phosphorTrash" class="size-4" />
@@ -161,7 +168,7 @@ function initialsOf(label: string): string {
                   <app-avatar size="sm" [src]="avatarSrc()" [alt]="displayName()" [fallback]="initials()" />
                   @if (!sidebarCollapsed()) {
                     <span class="min-w-0 flex-1 truncate text-sm font-medium">{{ displayName() }}</span>
-                    <ng-icon name="phosphorDotsThreeVertical" class="text-muted-foreground size-4 shrink-0" />
+                    <ng-icon name="phosphorArrowSquareOut" class="text-muted-foreground size-4 shrink-0" />
                   }
                 </button>
               </app-sidebar-group>
@@ -233,12 +240,26 @@ export class AppComponent {
 
   protected readonly currentPath = injectCurrentPath();
 
+  readonly #router = inject(Router);
+  readonly #titlePath = toSignal(
+    this.#router.events.pipe(
+      filter(
+        (event): event is NavigationStart | NavigationEnd =>
+          event instanceof NavigationStart || event instanceof NavigationEnd,
+      ),
+      map(event =>
+        normalizeUrlPath(event instanceof NavigationStart ? event.url : event.urlAfterRedirects),
+      ),
+    ),
+    { initialValue: normalizeUrlPath(this.#router.url) },
+  );
+
   protected readonly showSplash = computed(() => AUTH_GATE_ENABLED && !this.#auth.ready());
   protected readonly showLogin = computed(
     () => AUTH_GATE_ENABLED && this.#auth.ready() && !this.#auth.isAuthenticated(),
   );
 
-  protected readonly pageTitle = computed(() => PAGE_TITLES[this.currentPath()] ?? APP_NAME);
+  protected readonly pageTitle = computed(() => PAGE_TITLES[this.#titlePath()] ?? APP_NAME);
 
   readonly #currentUser = this.#auth.user;
 

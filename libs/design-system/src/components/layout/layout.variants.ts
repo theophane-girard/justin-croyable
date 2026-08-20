@@ -38,7 +38,7 @@ export const contentVariants = cva(
 
 // Sidebar Variants
 export const sidebarVariants = cva(
-  'relative flex flex-col h-full transition-all duration-300 ease-in-out border-r shrink-0 px-3 py-6 bg-sidebar text-sidebar-foreground border-sidebar-border',
+  'relative flex flex-col h-full transition-all duration-300 ease-in-out border-r shrink-0 px-3 pt-6 pb-3 bg-sidebar text-sidebar-foreground border-sidebar-border',
 );
 
 export const sidebarTriggerVariants = cva(
