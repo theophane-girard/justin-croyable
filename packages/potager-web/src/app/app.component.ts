@@ -107,7 +107,7 @@ function initialsOf(label: string): string {
                   <span class="text-base font-semibold" [class.hidden]="sidebarCollapsed()">{{ appName }}</span>
                 </div>
 
-                @if (!sidebarCollapsed() && access.hasGardens()) {
+                @if (!sidebarCollapsed() && access.hasMultiple()) {
                   <div class="mb-2 flex flex-col gap-2 px-2">
                     <app-select
                       class="w-full"
@@ -130,12 +130,10 @@ function initialsOf(label: string): string {
                         <ng-icon name="phosphorStar" class="size-4" />
                         Par défaut
                       </button>
-                      @if (access.hasMultiple()) {
-                        <button appButton variant="ghost" size="sm" (click)="openDeleteGarden()">
-                          <ng-icon name="phosphorTrash" class="size-4" />
-                          {{ deleteLabel() }}
-                        </button>
-                      }
+                      <button appButton variant="ghost" size="sm" (click)="openDeleteGarden()">
+                        <ng-icon name="phosphorTrash" class="size-4" />
+                        {{ deleteLabel() }}
+                      </button>
                     </div>
                   </div>
                 }

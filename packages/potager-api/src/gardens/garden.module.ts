@@ -44,6 +44,13 @@ function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
+function membershipOfUser(user: UserRecord) {
+  return or(
+    eq(gardenMembers.userId, user.id),
+    sql`lower(trim(${gardenMembers.email})) = ${normalizeEmail(user.email)}`,
+  );
+}
+
 export function effectiveRole(
   role: GardenRole,
   expiresAt: Date | null,
@@ -107,7 +114,7 @@ export class GardenService {
     const memberships = await this.db
       .select({ gardenId: gardenMembers.gardenId, role: gardenMembers.role, expiresAt: gardenMembers.expiresAt })
       .from(gardenMembers)
-      .where(or(eq(gardenMembers.userId, user.id), eq(gardenMembers.email, user.email)));
+      .where(membershipOfUser(user));
     const now = new Date();
     const shared = memberships
       .filter(member => effectiveRole(member.role, member.expiresAt, now) !== null)
@@ -118,7 +125,7 @@ export class GardenService {
   async listAccessibleGardens(user: UserRecord): Promise<Garden[]> {
     const personal = await this.currentGarden(user);
     const memberships = await this.db.query.gardenMembers.findMany({
-      where: or(eq(gardenMembers.userId, user.id), eq(gardenMembers.email, user.email)),
+      where: membershipOfUser(user),
     });
     const now = new Date();
     const shared = await Promise.all(
@@ -172,7 +179,7 @@ export class GardenService {
       .where(
         and(
           eq(gardenMembers.gardenId, gardenId),
-          or(eq(gardenMembers.userId, user.id), eq(gardenMembers.email, user.email)),
+          membershipOfUser(user),
         ),
       );
     return 'ok';
@@ -207,7 +214,7 @@ export class GardenService {
     const membership = await this.db.query.gardenMembers.findFirst({
       where: and(
         eq(gardenMembers.gardenId, gardenId),
-        or(eq(gardenMembers.userId, user.id), eq(gardenMembers.email, user.email)),
+        membershipOfUser(user),
       ),
     });
     if (!membership) {
