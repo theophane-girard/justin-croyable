@@ -71,18 +71,6 @@ jobs:
       - name: Préparation du workspace
         uses: ./.github/actions/setup-workspace
 
-      # Nx rejoue depuis ce cache toute tâche dont les inputs n'ont pas bougé
-      # (typecheck, lint, build). Clé unique par commit + `restore-keys` sur le
-      # préfixe : le cache est réécrit à chaque run et repart de l'entrée la plus
-      # récente. Aucun risque de résultat périmé, Nx hache lui-même ses inputs.
-      # Les tests tournent en `--skip-nx-cache` et ne sont donc pas concernés.
-      - name: Cache Nx
-        uses: actions/cache@v4
-        with:
-          path: .nx/cache
-          key: nx-${{ runner.os }}-${{ github.sha }}
-          restore-keys: nx-${{ runner.os }}-
-
       # Détermine les sites impactés pour ne (re)builder et (re)déployer que
       # ceux-là. S'appuie sur NX_BASE / NX_HEAD posés par l'action ci-dessus.
       # Calculé une seule fois ici, puis relayé aux jobs de déploiement.
