@@ -125,6 +125,10 @@ export class ApiService {
     return this.#client.gardens.list();
   }
 
+  updateGarden(id: string, name: string) {
+    return this.#client.gardens.update({ params: { id }, body: { name } });
+  }
+
   removeGarden(id: string) {
     return this.#client.gardens.remove({ params: { id } });
   }

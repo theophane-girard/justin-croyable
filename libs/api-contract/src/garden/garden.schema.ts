@@ -28,6 +28,12 @@ export const gardenSchema = z.object({
 
 export type Garden = z.infer<typeof gardenSchema>;
 
+export const updateGardenSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+});
+
+export type UpdateGardenPayload = z.infer<typeof updateGardenSchema>;
+
 export const gardenMemberSchema = z.object({
   id: z.string().uuid(),
   gardenId: z.string().uuid(),

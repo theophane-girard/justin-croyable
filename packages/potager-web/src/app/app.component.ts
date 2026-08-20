@@ -281,7 +281,7 @@ export class AppComponent {
   protected readonly gardenOptions = computed(() =>
     this.access.gardens().map(garden => ({
       id: garden.id,
-      label: garden.ownerEmail ?? garden.name,
+      label: garden.name,
     })),
   );
 
