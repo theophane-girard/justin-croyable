@@ -22,9 +22,12 @@ import {
 } from '../../core/pokemon-damage';
 import {
   EMPTY_DETAIL,
+  MOVE_EFFECTS_QUERY,
+  type MoveEffectInfo,
   POKEAPI_GRAPHQL_URL,
   POKEMON_DETAIL_QUERY,
   type PokemonMove,
+  parseMoveEffects,
   parsePokemonDetail,
 } from '../../core/pokemon-detail';
 import { LANG, pokemonName, type Stat, STAT_META } from '../../core/pokemon.model';
@@ -197,8 +200,32 @@ export class CombatantPanelComponent {
     { parse: parsePokemonDetail, defaultValue: EMPTY_DETAIL },
   );
 
+  readonly #moveEffectsResource = httpResource<ReadonlyMap<string, MoveEffectInfo>>(
+    () => {
+      const slugs = this.#movesResource.value().moves.map(move => move.slug);
+      return slugs.length === 0
+        ? undefined
+        : {
+            url: POKEAPI_GRAPHQL_URL,
+            method: 'POST',
+            body: { query: MOVE_EFFECTS_QUERY, variables: { moves: slugs } },
+          };
+    },
+    { parse: parseMoveEffects, defaultValue: new Map<string, MoveEffectInfo>() },
+  );
+
   protected readonly movesLoading = this.#movesResource.isLoading;
-  protected readonly availableMoves = computed(() => this.#movesResource.value().moves);
+  protected readonly availableMoves = computed<readonly PokemonMove[]>(() => {
+    const effects = this.#moveEffectsResource.value();
+    return this.#movesResource.value().moves.map(move => {
+      const info = effects.get(move.slug);
+      return {
+        ...move,
+        description: info?.flavor || move.description,
+        effect: info?.effect || move.effect,
+      };
+    });
+  });
 
   readonly displayName = computed(() => {
     const pokemon = this.#pokemon();

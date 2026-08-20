@@ -62,14 +62,12 @@ const DIRECTION_ITEMS: ToggleGroupItem[] = [
   { value: 'asc', label: 'Croissant' },
 ];
 
-const ROW_BASE = 'flex items-center gap-2 rounded-lg border p-2 text-left transition-colors';
+const ROW_BASE = 'flex w-full items-center gap-2 rounded-lg border p-2 text-left transition-colors';
 const ROW_UNSELECTED = 'border-border hover:bg-muted/50';
 const ROW_SELECTED = 'border-primary bg-primary/10';
 
-function rowClassFor(selected: boolean, selectable: boolean): string {
-  const state = selected ? ROW_SELECTED : ROW_UNSELECTED;
-  const width = selectable ? 'min-w-0 flex-1' : 'w-full';
-  return `${ROW_BASE} ${state} ${width}`;
+function rowClassFor(selected: boolean): string {
+  return `${ROW_BASE} ${selected ? ROW_SELECTED : ROW_UNSELECTED}`;
 }
 
 interface MoveView {
@@ -96,12 +94,12 @@ function asArray(value: string | string[]): string[] {
   return Array.isArray(value) ? value : [value];
 }
 
-function toMoveView(move: PokemonMove, selected: boolean, selectable: boolean): MoveView {
+function toMoveView(move: PokemonMove, selected: boolean): MoveView {
   return {
     key: `${move.name}-${move.type}-${move.damageClass}`,
     slug: move.slug,
     selected,
-    rowClass: rowClassFor(selected, selectable),
+    rowClass: rowClassFor(selected),
     name: move.name,
     type: move.type,
     typeLabel: typeLabel(move.type),
@@ -152,13 +150,17 @@ function toMoveView(move: PokemonMove, selected: boolean, selectable: boolean): 
         <div class="flex flex-col gap-2 overflow-y-auto pr-1" [class]="viewportClass()">
           @for (move of visibleMoves(); track move.key) {
             @if (selectable()) {
-              <div class="flex items-center gap-1">
-                <button type="button" [class]="move.rowClass" (click)="toggleMove(move)">
+              <div [class]="move.rowClass">
+                <button
+                  type="button"
+                  class="flex min-w-0 flex-1 items-center gap-2 text-left"
+                  (click)="toggleMove(move)"
+                >
                   <ng-container [ngTemplateOutlet]="moveRow" [ngTemplateOutletContext]="{ $implicit: move }" />
                 </button>
                 <button
                   type="button"
-                  class="border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground flex size-9 shrink-0 items-center justify-center rounded-lg border transition-colors"
+                  class="text-muted-foreground hover:text-foreground -m-1 flex shrink-0 items-center rounded-md p-1 transition-colors"
                   aria-label="Détail de l'attaque"
                   appPopover
                   [content]="movePopover"
@@ -385,8 +387,7 @@ export class PokemonMovesComponent {
       return ascending ? powerA - powerB : powerB - powerA;
     });
 
-    const selectable = this.selectable();
-    return sorted.map(move => toMoveView(move, selectedSlugs.has(move.slug), selectable));
+    return sorted.map(move => toMoveView(move, selectedSlugs.has(move.slug)));
   });
 
   protected toggleMove(move: MoveView): void {
