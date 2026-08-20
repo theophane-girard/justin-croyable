@@ -22,7 +22,10 @@ export abstract class ApiEntityStore<T extends { readonly id: string }> {
       this.api.activeGardenId();
       if (this.#auth.isAuthenticated()) {
         void this.reload();
+        return;
       }
+      this.#entries.set([]);
+      this.#loaded.set(false);
     });
   }
 

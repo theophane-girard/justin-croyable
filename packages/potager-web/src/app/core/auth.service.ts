@@ -33,7 +33,9 @@ export class AuthService {
   readonly isAuthenticated = computed(() => this.#state().user !== null);
 
   signInWithGoogle(): Promise<unknown> {
-    return signInWithPopup(this.#auth, new GoogleAuthProvider());
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    return signInWithPopup(this.#auth, provider);
   }
 
   signOut(): Promise<void> {

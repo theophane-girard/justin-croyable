@@ -8,6 +8,7 @@ import {
   input,
   linkedSignal,
   signal,
+  viewChild,
 } from '@angular/core';
 
 import { NgIcon, provideIcons } from '@ng-icons/core';
@@ -37,8 +38,13 @@ interface SelectHost {
         <ng-icon name="lucideCheck" [strokeWidth]="strokeWidth()" aria-hidden="true" data-testid="check-icon" />
       </span>
     }
-    <span class="truncate">
-      <ng-content />
+    <span class="flex min-w-0 flex-col">
+      <span #labelText class="truncate">
+        <ng-content />
+      </span>
+      @if (hint()) {
+        <span class="text-muted-foreground truncate text-xs">{{ hint() }}</span>
+      }
     </span>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -64,12 +70,14 @@ export class SelectItemComponent {
   readonly disabled = input(false, { transform: booleanAttribute });
   readonly class = input<string>('');
   readonly searchKeywords = input<string>('');
+  readonly hint = input<string>('');
 
   private readonly select = signal<SelectHost | null>(null);
+  private readonly labelText = viewChild<ElementRef<HTMLElement>>('labelText');
   noopFn = noopFn;
 
   readonly label = linkedSignal<string>(() => {
-    const element = this.elementRef.nativeElement;
+    const element = this.labelText()?.nativeElement ?? this.elementRef.nativeElement;
     return (element.textContent ?? element.innerText)?.trim() ?? '';
   });
 
