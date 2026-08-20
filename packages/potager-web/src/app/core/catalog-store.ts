@@ -83,7 +83,10 @@ export class CatalogStore {
     effect(() => {
       if (this.#auth.isAuthenticated()) {
         void this.reload();
+        return;
       }
+      this.#varieties.set([]);
+      this.#loaded.set(false);
     });
   }
 

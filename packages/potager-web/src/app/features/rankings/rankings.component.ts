@@ -34,7 +34,9 @@ import { CatalogStore } from '../../core/catalog-store';
 import { RankingStore } from '../../core/ranking-store';
 
 type RankRow = { readonly gardenId: string; readonly label: string; readonly value: number };
-type CultureOption = { readonly value: CropId; readonly label: string };
+type CultureOption = { readonly value: string; readonly label: string };
+
+const CULTURE_ALL = 'all';
 
 const SEASON_ITEMS: SegmentItem[] = [
   { value: SEASON_FILTER_ALL, label: 'Toutes' },
@@ -164,7 +166,7 @@ export class RankingsComponent {
 
   readonly #today = new Date();
 
-  protected readonly selectedCulture = signal<string>('');
+  protected readonly selectedCulture = signal<string>(CULTURE_ALL);
   protected readonly season = signal<SeasonFilter>(seasonForDate(this.#today));
   protected readonly year = signal<YearFilter>(this.#today.getFullYear());
   protected readonly raceOpen = signal(false);
@@ -181,17 +183,18 @@ export class RankingsComponent {
           }
         }),
     );
-    return Array.from(present)
-      .map(cropId => ({ value: cropId, label: CROP_BY_ID[cropId].label }))
+    const crops = Array.from(present)
+      .map(cropId => ({ value: cropId as string, label: CROP_BY_ID[cropId].label }))
       .sort((a, b) => a.label.localeCompare(b.label, 'fr'));
+    return [{ value: CULTURE_ALL, label: 'Toutes les cultures' }, ...crops];
   });
 
-  protected readonly activeCulture = computed<CropId | null>(() => {
+  protected readonly activeCulture = computed<string>(() => {
     const selected = this.selectedCulture();
-    if (selected && isCropId(selected)) {
+    if (selected === CULTURE_ALL || isCropId(selected)) {
       return selected;
     }
-    return this.cultureOptions()[0]?.value ?? null;
+    return CULTURE_ALL;
   });
 
   protected readonly yearOptions = computed(() => {
@@ -212,14 +215,11 @@ export class RankingsComponent {
 
   protected readonly yieldUnitSuffix = computed(() => {
     const culture = this.activeCulture();
-    return culture ? HARVEST_UNIT_META[cropUnit(culture)].quantitySuffix : '';
+    return isCropId(culture) ? HARVEST_UNIT_META[cropUnit(culture)].quantitySuffix : '';
   });
 
   protected readonly yieldRows = computed<RankRow[]>(() => {
     const culture = this.activeCulture();
-    if (!culture) {
-      return [];
-    }
     return this.ranking
       .entries()
       .map(entry => ({
@@ -255,9 +255,6 @@ export class RankingsComponent {
 
   protected readonly raceSteps = computed<number[]>(() => {
     const culture = this.activeCulture();
-    if (!culture) {
-      return [];
-    }
     const timestamps = new Set<number>();
     this.ranking.entries().forEach(entry =>
       this.#cultureHarvests(entry.gardenId, culture).forEach(timestamp =>
@@ -294,7 +291,7 @@ export class RankingsComponent {
   protected readonly raceChartOptions = computed<EChartsCoreOption>(() => {
     const culture = this.activeCulture();
     const steps = this.raceSteps();
-    if (!culture || steps.length === 0) {
+    if (steps.length === 0) {
       return this.#horizontalBar([], this.yieldUnitSuffix());
     }
     const index = Math.min(Math.max(this.#raceIndex(), 0), steps.length - 1);
@@ -340,7 +337,7 @@ export class RankingsComponent {
     this.raceRun.update(run => run + 1);
   }
 
-  #cultureHarvests(gardenId: string, culture: CropId): readonly { at: number; weightKg: number }[] {
+  #cultureHarvests(gardenId: string, culture: string): readonly { at: number; weightKg: number }[] {
     const entry = this.ranking.entries().find(item => item.gardenId === gardenId);
     if (!entry) {
       return [];
@@ -349,7 +346,7 @@ export class RankingsComponent {
     const seasonFilter = this.season();
     const yearFilter = this.year();
     return entry.harvests
-      .filter(harvest => byId.get(harvest.varietyId)?.cropId === culture)
+      .filter(harvest => culture === CULTURE_ALL || byId.get(harvest.varietyId)?.cropId === culture)
       .map(harvest => ({ date: new Date(harvest.harvestedOn), weightKg: harvest.weightKg }))
       .filter(
         item =>
@@ -359,17 +356,17 @@ export class RankingsComponent {
       .map(item => ({ at: item.date.getTime(), weightKg: item.weightKg }));
   }
 
-  #totalPlants(gardenId: string, culture: CropId): number {
+  #totalPlants(gardenId: string, culture: string): number {
     const entry = this.ranking.entries().find(item => item.gardenId === gardenId);
     if (!entry) {
       return 0;
     }
     return entry.plants
-      .filter(plant => plant.cropId === culture)
+      .filter(plant => culture === CULTURE_ALL || plant.cropId === culture)
       .reduce((total, plant) => total + plant.quantity, 0);
   }
 
-  #yieldPerPlant(gardenId: string, culture: CropId, cutoff: number): number {
+  #yieldPerPlant(gardenId: string, culture: string, cutoff: number): number {
     const plants = this.#totalPlants(gardenId, culture);
     if (plants === 0) {
       return 0;

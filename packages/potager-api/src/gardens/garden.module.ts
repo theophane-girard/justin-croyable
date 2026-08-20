@@ -29,7 +29,10 @@ import {
   type UserRecord,
 } from '../db/schema';
 
-const PERSONAL_GARDEN_NAME = 'Mon potager';
+function defaultGardenName(user: UserRecord): string {
+  const displayName = user.displayName?.trim();
+  return displayName && displayName.length > 0 ? displayName : user.email;
+}
 
 function toMember(record: GardenMemberRecord): GardenMember {
   return {
@@ -117,19 +120,26 @@ export class GardenService {
     if (existing) {
       return existing;
     }
-    const [created] = await this.db
-      .insert(gardens)
-      .values({ ownerUserId: user.id, name: PERSONAL_GARDEN_NAME })
-      .returning();
-    await this.db
-      .insert(gardenMembers)
-      .values({
+    return this.db.transaction(async tx => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${user.id}))`);
+      const locked = await tx.query.gardens.findFirst({
+        where: eq(gardens.ownerUserId, user.id),
+      });
+      if (locked) {
+        return locked;
+      }
+      const [created] = await tx
+        .insert(gardens)
+        .values({ ownerUserId: user.id, name: defaultGardenName(user) })
+        .returning();
+      await tx.insert(gardenMembers).values({
         gardenId: created.id,
         userId: user.id,
         email: user.email,
         role: GARDEN_ROLE.owner,
       });
-    return created;
+      return created;
+    });
   }
 
   async accessibleGardenIds(user: UserRecord): Promise<string[]> {
@@ -168,11 +178,11 @@ export class GardenService {
           const owner = await this.db.query.users.findFirst({
             where: eq(users.id, record.ownerUserId),
           });
-          return this.toGarden(record, role, owner?.email ?? null);
+          return this.toGarden(record, role, owner?.email ?? null, owner?.displayName ?? null);
         }),
     );
     return [
-      this.toGarden(personal, GARDEN_ROLE.owner),
+      this.toGarden(personal, GARDEN_ROLE.owner, user.email, user.displayName ?? null),
       ...shared.filter((garden): garden is Garden => garden !== null),
     ];
   }
@@ -197,9 +207,9 @@ export class GardenService {
       .returning();
     const owner =
       updated.ownerUserId === user.id
-        ? null
+        ? user
         : await this.db.query.users.findFirst({ where: eq(users.id, updated.ownerUserId) });
-    return this.toGarden(updated, role, owner?.email ?? null);
+    return this.toGarden(updated, role, owner?.email ?? null, owner?.displayName ?? null);
   }
 
   async removeForUser(
@@ -294,12 +304,18 @@ export class GardenService {
     return effectiveRole(membership.role, membership.expiresAt, new Date());
   }
 
-  toGarden(record: GardenRecord, role: GardenRole, ownerEmail: string | null = null): Garden {
+  toGarden(
+    record: GardenRecord,
+    role: GardenRole,
+    ownerEmail: string | null = null,
+    ownerName: string | null = null,
+  ): Garden {
     return {
       id: record.id,
       name: record.name,
       role,
       ownerEmail,
+      ownerName,
       createdAt: record.createdAt.toISOString(),
     };
   }

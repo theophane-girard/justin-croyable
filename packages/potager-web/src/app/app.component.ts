@@ -130,7 +130,7 @@ function initialsOf(label: string): string {
                       (valueChange)="onGardenChange($event)"
                     >
                       @for (option of gardenOptions(); track option.id) {
-                        <app-select-item [value]="option.id">{{ option.label }}</app-select-item>
+                        <app-select-item [value]="option.id" [hint]="option.hint">{{ option.label }}</app-select-item>
                       }
                     </app-select>
                     <div class="flex items-center justify-end gap-1">
@@ -307,6 +307,7 @@ export class AppComponent {
     this.access.gardens().map(garden => ({
       id: garden.id,
       label: garden.name,
+      hint: garden.ownerName ?? garden.ownerEmail ?? '',
     })),
   );
 
@@ -363,8 +364,10 @@ export class AppComponent {
     }
   }
 
+  #userSheetRef: ReturnType<SheetService['create']> | null = null;
+
   protected openUserMenu(): void {
-    this.#sheet.create({
+    this.#userSheetRef = this.#sheet.create({
       title: 'Mon compte',
       side: 'bottom',
       hideFooter: true,
@@ -391,6 +394,8 @@ export class AppComponent {
   }
 
   protected onSignOut(): void {
+    this.#userSheetRef?.close();
+    this.#userSheetRef = null;
     this.#auth.signOut().catch(() => undefined);
   }
 }
