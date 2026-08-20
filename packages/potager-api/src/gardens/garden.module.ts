@@ -120,19 +120,26 @@ export class GardenService {
     if (existing) {
       return existing;
     }
-    const [created] = await this.db
-      .insert(gardens)
-      .values({ ownerUserId: user.id, name: defaultGardenName(user) })
-      .returning();
-    await this.db
-      .insert(gardenMembers)
-      .values({
+    return this.db.transaction(async tx => {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${user.id}))`);
+      const locked = await tx.query.gardens.findFirst({
+        where: eq(gardens.ownerUserId, user.id),
+      });
+      if (locked) {
+        return locked;
+      }
+      const [created] = await tx
+        .insert(gardens)
+        .values({ ownerUserId: user.id, name: defaultGardenName(user) })
+        .returning();
+      await tx.insert(gardenMembers).values({
         gardenId: created.id,
         userId: user.id,
         email: user.email,
         role: GARDEN_ROLE.owner,
       });
-    return created;
+      return created;
+    });
   }
 
   async accessibleGardenIds(user: UserRecord): Promise<string[]> {
