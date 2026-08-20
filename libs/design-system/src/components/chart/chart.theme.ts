@@ -27,6 +27,31 @@ import type { ThemePalette } from '../../core/services/theme-palette.service';
 export const CHART_FONT_FAMILY =
   "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 
+/**
+ * Corps de texte des graphiques, aligné sur `text-xs` du DS (12px) : la taille
+ * des libellés secondaires (axes, légendes, valeurs posées sur les marques).
+ * ECharts ne fait pas hériter toutes les zones de texte du `textStyle` global,
+ * l'habillage la repose donc explicitement là où c'est nécessaire.
+ */
+export const CHART_FONT_SIZE = 12;
+
+/** Habillage de texte commun : même police et même corps partout. */
+const TEXT_STYLE = { fontFamily: CHART_FONT_FAMILY, fontSize: CHART_FONT_SIZE } as const;
+
+/**
+ * Positions de libellé posées *hors* de la marque. Là seulement le libellé est
+ * repeint en couleur de texte du thème : à l'intérieur d'une barre, ECharts
+ * choisit lui-même une couleur contrastant avec la couleur de la série, et lui
+ * retirer la main rendrait le libellé illisible sur les teintes foncées.
+ */
+const OUTSIDE_LABEL_POSITIONS: ReadonlySet<string> = new Set([
+  'top',
+  'bottom',
+  'left',
+  'right',
+  'outside',
+]);
+
 /** Arrondi des marques (barres, secteurs). Aligné sur `--radius-sm` du DS (6px). */
 const MARK_RADIUS = 6;
 
@@ -56,7 +81,7 @@ function baseOption(palette: ThemePalette): EChartsCoreOption {
   return {
     color: palette.series,
     backgroundColor: 'transparent',
-    textStyle: { fontFamily: CHART_FONT_FAMILY, color: palette.foreground },
+    textStyle: { ...TEXT_STYLE, color: palette.foreground },
     title: { textStyle: { fontFamily: CHART_FONT_FAMILY, color: palette.foreground } },
     legend: {
       // Repères en carrés arrondis (parti pris du DS), appliqué à tous les
@@ -65,12 +90,12 @@ function baseOption(palette: ThemePalette): EChartsCoreOption {
       icon: 'roundRect',
       itemWidth: 12,
       itemHeight: 12,
-      textStyle: { fontFamily: CHART_FONT_FAMILY, color: palette.mutedForeground },
+      textStyle: { ...TEXT_STYLE, color: palette.mutedForeground },
     },
     tooltip: {
       backgroundColor: palette.popover,
       borderColor: palette.border,
-      textStyle: { fontFamily: CHART_FONT_FAMILY, color: palette.popoverForeground },
+      textStyle: { ...TEXT_STYLE, color: palette.popoverForeground },
     },
   };
 }
@@ -84,7 +109,7 @@ function axisStyle(palette: ThemePalette) {
   return {
     axisLine: { lineStyle: { color: palette.border } },
     axisTick: { lineStyle: { color: palette.border } },
-    axisLabel: { color: palette.mutedForeground },
+    axisLabel: { ...TEXT_STYLE, color: palette.mutedForeground },
     splitLine: { lineStyle: { color: palette.border, type: 'dashed' as const } },
   };
 }
@@ -132,6 +157,28 @@ function areaGradient(color: string): AreaColor {
   return gradient;
 }
 
+type PositionedLabel = { position?: unknown };
+
+/** Vrai quand le libellé est posé hors de la marque (donc sur le fond du graphique). */
+function isOutsideLabel(label: PositionedLabel | undefined): boolean {
+  const position = label?.position;
+  return typeof position === 'string' && OUTSIDE_LABEL_POSITIONS.has(position);
+}
+
+/**
+ * Défauts d'un libellé de marque : police et corps du DS partout, couleur de
+ * texte du thème et halo supprimé pour les libellés posés sur le fond. Hors de
+ * ce cas la couleur reste indéfinie, donc laissée au calcul de contraste
+ * d'ECharts. Les réglages de l'appelant se fusionnent par-dessus.
+ */
+function markLabelDefaults(palette: ThemePalette, outside: boolean) {
+  return {
+    ...TEXT_STYLE,
+    color: outside ? palette.foreground : undefined,
+    textBorderWidth: outside ? 0 : undefined,
+  };
+}
+
 /**
  * Injecte les partis pris du DS selon le type de série. Les valeurs de l'appelant
  * priment : ses réglages sont fusionnés par-dessus les défauts.
@@ -148,6 +195,10 @@ function themeForSeries(series: SeriesOption, palette: ThemePalette, index: numb
           ...(stacked ? { borderColor: palette.card, borderWidth: SEGMENT_GAP / 2 } : {}),
           ...series.itemStyle,
         },
+        // Comme pour les secteurs, les libellés rattachés à une barre échappent au
+        // `textStyle` global : ECharts leur déduit une couleur et un halo du fond
+        // du canvas, transparent ici donc supposé blanc.
+        label: { ...markLabelDefaults(palette, isOutsideLabel(series.label)), ...series.label },
         emphasis: {
           ...series.emphasis,
           itemStyle: { color: 'inherit', borderColor: 'inherit', ...series.emphasis?.itemStyle },
@@ -192,7 +243,7 @@ function themeForSeries(series: SeriesOption, palette: ThemePalette, index: numb
         // ECharts leur choisit une couleur sombre et un halo déduit de la couleur
         // de fond du canvas — transparente ici, donc supposée blanche. Couleur du
         // thème et halo supprimé, pour rester lisible en clair comme en sombre.
-        label: { color: palette.foreground, textBorderWidth: 0, ...series.label },
+        label: { ...markLabelDefaults(palette, true), ...series.label },
         emphasis: {
           scale: true,
           scaleSize: PIE_EMPHASIS_SCALE_SIZE,

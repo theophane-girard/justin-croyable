@@ -6,8 +6,9 @@ builds**, puis le job **Déploiement de l'app potager** publie ce build sur
 Firebase Hosting (site `justin-croyable-potager`) :
 
 - **push sur `master`** → déploiement sur le canal **live** (production).
-- **pull request** → **canal de prévisualisation** `pr-<n>` avec une URL
-  temporaire (expire au bout de 7 jours), commentée automatiquement sur la PR.
+- **pull request** → **canal de prévisualisation** `pr<n>-<branche tronquée>`
+  avec une URL temporaire (expire au bout de 7 jours), commentée automatiquement
+  sur la PR.
 
 Tant que le secret `FIREBASE_SERVICE_ACCOUNT` n'est pas configuré, **le job de
 déploiement est simplement ignoré** (même garde que le déploiement backend).
@@ -42,16 +43,23 @@ firebase init hosting:github   # génère et enregistre FIREBASE_SERVICE_ACCOUNT
 # rôle "Firebase Hosting Admin", collée dans le secret FIREBASE_SERVICE_ACCOUNT.
 ```
 
-## CORS (indispensable pour les previews)
+## CORS (previews)
 
-Les canaux de prévisualisation ont un sous-domaine dynamique
-(`justin-croyable-potager--pr-<n>-<hash>.web.app`). Pour que l'API les accepte,
-renseigner côté backend (voir [deploy-backend.md](./deploy-backend.md)) le
-secret :
+Les canaux de prévisualisation ont un sous-domaine dynamique, de la forme
+`justin-croyable-potager--<canal>-<empreinte>.web.app`. Le nom de canal est
+produit par l'action de déploiement (`pr<n>-` suivi des 20 premiers caractères
+de la branche, tirets compris), pas par un simple numéro de PR : une branche
+`claude/potager-app-updates-56zitv` sur la PR 105 donne
+`justin-croyable-potager--pr105-claude-potager-app-u-<empreinte>.web.app`.
 
-| Secret | Valeur |
+L'API reconnaît ces origines d'elle-même
+([`cors-origin.ts`](../packages/potager-api/src/config/cors-origin.ts), couvert
+par des tests) : elle accepte le canal live et tout canal de prévisualisation des
+sites qu'elle sert. **Aucun secret n'est nécessaire pour les previews.**
+
+Restent utiles côté backend (voir [deploy-backend.md](./deploy-backend.md)) :
+
+| Secret | Usage |
 | --- | --- |
-| `API_CORS_ORIGIN_REGEX` | `^https://justin-croyable-potager--[a-z0-9-]+\.web\.app$` |
-
-Et mettre les domaines stables (front live) dans `API_CORS_ORIGIN`
-(liste séparée par des virgules).
+| `GARDEN_HARVEST_API_CORS_ORIGIN` | domaines stables hors Firebase Hosting (liste séparée par des virgules) |
+| `GARDEN_HARVEST_API_CORS_ORIGIN_REGEX` | motif supplémentaire, pour une origine que la règle Firebase ne couvre pas |

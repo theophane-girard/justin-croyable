@@ -8,14 +8,15 @@ import {
 
 import type { ClassValue } from 'clsx';
 
-import { contentVariants } from './layout.variants';
+import { contentBodyVariants, contentSpacerVariants, contentVariants } from './layout.variants';
 import { mergeClasses } from '../../utils/merge-classes';
 
 @Component({
   selector: 'app-content',
   template: `
-    <main class="flex min-h-0 flex-1 flex-col">
+    <main [class]="bodyClasses">
       <ng-content />
+      <div [class]="spacerClasses" aria-hidden="true"></div>
     </main>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -26,6 +27,9 @@ import { mergeClasses } from '../../utils/merge-classes';
 })
 export class ContentComponent {
   readonly class = input<ClassValue>('');
+
+  protected readonly bodyClasses = contentBodyVariants();
+  protected readonly spacerClasses = contentSpacerVariants();
 
   protected readonly classes = computed(() => mergeClasses(contentVariants(), this.class()));
 }

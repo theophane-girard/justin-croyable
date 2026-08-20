@@ -210,16 +210,28 @@ const INVITE_ROLE_OPTIONS: readonly { readonly value: ShareableRole; readonly la
             (valueChange)="onSeasonChange($event)"
           />
           @if (canManage()) {
-            <button appButton variant="outline" size="sm" (click)="openRename()">
+            <button
+              appButton
+              variant="outline"
+              size="sm"
+              class="hidden sm:inline-flex"
+              (click)="openRename()"
+            >
               <ng-icon name="phosphorPencilSimple" class="size-4" />
               Renommer
             </button>
-            <button appButton variant="outline" size="sm" (click)="openShare()">
+            <button
+              appButton
+              variant="outline"
+              size="sm"
+              class="hidden sm:inline-flex"
+              (click)="openShare()"
+            >
               <ng-icon name="phosphorUsersThree" class="size-4" />
               Partager
             </button>
           }
-          @if (store.rows().length > 0) {
+          @if (hasRows()) {
             <button
               appButton
               variant="outline"
@@ -253,7 +265,7 @@ const INVITE_ROLE_OPTIONS: readonly { readonly value: ShareableRole; readonly la
         </div>
       </div>
 
-      @if (store.rows().length === 0) {
+      @if (!hasRows()) {
         <app-empty
           icon="phosphorPottedPlant"
           title="Aucun plant"
@@ -277,7 +289,7 @@ const INVITE_ROLE_OPTIONS: readonly { readonly value: ShareableRole; readonly la
       }
     </div>
 
-    @if (store.rows().length > 0) {
+    @if (showMobileActions()) {
       <app-fab
         class="sm:hidden"
         position="bottom-right"
@@ -290,9 +302,31 @@ const INVITE_ROLE_OPTIONS: readonly { readonly value: ShareableRole; readonly la
               <ng-icon name="phosphorPlus" />
             </a>
           }
-          <button appFabButton type="button" variant="secondary" (click)="openFilter()" aria-label="Filtrer">
-            <ng-icon name="phosphorFunnel" />
-          </button>
+          @if (hasRows()) {
+            <button appFabButton type="button" variant="secondary" (click)="openFilter()" aria-label="Filtrer">
+              <ng-icon name="phosphorFunnel" />
+            </button>
+            @if (canWrite()) {
+              <button
+                appFabButton
+                type="button"
+                variant="destructive"
+                [fabDisabled]="!selectedId()"
+                aria-label="Supprimer la sélection"
+                (click)="onDelete()"
+              >
+                <ng-icon name="phosphorTrash" />
+              </button>
+            }
+          }
+          @if (canManage()) {
+            <button appFabButton type="button" variant="secondary" (click)="openRename()" aria-label="Renommer">
+              <ng-icon name="phosphorPencilSimple" />
+            </button>
+            <button appFabButton type="button" variant="secondary" (click)="openShare()" aria-label="Partager">
+              <ng-icon name="phosphorUsersThree" />
+            </button>
+          }
         </app-fab-list>
       </app-fab>
     }
@@ -439,6 +473,9 @@ export class GardenComponent {
     }
     return this.store.rows().filter(row => row.cropId === culture);
   });
+
+  protected readonly hasRows = computed(() => this.store.rows().length > 0);
+  protected readonly showMobileActions = computed(() => this.hasRows() || this.canManage());
 
   protected readonly showYearSelector = computed(() => this.#harvests.availableYears().length >= 2);
   protected readonly yearOptions = computed(() => buildYearOptions(this.#harvests.availableYears()));

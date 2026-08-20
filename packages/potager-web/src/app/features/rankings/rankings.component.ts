@@ -45,6 +45,17 @@ const SEASON_ITEMS: SegmentItem[] = [
 const YEAR_ALL_OPTION = { value: YEAR_ALL, label: 'Toutes années' };
 const RACE_STEP_MS = 900;
 
+const PODIUM_PREFIXES: readonly string[] = ['👑', '🥈', '🥉'];
+
+function withPodiumPrefix(label: string, rank: number, value: number): string {
+  const prefix = value > 0 ? PODIUM_PREFIXES[rank] : undefined;
+  return prefix ? `${prefix} ${label}` : label;
+}
+
+function podiumRanked(rows: readonly RankRow[]): RankRow[] {
+  return rows.map((row, rank) => ({ ...row, label: withPodiumPrefix(row.label, rank, row.value) }));
+}
+
 const DATE_FORMATTER = new Intl.DateTimeFormat('fr-FR', {
   day: '2-digit',
   month: 'short',
@@ -151,9 +162,11 @@ export class RankingsComponent {
 
   protected readonly seasonItems = SEASON_ITEMS;
 
+  readonly #today = new Date();
+
   protected readonly selectedCulture = signal<string>('');
-  protected readonly season = signal<SeasonFilter>(SEASON_FILTER_ALL);
-  protected readonly year = signal<YearFilter>(YEAR_ALL);
+  protected readonly season = signal<SeasonFilter>(seasonForDate(this.#today));
+  protected readonly year = signal<YearFilter>(this.#today.getFullYear());
   protected readonly raceOpen = signal(false);
   protected readonly raceRun = signal(0);
 
@@ -182,7 +195,7 @@ export class RankingsComponent {
   });
 
   protected readonly yearOptions = computed(() => {
-    const years = new Set<number>();
+    const years = new Set<number>([this.#today.getFullYear()]);
     this.ranking
       .entries()
       .forEach(entry =>
@@ -217,19 +230,23 @@ export class RankingsComponent {
       .sort((a, b) => b.value - a.value);
   });
 
+  protected readonly rankedYieldRows = computed<RankRow[]>(() => podiumRanked(this.yieldRows()));
+
   protected readonly varietyRows = computed<RankRow[]>(() =>
-    this.ranking
-      .entries()
-      .map(entry => {
-        const keys = new Set<string>();
-        entry.plants.forEach(plant => keys.add(plant.varietyId ?? `crop:${plant.cropId}`));
-        return { gardenId: entry.gardenId, label: entry.gardenName, value: keys.size };
-      })
-      .sort((a, b) => b.value - a.value),
+    podiumRanked(
+      this.ranking
+        .entries()
+        .map(entry => {
+          const keys = new Set<string>();
+          entry.plants.forEach(plant => keys.add(plant.varietyId ?? `crop:${plant.cropId}`));
+          return { gardenId: entry.gardenId, label: entry.gardenName, value: keys.size };
+        })
+        .sort((a, b) => b.value - a.value),
+    ),
   );
 
   protected readonly yieldChartOptions = computed<EChartsCoreOption>(() =>
-    this.#horizontalBar(this.yieldRows(), this.yieldUnitSuffix()),
+    this.#horizontalBar(this.rankedYieldRows(), this.yieldUnitSuffix()),
   );
 
   protected readonly varietyChartOptions = computed<EChartsCoreOption>(() =>

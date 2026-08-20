@@ -34,7 +34,6 @@ export const appConfig: ApplicationConfig = {
     provideRouteSkeletons({
       registry: DEFAULT_ROUTE_SKELETONS,
       fallback: GenericSkeletonComponent,
-      appearDelayMs: 0,
     }),
   ],
 };

@@ -340,6 +340,109 @@ export const WithCustomColor: Story = {
   }),
 };
 
+const CLASSEMENT_RACE_STEP_MS = 900;
+
+const jardins = ['Potager de Léa', 'Jardin du Clos', 'Balcon de Sam', 'Carrés de Nour'];
+
+const classement: EChartsCoreOption = {
+  grid: { left: 8, right: 48, top: 12, bottom: 8, containLabel: true },
+  tooltip: { trigger: 'axis', valueFormatter: (value: number) => `${value} kg` },
+  xAxis: { type: 'value' },
+  // Axe des catégories dessiné de bas en haut : la liste est inversée pour que
+  // le premier du classement se retrouve en haut du graphique.
+  yAxis: {
+    type: 'category',
+    data: [
+      'Carrés de Nour',
+      '\u{1F949} Balcon de Sam',
+      '\u{1F948} Jardin du Clos',
+      '\u{1F451} Potager de Léa',
+    ],
+  },
+  series: [
+    {
+      type: 'bar',
+      data: [1.2, 2.4, 3.1, 4.8],
+      label: {
+        show: true,
+        position: 'right',
+        formatter: (params: { value: number }) => `${params.value} kg`,
+      },
+    },
+  ],
+};
+
+const course: EChartsCoreOption = {
+  grid: { left: 8, right: 64, top: 12, bottom: 8, containLabel: true },
+  xAxis: { type: 'value', max: 'dataMax' },
+  yAxis: {
+    type: 'category',
+    data: jardins,
+    inverse: true,
+    animationDuration: 300,
+    animationDurationUpdate: 300,
+  },
+  series: [
+    {
+      type: 'bar',
+      realtimeSort: true,
+      data: [4.8, 3.1, 2.4, 1.2],
+      label: {
+        show: true,
+        position: 'right',
+        valueAnimation: true,
+        formatter: (params: { value: number }) => `${params.value} kg`,
+      },
+    },
+  ],
+  animationDuration: 0,
+  animationDurationUpdate: CLASSEMENT_RACE_STEP_MS,
+  animationEasing: 'linear',
+  animationEasingUpdate: 'linear',
+};
+
+export const HorizontalRanking: Story = {
+  args: { options: classement, height: '18rem' },
+  render: args => ({
+    props: args,
+    moduleMetadata: { imports: [CardComponent] },
+    template: `
+      <app-card title="Meilleur rendement par plant">
+        <app-chart [options]="options" [height]="height" />
+      </app-card>
+    `,
+  }),
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Barres horizontales classées, valeur posée au bout de chaque barre. Forme utilisée par la page Classement : l'axe des catégories se dessinant de bas en haut, la liste est inversée pour poser le premier en haut. Les libellés de valeur prennent la police, le corps et la couleur de texte du thème (posés hors de la barre, donc sur le fond).",
+      },
+    },
+  },
+};
+
+export const BarRace: Story = {
+  args: { options: course, height: '18rem' },
+  render: args => ({
+    props: args,
+    moduleMetadata: { imports: [CardComponent] },
+    template: `
+      <app-card title="Course dans le temps">
+        <app-chart [options]="options" [height]="height" />
+      </app-card>
+    `,
+  }),
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Barres classées en continu (`realtimeSort`) : la même forme animée, où les barres se réordonnent à chaque nouvelle valeur. L'appelant pilote les étapes en repassant des options, la durée d'animation étant calée sur son pas de temps.",
+      },
+    },
+  },
+};
+
 export const Dashboard: Story = {
   argTypes: seriesCountControl,
   args: { seriesCount: 1 },
