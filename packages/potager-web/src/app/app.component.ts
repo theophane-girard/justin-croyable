@@ -126,20 +126,25 @@ function initialsOf(label: string): string {
                         <app-select-item [value]="option.id">{{ option.label }}</app-select-item>
                       }
                     </app-select>
-                    <div class="flex items-center gap-1">
+                    <div class="flex items-center justify-end gap-1">
                       <button
                         appButton
                         variant="ghost"
                         size="sm"
-                        aria-label="Définir comme jardin par défaut"
+                        [attr.aria-label]="defaultLabel()"
                         [buttonDisabled]="access.activeIsDefault()"
                         (click)="onSetDefault()"
                       >
-                        <ng-icon name="phosphorStar" class="size-4" />
+                        <ng-icon [name]="defaultStarIcon()" [class]="defaultStarClass()" />
                       </button>
-                      <button appButton variant="ghost" size="sm" (click)="openDeleteGarden()">
-                        <ng-icon name="phosphorTrash" class="size-4" />
-                        {{ deleteLabel() }}
+                      <button
+                        appButton
+                        variant="ghost"
+                        size="sm"
+                        [attr.aria-label]="deleteLabel()"
+                        (click)="openDeleteGarden()"
+                      >
+                        <ng-icon [name]="deleteIcon()" [class]="deleteIconClass()" />
                       </button>
                     </div>
                   </div>
@@ -287,6 +292,21 @@ export class AppComponent {
 
   protected readonly activeIsOwner = computed(() => this.access.active()?.role === GARDEN_ROLE.owner);
   protected readonly deleteLabel = computed(() => (this.activeIsOwner() ? 'Supprimer' : 'Quitter'));
+  protected readonly deleteIcon = computed(() =>
+    this.activeIsOwner() ? 'phosphorTrash' : 'phosphorSignOut',
+  );
+  protected readonly deleteIconClass = computed(() =>
+    this.activeIsOwner() ? 'size-4 text-destructive' : 'size-4',
+  );
+  protected readonly defaultStarIcon = computed(() =>
+    this.access.activeIsDefault() ? 'phosphorStarFill' : 'phosphorStar',
+  );
+  protected readonly defaultStarClass = computed(() =>
+    this.access.activeIsDefault() ? 'size-4 text-amber-500' : 'size-4',
+  );
+  protected readonly defaultLabel = computed(() =>
+    this.access.activeIsDefault() ? 'Jardin par défaut' : 'Définir comme jardin par défaut',
+  );
   protected readonly deleteConfirmMessage = computed(() =>
     this.activeIsOwner()
       ? 'Supprimer définitivement ce jardin et toutes ses données ?'
