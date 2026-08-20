@@ -23,6 +23,7 @@ import { ComparatorStore } from '../../core/comparator-store';
 import { type Stat } from '../../core/pokemon.model';
 import {
   DEFAULT_ENHANCE_CONFIG,
+  DEFAULT_LEVEL,
   type EnhanceConfig,
   evsTotal,
   maxEvForStat,
@@ -35,6 +36,7 @@ export interface EnhanceTarget {
 }
 
 interface TargetDraft {
+  readonly level: number;
   readonly nature: string;
   readonly evs: Readonly<Record<Stat, number>>;
 }
@@ -42,6 +44,7 @@ interface TargetDraft {
 interface PanelView {
   readonly id: number;
   readonly name: string;
+  readonly level: number;
   readonly nature: string;
   readonly evs: Readonly<Record<Stat, number>>;
 }
@@ -65,8 +68,8 @@ interface PanelView {
     <ng-template #enhanceSheet>
       <div class="flex flex-col gap-6">
         <p class="text-muted-foreground text-sm">
-          À la validation, les statistiques sont calculées au niveau 100 avec des IV parfaits (31),
-          selon la nature et les EV choisis ci-dessous.
+          À la validation, les statistiques sont calculées au niveau choisi avec des IV parfaits
+          (31), selon la nature et les EV définis ci-dessous.
         </p>
 
         @if (isMulti()) {
@@ -81,8 +84,10 @@ interface PanelView {
                   <app-enhance-target-panel
                     [nature]="panel.nature"
                     [evs]="panel.evs"
+                    [level]="panel.level"
                     (natureChange)="onNature(panel.id, $event)"
                     (evChange)="onEv(panel.id, $event)"
+                    (levelChange)="onLevel(panel.id, $event)"
                   />
                 </div>
               </app-tab>
@@ -93,8 +98,10 @@ interface PanelView {
           <app-enhance-target-panel
             [nature]="only.nature"
             [evs]="only.evs"
+            [level]="only.level"
             (natureChange)="onNature(only.id, $event)"
             (evChange)="onEv(only.id, $event)"
+            (levelChange)="onLevel(only.id, $event)"
           />
         }
 
@@ -131,6 +138,7 @@ export class StatEnhancerComponent {
       return {
         id: target.id,
         name: target.name,
+        level: entry ? entry.level : DEFAULT_LEVEL,
         nature: entry ? entry.nature : DEFAULT_ENHANCE_CONFIG.nature,
         evs: entry ? entry.evs : DEFAULT_ENHANCE_CONFIG.evs,
       };
@@ -141,7 +149,7 @@ export class StatEnhancerComponent {
     this.#draft.set(
       this.targets().reduce((draft, target) => {
         const config = this.#store.enhanceFor(target.id);
-        draft[target.id] = { nature: config.nature, evs: config.evs };
+        draft[target.id] = { level: config.level, nature: config.nature, evs: config.evs };
         return draft;
       }, {} as Record<number, TargetDraft>),
     );
@@ -162,6 +170,10 @@ export class StatEnhancerComponent {
     this.#updateDraft(id, entry => ({ ...entry, nature }));
   }
 
+  protected onLevel(id: number, level: number): void {
+    this.#updateDraft(id, entry => ({ ...entry, level }));
+  }
+
   protected onEv(id: number, change: EvChange): void {
     this.#updateDraft(id, entry => {
       const max = maxEvForStat(entry.evs[change.stat], evsTotal(entry.evs));
@@ -174,7 +186,11 @@ export class StatEnhancerComponent {
     const ids = this.targets().map(target => target.id);
     this.#draft.set(
       ids.reduce((draft, id) => {
-        draft[id] = { nature: DEFAULT_ENHANCE_CONFIG.nature, evs: DEFAULT_ENHANCE_CONFIG.evs };
+        draft[id] = {
+          level: DEFAULT_LEVEL,
+          nature: DEFAULT_ENHANCE_CONFIG.nature,
+          evs: DEFAULT_ENHANCE_CONFIG.evs,
+        };
         return draft;
       }, {} as Record<number, TargetDraft>),
     );
@@ -187,6 +203,7 @@ export class StatEnhancerComponent {
     const draft = { ...this.#draft() };
     ids.forEach(targetId => {
       const entry = draft[targetId] ?? {
+        level: DEFAULT_LEVEL,
         nature: DEFAULT_ENHANCE_CONFIG.nature,
         evs: DEFAULT_ENHANCE_CONFIG.evs,
       };
@@ -199,10 +216,16 @@ export class StatEnhancerComponent {
     const configs = new Map<number, EnhanceConfig>();
     this.targets().forEach(target => {
       const entry = this.#draft()[target.id] ?? {
+        level: DEFAULT_LEVEL,
         nature: DEFAULT_ENHANCE_CONFIG.nature,
         evs: DEFAULT_ENHANCE_CONFIG.evs,
       };
-      configs.set(target.id, { level100: true, nature: entry.nature, evs: entry.evs });
+      configs.set(target.id, {
+        level100: true,
+        level: entry.level,
+        nature: entry.nature,
+        evs: entry.evs,
+      });
     });
     this.#store.setEnhanceConfigs(configs);
 

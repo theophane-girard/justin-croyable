@@ -44,7 +44,9 @@ import {
 } from '../../core/pokemon-detail';
 import { LANG, pokemonImageUrl, pokemonName, type Stat, STAT_META } from '../../core/pokemon.model';
 import {
+  clampLevel,
   DEFAULT_ENHANCE_CONFIG,
+  DEFAULT_LEVEL,
   type EnhanceConfig,
   evsTotal,
   maxEvForStat,
@@ -168,10 +170,12 @@ const ZERO_STAGES: Readonly<Record<Stat, number>> = DAMAGE_STAGE_STATS.reduce(
           <app-enhance-target-panel
             [nature]="config().nature"
             [evs]="config().evs"
+            [level]="config().level"
             [displayStats]="true"
             [baseStats]="pokemonStats()"
             (natureChange)="onNatureChange($event)"
             (evChange)="onEvChange($event)"
+            (levelChange)="onLevelChange($event)"
           />
         </section>
       }
@@ -220,6 +224,7 @@ export class CombatantPanelComponent {
   readonly #id = computed(() => this.#fight.slotValue(this.slot()));
   readonly #config = signal<EnhanceConfig>({
     level100: true,
+    level: DEFAULT_LEVEL,
     nature: NEUTRAL_NATURE_ID,
     evs: DEFAULT_ENHANCE_CONFIG.evs,
   });
@@ -416,6 +421,10 @@ export class CombatantPanelComponent {
 
   protected onNatureChange(nature: string): void {
     this.#config.update(config => ({ ...config, nature }));
+  }
+
+  protected onLevelChange(level: number): void {
+    this.#config.update(config => ({ ...config, level: clampLevel(level) }));
   }
 
   protected onEvChange(change: EvChange): void {
