@@ -30,7 +30,6 @@ import { NgIcon } from '@ng-icons/core';
 import { AUTH_GATE_ENABLED } from './core/app-config';
 import { AuthService } from './core/auth.service';
 import { GardenAccessStore } from './core/garden-access-store';
-import { UserStore } from './core/user-store';
 import { LoginComponent } from './features/auth/login.component';
 import { APP_PATHS } from './app.routes';
 
@@ -223,7 +222,6 @@ export class AppComponent {
   protected readonly theme = inject(ThemeService);
   protected readonly access = inject(GardenAccessStore);
   readonly #auth = inject(AuthService);
-  readonly #users = inject(UserStore);
   readonly #sheet = inject(SheetService);
 
   protected readonly appName = APP_NAME;
@@ -242,13 +240,22 @@ export class AppComponent {
 
   protected readonly pageTitle = computed(() => PAGE_TITLES[this.currentPath()] ?? APP_NAME);
 
+  readonly #currentUser = this.#auth.user;
+
   protected readonly displayName = computed(() => {
-    const profile = this.#users.profile();
-    return profile?.displayName ?? profile?.email ?? 'Utilisateur';
+    const user = this.#currentUser();
+    return user?.displayName ?? user?.email ?? 'Utilisateur';
   });
-  protected readonly email = computed(() => this.#users.profile()?.email ?? '');
-  protected readonly avatarSrc = computed(() => this.#users.profile()?.photoUrl ?? '');
-  protected readonly initials = computed(() => initialsOf(this.displayName()));
+  protected readonly email = computed(() => this.#currentUser()?.email ?? '');
+  protected readonly avatarSrc = computed(() => this.#currentUser()?.photoURL ?? '');
+  protected readonly initials = computed(() => {
+    const user = this.#currentUser();
+    if (user?.displayName) {
+      return initialsOf(user.displayName);
+    }
+    const userEmail = user?.email ?? '';
+    return userEmail ? userEmail.slice(0, 2).toUpperCase() : '?';
+  });
 
   protected readonly gardenOptions = computed(() =>
     this.access.gardens().map(garden => ({
