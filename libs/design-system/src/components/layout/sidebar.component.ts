@@ -156,13 +156,10 @@ export class SidebarComponent {
 
 @Component({
   selector: 'app-sidebar-group',
-  template: `
-    <div [class]="classes()">
-      <ng-content />
-    </div>
-  `,
+  template: `<ng-content />`,
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
+  host: { '[class]': 'classes()' },
   exportAs: 'sidebarGroup',
 })
 export class SidebarGroupComponent {

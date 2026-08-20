@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 
 import {
   ButtonComponent,
@@ -19,7 +19,6 @@ import { HARVESTS_LINK } from '../../app.routes';
 @Component({
   selector: 'app-add-harvest',
   imports: [
-    RouterLink,
     ...SelectImports,
     NgIcon,
     ButtonComponent,
@@ -37,7 +36,6 @@ import { HARVESTS_LINK } from '../../app.routes';
           </p>
         </div>
         <div class="flex items-center gap-2">
-          <a appButton variant="outline" [routerLink]="harvestsLink">Annuler</a>
           <button appButton variant="outline" [buttonDisabled]="!canSubmit()" (click)="onSaveAndAddAnother()">
             <ng-icon name="phosphorPlus" class="size-4" />
             Ajouter un autre
@@ -146,7 +144,6 @@ export class AddHarvestComponent {
   readonly #catalog = inject(CatalogStore);
   readonly #router = inject(Router);
 
-  protected readonly harvestsLink = HARVESTS_LINK;
   protected readonly varietyOptions = this.#catalog.varietyOptions;
   protected readonly referenceOptions = this.#catalog.referenceOptions;
 

@@ -13,6 +13,8 @@ import { filter, map } from 'rxjs';
 
 import {
   AvatarComponent,
+  BreadcrumbImports,
+  BreadcrumbService,
   ButtonComponent,
   injectCurrentPath,
   isActivePath,
@@ -36,6 +38,8 @@ import { LoginComponent } from './features/auth/login.component';
 import { APP_PATHS } from './app.routes';
 
 type NavItem = { readonly path: string; readonly link: string; readonly label: string; readonly icon: string };
+
+type HeaderCrumb = { readonly url: string; readonly label: string; readonly link: string[] };
 
 const NAV_ITEMS: readonly NavItem[] = [
   { path: APP_PATHS.dashboard, link: '/', label: 'Tableau de bord', icon: 'phosphorSquaresFour' },
@@ -82,6 +86,7 @@ function initialsOf(label: string): string {
     RouterOutlet,
     RouterLink,
     ...LayoutImports,
+    ...BreadcrumbImports,
     NgIcon,
     AvatarComponent,
     ButtonComponent,
@@ -165,7 +170,7 @@ function initialsOf(label: string): string {
                 }
               </app-sidebar-group>
 
-              <app-sidebar-group class="mt-auto px-1 py-3">
+              <app-sidebar-group class="mt-auto px-1 pt-2">
                 <button
                   type="button"
                   class="hover:bg-accent flex w-full items-center gap-2 rounded-md p-2 text-left"
@@ -184,8 +189,16 @@ function initialsOf(label: string): string {
 
           <app-layout direction="vertical" class="min-w-0 flex-1">
             <app-header class="px-4">
-              <div class="flex items-center gap-2">
-                <p class="text-sm font-medium">{{ pageTitle() }}</p>
+              <div class="flex min-w-0 items-center gap-2 overflow-x-auto">
+                @if (showBreadcrumb()) {
+                  <app-breadcrumb wrap="nowrap">
+                    @for (crumb of breadcrumbItems(); track crumb.url) {
+                      <app-breadcrumb-item [link]="crumb.link">{{ crumb.label }}</app-breadcrumb-item>
+                    }
+                  </app-breadcrumb>
+                } @else {
+                  <p class="text-sm font-medium">{{ pageTitle() }}</p>
+                }
               </div>
             </app-header>
 
@@ -216,7 +229,7 @@ function initialsOf(label: string): string {
               (valueChange)="onThemeChange($event)"
             />
           </div>
-          <button appButton variant="outline" (click)="onSignOut()">
+          <button appButton variant="destructive" (click)="onSignOut()">
             <ng-icon name="phosphorSignOut" class="size-4" />
             Se déconnecter
           </button>
@@ -237,6 +250,7 @@ export class AppComponent {
   protected readonly access = inject(GardenAccessStore);
   readonly #auth = inject(AuthService);
   readonly #sheet = inject(SheetService);
+  readonly #breadcrumbs = inject(BreadcrumbService);
 
   protected readonly appName = APP_NAME;
 
@@ -267,6 +281,15 @@ export class AppComponent {
   );
 
   protected readonly pageTitle = computed(() => PAGE_TITLES[this.#titlePath()] ?? APP_NAME);
+
+  protected readonly breadcrumbItems = computed<HeaderCrumb[]>(() =>
+    this.#breadcrumbs.breadcrumbs().map(crumb => ({
+      url: crumb.url,
+      label: crumb.label,
+      link: [crumb.url],
+    })),
+  );
+  protected readonly showBreadcrumb = computed(() => this.breadcrumbItems().length > 1);
 
   readonly #currentUser = this.#auth.user;
 

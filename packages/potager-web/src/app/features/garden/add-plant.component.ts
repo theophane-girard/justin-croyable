@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 
 import {
   ButtonComponent,
@@ -17,7 +17,6 @@ import { GARDEN_LINK } from '../../app.routes';
 @Component({
   selector: 'app-add-plant',
   imports: [
-    RouterLink,
     ...SelectImports,
     NgIcon,
     ButtonComponent,
@@ -34,7 +33,6 @@ import { GARDEN_LINK } from '../../app.routes';
           </p>
         </div>
         <div class="flex items-center gap-2">
-          <a appButton variant="outline" [routerLink]="gardenLink">Annuler</a>
           <button appButton variant="outline" [buttonDisabled]="!canSubmit()" (click)="onSaveAndAddAnother()">
             <ng-icon name="phosphorPlus" class="size-4" />
             Ajouter un autre
@@ -128,7 +126,6 @@ export class AddPlantComponent {
   readonly #catalog = inject(CatalogStore);
   readonly #router = inject(Router);
 
-  protected readonly gardenLink = GARDEN_LINK;
   protected readonly varietyOptions = this.#catalog.varietyOptions;
   protected readonly referenceOptions = this.#catalog.referenceOptions;
 

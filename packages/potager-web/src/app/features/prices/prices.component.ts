@@ -11,6 +11,8 @@ import {
 import {
   ButtonComponent,
   FabButtonComponent,
+  FabContainerComponent,
+  FabListComponent,
   InputDirective,
   InputGroupComponent,
   SegmentComponent,
@@ -287,6 +289,8 @@ function parsePositive(raw: string): number | null {
     TableComponent,
     ButtonComponent,
     FabButtonComponent,
+    FabContainerComponent,
+    FabListComponent,
     InputDirective,
     InputGroupComponent,
     NgIcon,
@@ -300,7 +304,7 @@ function parsePositive(raw: string): number | null {
             Prix de référence par variété, d'après les prix moyens français (FranceAgriMer — RNM).
           </p>
         </div>
-        <div class="flex flex-wrap items-center gap-2">
+        <div class="hidden flex-wrap items-center gap-2 sm:flex">
           @if (isAdmin()) {
             <button
               appButton
@@ -466,16 +470,54 @@ function parsePositive(raw: string): number | null {
       </div>
     </ng-template>
 
-    <button
-      appFabButton
-      variant="secondary"
-      position="bottom-right"
-      class="sm:hidden"
-      aria-label="Filtrer les prix"
-      (click)="openFilter()"
-    >
-      <ng-icon name="phosphorFunnel" />
-    </button>
+    @if (isAdmin()) {
+      <app-fab
+        class="sm:hidden"
+        position="bottom-right"
+        triggerIcon="phosphorDotsThreeVertical"
+        triggerLabel="Actions sur les prix"
+      >
+        <app-fab-list>
+          <button appFabButton type="button" variant="secondary" (click)="openFilter()" aria-label="Filtrer">
+            <ng-icon name="phosphorFunnel" />
+          </button>
+          <button
+            appFabButton
+            type="button"
+            variant="secondary"
+            [loading]="refreshing()"
+            [fabDisabled]="refreshing()"
+            aria-label="Rafraîchir (RNM)"
+            (click)="onRefreshRnm()"
+          >
+            <ng-icon name="phosphorCloudArrowDown" />
+          </button>
+          @if (!showHistory()) {
+            <button
+              appFabButton
+              type="button"
+              variant="secondary"
+              [fabDisabled]="!canEditSelection()"
+              aria-label="Éditer"
+              (click)="openEditor()"
+            >
+              <ng-icon name="phosphorPencilSimple" />
+            </button>
+          }
+        </app-fab-list>
+      </app-fab>
+    } @else {
+      <button
+        appFabButton
+        variant="secondary"
+        position="bottom-right"
+        class="sm:hidden"
+        aria-label="Filtrer les prix"
+        (click)="openFilter()"
+      >
+        <ng-icon name="phosphorFunnel" />
+      </button>
+    }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

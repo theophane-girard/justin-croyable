@@ -223,6 +223,18 @@ const BOTTOM_SHEET_SIDE = 'bottom';
           <button appFabButton type="button" variant="secondary" (click)="openSort()" aria-label="Trier">
             <ng-icon name="phosphorArrowsDownUp" />
           </button>
+          @if (canWrite()) {
+            <button
+              appFabButton
+              type="button"
+              variant="destructive"
+              [fabDisabled]="!selectedId()"
+              aria-label="Supprimer la sélection"
+              (click)="onDelete()"
+            >
+              <ng-icon name="phosphorTrash" />
+            </button>
+          }
         </app-fab-list>
       </app-fab>
     }

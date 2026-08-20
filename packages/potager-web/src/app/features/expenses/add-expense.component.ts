@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 
 import {
   ButtonComponent,
@@ -20,7 +20,6 @@ import { EXPENSES_LINK } from '../../app.routes';
 @Component({
   selector: 'app-add-expense',
   imports: [
-    RouterLink,
     ...SelectImports,
     NgIcon,
     ButtonComponent,
@@ -37,7 +36,6 @@ import { EXPENSES_LINK } from '../../app.routes';
           <p class="text-muted-foreground text-sm">Renseignez le libellé, la catégorie et le montant.</p>
         </div>
         <div class="flex items-center gap-2">
-          <a appButton variant="outline" [routerLink]="expensesLink">Annuler</a>
           <button appButton variant="outline" [buttonDisabled]="!canSubmit()" (click)="onSaveAndAddAnother()">
             <ng-icon name="phosphorPlus" class="size-4" />
             Ajouter un autre
@@ -138,7 +136,6 @@ export class AddExpenseComponent {
   readonly #router = inject(Router);
 
   protected readonly categories = EXPENSE_CATEGORIES;
-  protected readonly expensesLink = EXPENSES_LINK;
   protected readonly plants = this.#garden.rows;
 
   protected readonly label = signal<string>('');
