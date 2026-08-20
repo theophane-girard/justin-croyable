@@ -5,6 +5,51 @@ import { typeMultiplier } from './pokemon-type';
 const SIMULATED_LEVEL = 100;
 const STAB_MULTIPLIER = 1.5;
 const MIN_RANDOM_FACTOR = 0.85;
+const CRITICAL_MULTIPLIER = 1.5;
+const BURN_MULTIPLIER = 0.5;
+const WEATHER_BOOST = 1.5;
+const WEATHER_REDUCTION = 0.5;
+
+const WATER_TYPE = 'water';
+const FIRE_TYPE = 'fire';
+const PHYSICAL_CLASS = 'physical';
+
+export const WEATHER = { none: 'none', rain: 'rain', sun: 'sun' } as const;
+export type Weather = (typeof WEATHER)[keyof typeof WEATHER];
+
+export const WEATHER_OPTIONS: readonly { readonly value: Weather; readonly label: string }[] = [
+  { value: WEATHER.none, label: 'Aucune' },
+  { value: WEATHER.rain, label: 'Pluie' },
+  { value: WEATHER.sun, label: 'Soleil' },
+];
+
+function isWeather(value: string): value is Weather {
+  return value === WEATHER.none || value === WEATHER.rain || value === WEATHER.sun;
+}
+
+export function toWeather(value: string): Weather {
+  return isWeather(value) ? value : WEATHER.none;
+}
+
+function weatherMultiplier(weather: Weather, moveType: string): number {
+  if (weather === WEATHER.rain) {
+    if (moveType === WATER_TYPE) {
+      return WEATHER_BOOST;
+    }
+    if (moveType === FIRE_TYPE) {
+      return WEATHER_REDUCTION;
+    }
+  }
+  if (weather === WEATHER.sun) {
+    if (moveType === FIRE_TYPE) {
+      return WEATHER_BOOST;
+    }
+    if (moveType === WATER_TYPE) {
+      return WEATHER_REDUCTION;
+    }
+  }
+  return 1;
+}
 
 export const STAT_STAGES: readonly number[] = [-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6];
 
@@ -28,6 +73,9 @@ export interface Combatant {
   readonly baseStats: Readonly<Record<Stat, number>>;
   readonly config: EnhanceConfig;
   readonly stages: Readonly<Record<Stat, number>>;
+  readonly critical: boolean;
+  readonly burned: boolean;
+  readonly weather: Weather;
 }
 
 export interface DamageMove {
@@ -43,15 +91,28 @@ export interface DamageResult {
   readonly maxPercent: number;
   readonly effectiveness: number;
   readonly stab: boolean;
+  readonly critical: boolean;
+  readonly weatherBoosted: boolean;
+  readonly weatherReduced: boolean;
+  readonly burnReduced: boolean;
 }
 
 function level100Stats(combatant: Combatant): Readonly<Record<Stat, number>> {
   return applyEnhancedStats(combatant.baseStats, { ...combatant.config, level100: true });
 }
 
-function effectiveStat(combatant: Combatant, stat: Stat): number {
+function effectiveStat(
+  combatant: Combatant,
+  stat: Stat,
+  ignoreNegativeStage: boolean,
+  ignorePositiveStage: boolean,
+): number {
   const value = level100Stats(combatant)[stat];
-  return Math.max(1, Math.floor(value * stageMultiplier(combatant.stages[stat] ?? 0)));
+  const rawStage = combatant.stages[stat] ?? 0;
+  const ignored =
+    (ignoreNegativeStage && rawStage < 0) || (ignorePositiveStage && rawStage > 0);
+  const stage = ignored ? 0 : rawStage;
+  return Math.max(1, Math.floor(value * stageMultiplier(stage)));
 }
 
 export function computeDamage(
@@ -62,12 +123,31 @@ export function computeDamage(
   if (move.power == null || move.power <= 0 || move.damageClass === 'status') {
     return null;
   }
-  const physical = move.damageClass === 'physical';
-  const attack = effectiveStat(attacker, physical ? STAT.attack : STAT.specialAttack);
-  const defense = effectiveStat(defender, physical ? STAT.defense : STAT.specialDefense);
+  const physical = move.damageClass === PHYSICAL_CLASS;
+  const critical = attacker.critical;
+  const attack = effectiveStat(
+    attacker,
+    physical ? STAT.attack : STAT.specialAttack,
+    critical,
+    false,
+  );
+  const defense = effectiveStat(
+    defender,
+    physical ? STAT.defense : STAT.specialDefense,
+    false,
+    critical,
+  );
   const effectiveness = typeMultiplier(move.type, defender.types);
   const stab = attacker.types.includes(move.type);
-  const modifier = (stab ? STAB_MULTIPLIER : 1) * effectiveness;
+  const weather = weatherMultiplier(attacker.weather, move.type);
+  const burnReduced = attacker.burned && physical;
+
+  const modifier =
+    (stab ? STAB_MULTIPLIER : 1) *
+    effectiveness *
+    weather *
+    (critical ? CRITICAL_MULTIPLIER : 1) *
+    (burnReduced ? BURN_MULTIPLIER : 1);
 
   const base =
     Math.floor((((2 * SIMULATED_LEVEL) / 5 + 2) * move.power * (attack / defense)) / 50) + 2;
@@ -84,5 +164,9 @@ export function computeDamage(
     maxPercent: toPercent(maxDamage),
     effectiveness,
     stab,
+    critical,
+    weatherBoosted: weather > 1,
+    weatherReduced: weather < 1,
+    burnReduced,
   };
 }

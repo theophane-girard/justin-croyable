@@ -21,6 +21,10 @@ interface DamageRow {
   readonly typeClass: string;
   readonly stab: boolean;
   readonly status: boolean;
+  readonly critical: boolean;
+  readonly weatherBoosted: boolean;
+  readonly weatherReduced: boolean;
+  readonly burnReduced: boolean;
   readonly damageLabel: string;
   readonly percentLabel: string;
   readonly effectivenessLabel: string;
@@ -67,6 +71,10 @@ function toRow(move: PokemonMove, damage: DamageResult | null): DamageRow {
       typeClass: typeTileClass(move.type),
       stab: false,
       status: true,
+      critical: false,
+      weatherBoosted: false,
+      weatherReduced: false,
+      burnReduced: false,
       damageLabel: '—',
       percentLabel: 'Attaque de statut',
       effectivenessLabel: '',
@@ -80,6 +88,10 @@ function toRow(move: PokemonMove, damage: DamageResult | null): DamageRow {
     typeClass: typeTileClass(move.type),
     stab: damage.stab,
     status: false,
+    critical: damage.critical,
+    weatherBoosted: damage.weatherBoosted,
+    weatherReduced: damage.weatherReduced,
+    burnReduced: damage.burnReduced,
     damageLabel: `${damage.minDamage} – ${damage.maxDamage}`,
     percentLabel: `${damage.minPercent} – ${damage.maxPercent}% des PV`,
     effectivenessLabel: effectivenessLabel(damage.effectiveness),
@@ -150,6 +162,18 @@ function toRow(move: PokemonMove, damage: DamageResult | null): DamageRow {
                         @if (row.stab) {
                           <app-badge type="secondary">STAB</app-badge>
                         }
+                        @if (row.critical) {
+                          <app-badge type="secondary">Crit ×1.5</app-badge>
+                        }
+                        @if (row.weatherBoosted) {
+                          <app-badge type="secondary">Météo ×1.5</app-badge>
+                        }
+                        @if (row.weatherReduced) {
+                          <app-badge type="secondary">Météo ×0.5</app-badge>
+                        }
+                        @if (row.burnReduced) {
+                          <app-badge type="secondary">Brûlé ÷2</app-badge>
+                        }
                         @if (row.effectivenessLabel) {
                           <span
                             [class]="row.effectivenessClass"
@@ -189,6 +213,18 @@ function toRow(move: PokemonMove, damage: DamageResult | null): DamageRow {
                         </span>
                         @if (row.stab) {
                           <app-badge type="secondary">STAB</app-badge>
+                        }
+                        @if (row.critical) {
+                          <app-badge type="secondary">Crit ×1.5</app-badge>
+                        }
+                        @if (row.weatherBoosted) {
+                          <app-badge type="secondary">Météo ×1.5</app-badge>
+                        }
+                        @if (row.weatherReduced) {
+                          <app-badge type="secondary">Météo ×0.5</app-badge>
+                        }
+                        @if (row.burnReduced) {
+                          <app-badge type="secondary">Brûlé ÷2</app-badge>
                         }
                         @if (row.effectivenessLabel) {
                           <span

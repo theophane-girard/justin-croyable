@@ -10,7 +10,13 @@ import {
   viewChild,
 } from '@angular/core';
 
-import { ButtonComponent, SelectImports, SheetService } from '@justin-croyable/design-system';
+import {
+  ButtonComponent,
+  SelectImports,
+  SheetService,
+  ToggleGroupComponent,
+  type ToggleGroupItem,
+} from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
 
 import { ComparatorStore } from '../../core/comparator-store';
@@ -19,6 +25,10 @@ import {
   DAMAGE_STAGE_STATS,
   stageLabel,
   STAT_STAGES,
+  type Weather,
+  WEATHER,
+  WEATHER_OPTIONS,
+  toWeather,
 } from '../../core/pokemon-damage';
 import {
   EMPTY_DETAIL,
@@ -48,6 +58,8 @@ interface StageControl {
   readonly value: string;
 }
 
+const CONDITION = { critical: 'critical', burn: 'burn' } as const;
+
 const ZERO_STAGES: Readonly<Record<Stat, number>> = DAMAGE_STAGE_STATS.reduce(
   (stages, stat) => ({ ...stages, [stat]: 0 }),
   {} as Record<Stat, number>,
@@ -61,6 +73,7 @@ const ZERO_STAGES: Readonly<Record<Stat, number>> = DAMAGE_STAGE_STATS.reduce(
     EnhanceTargetPanelComponent,
     PokedexGridComponent,
     PokemonMovesComponent,
+    ToggleGroupComponent,
     ...SelectImports,
   ],
   template: `
@@ -99,6 +112,27 @@ const ZERO_STAGES: Readonly<Record<Stat, number>> = DAMAGE_STAGE_STATS.reduce(
                 </app-select>
               </div>
             }
+          </div>
+        </section>
+
+        <section class="flex flex-col gap-2">
+          <h3 class="text-sm font-semibold">Conditions de combat</h3>
+          <app-toggle-group
+            mode="multiple"
+            class="flex-wrap justify-start"
+            [items]="conditionItems"
+            [value]="conditionValue()"
+            (valueChange)="onConditionsChange($event)"
+          />
+          <div class="flex flex-col gap-1">
+            <span class="text-muted-foreground text-xs">Météo</span>
+            <app-toggle-group
+              mode="single"
+              class="flex-wrap justify-start"
+              [items]="weatherItems"
+              [value]="weather()"
+              (valueChange)="onWeatherChange($event)"
+            />
           </div>
         </section>
 
@@ -156,11 +190,35 @@ export class CombatantPanelComponent {
   });
   readonly #stages = signal<Readonly<Record<Stat, number>>>({ ...ZERO_STAGES });
   readonly #selectedMoveSlugs = signal<string[]>([]);
+  readonly #critical = signal(false);
+  readonly #burned = signal(false);
+  readonly #weather = signal<Weather>(WEATHER.none);
 
   protected readonly stageOptions = STAT_STAGES.map(stage => ({
     value: String(stage),
     label: stageLabel(stage),
   }));
+
+  protected readonly conditionItems: readonly ToggleGroupItem[] = [
+    { value: CONDITION.critical, label: 'Coup critique' },
+    { value: CONDITION.burn, label: 'Brûlure (attaquant)' },
+  ];
+  protected readonly weatherItems: readonly ToggleGroupItem[] = WEATHER_OPTIONS.map(option => ({
+    value: option.value,
+    label: option.label,
+  }));
+
+  protected readonly weather = this.#weather.asReadonly();
+  protected readonly conditionValue = computed<string[]>(() => {
+    const active: string[] = [];
+    if (this.#critical()) {
+      active.push(CONDITION.critical);
+    }
+    if (this.#burned()) {
+      active.push(CONDITION.burn);
+    }
+    return active;
+  });
 
   protected readonly config = this.#config.asReadonly();
   protected readonly selectedMoveSlugs = computed(() => [...this.#selectedMoveSlugs()]);
@@ -242,6 +300,9 @@ export class CombatantPanelComponent {
       baseStats: pokemon.stats,
       config: this.#config(),
       stages: this.#stages(),
+      critical: this.#critical(),
+      burned: this.#burned(),
+      weather: this.#weather(),
     };
   });
 
@@ -292,6 +353,17 @@ export class CombatantPanelComponent {
       const bounded = Math.max(0, Math.min(change.value, max));
       return { ...config, evs: { ...config.evs, [change.stat]: bounded } };
     });
+  }
+
+  protected onConditionsChange(value: string | string[]): void {
+    const active = new Set(Array.isArray(value) ? value : [value]);
+    this.#critical.set(active.has(CONDITION.critical));
+    this.#burned.set(active.has(CONDITION.burn));
+  }
+
+  protected onWeatherChange(value: string | string[]): void {
+    const raw = Array.isArray(value) ? (value[0] ?? WEATHER.none) : value;
+    this.#weather.set(toWeather(raw));
   }
 
   protected onStageChange(stat: Stat, value: string | string[]): void {
