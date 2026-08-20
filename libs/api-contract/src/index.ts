@@ -17,6 +17,7 @@ export {
   updateGardenSchema,
   updateMemberSchema,
   gardenMemberParamsSchema,
+  gardenRankingEntrySchema,
   type GardenRole,
   type Garden,
   type GardenMember,
@@ -24,6 +25,7 @@ export {
   type InviteMemberPayload,
   type UpdateGardenPayload,
   type UpdateMemberPayload,
+  type GardenRankingEntry,
 } from './garden/garden.schema';
 export {
   varietySchema,
