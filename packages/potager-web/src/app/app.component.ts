@@ -43,6 +43,7 @@ const NAV_ITEMS: readonly NavItem[] = [
   { path: APP_PATHS.expenses, link: `/${APP_PATHS.expenses}`, label: 'Dépenses', icon: 'phosphorReceipt' },
   { path: APP_PATHS.garden, link: `/${APP_PATHS.garden}`, label: 'Mon jardin', icon: 'phosphorPottedPlant' },
   { path: APP_PATHS.prices, link: `/${APP_PATHS.prices}`, label: 'Prix', icon: 'phosphorCoins' },
+  { path: APP_PATHS.rankings, link: `/${APP_PATHS.rankings}`, label: 'Classement', icon: 'phosphorTrophy' },
 ];
 
 const APP_NAME = 'Mon Potager';
@@ -56,6 +57,7 @@ const PAGE_TITLES: Readonly<Record<string, string>> = {
   [APP_PATHS.garden]: 'Mon jardin',
   [`${APP_PATHS.garden}/${APP_PATHS.add}`]: 'Ajouter un plant',
   [APP_PATHS.prices]: 'Prix',
+  [APP_PATHS.rankings]: 'Classement',
 };
 
 function normalizeUrlPath(url: string): string {

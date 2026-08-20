@@ -3,6 +3,7 @@ import {
   GARDEN_ROLE,
   type Garden,
   type GardenMember,
+  type GardenRankingEntry,
   type GardenRole,
   type InviteMemberPayload,
   type UpdateMemberPayload,
@@ -23,6 +24,8 @@ import {
   users,
   type GardenMemberRecord,
   type GardenRecord,
+  type HarvestRecord,
+  type PlantRecord,
   type UserRecord,
 } from '../db/schema';
 
@@ -42,6 +45,26 @@ function toMember(record: GardenMemberRecord): GardenMember {
 
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
+}
+
+function toRankingPlant(record: PlantRecord) {
+  return {
+    id: record.id,
+    cropId: record.cropId,
+    varietyId: record.varietyId ?? null,
+    quantity: record.quantity,
+    createdAt: record.createdAt.toISOString(),
+  };
+}
+
+function toRankingHarvest(record: HarvestRecord) {
+  return {
+    id: record.id,
+    varietyId: record.varietyId,
+    weightKg: record.weightKg,
+    harvestedOn: record.harvestedOn.toISOString(),
+    createdAt: record.createdAt.toISOString(),
+  };
 }
 
 function membershipOfUser(user: UserRecord) {
@@ -217,6 +240,29 @@ export class GardenService {
     await this.db.delete(gardens).where(eq(gardens.id, garden.id));
   }
 
+  async rankings(user: UserRecord): Promise<GardenRankingEntry[]> {
+    const accessible = await this.listAccessibleGardens(user);
+    return Promise.all(
+      accessible.map(async garden => {
+        const record = await this.db.query.gardens.findFirst({ where: eq(gardens.id, garden.id) });
+        const ownerUserId = record?.ownerUserId;
+        if (!ownerUserId) {
+          return { gardenId: garden.id, gardenName: garden.name, plants: [], harvests: [] };
+        }
+        const [plantRows, harvestRows] = await Promise.all([
+          this.db.select().from(plants).where(eq(plants.userId, ownerUserId)),
+          this.db.select().from(harvests).where(eq(harvests.userId, ownerUserId)),
+        ]);
+        return {
+          gardenId: garden.id,
+          gardenName: garden.name,
+          plants: plantRows.map(toRankingPlant),
+          harvests: harvestRows.map(toRankingHarvest),
+        };
+      }),
+    );
+  }
+
   async resolveDataOwnerId(user: UserRecord, activeGardenId: string | null): Promise<string | null> {
     if (activeGardenId === null) {
       return user.id;
@@ -384,6 +430,7 @@ export class GardenController {
         return { status: 200, body: this.gardens.toGarden(garden, GARDEN_ROLE.owner) };
       },
       list: async () => ({ status: 200, body: await this.gardens.listAccessibleGardens(user) }),
+      rankings: async () => ({ status: 200, body: await this.gardens.rankings(user) }),
       update: async ({ params, body }) => {
         const outcome = await this.gardens.rename(user, params.id, body.name);
         if (outcome === 'not-found') {

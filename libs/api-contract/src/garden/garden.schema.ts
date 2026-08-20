@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+import { harvestSchema } from '../harvest/harvest.schema';
+import { plantSchema } from '../plant/plant.schema';
+
 export const GARDEN_ROLE = {
   owner: 'owner',
   coOwner: 'co_owner',
@@ -67,3 +70,12 @@ export const gardenMemberParamsSchema = z.object({
   id: z.string().uuid(),
   memberId: z.string().uuid(),
 });
+
+export const gardenRankingEntrySchema = z.object({
+  gardenId: z.string().uuid(),
+  gardenName: z.string(),
+  plants: z.array(plantSchema),
+  harvests: z.array(harvestSchema),
+});
+
+export type GardenRankingEntry = z.infer<typeof gardenRankingEntrySchema>;

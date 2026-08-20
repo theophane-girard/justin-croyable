@@ -10,6 +10,7 @@ export const APP_PATHS = {
   expenses: 'depenses',
   garden: 'jardin',
   prices: 'prix',
+  rankings: 'classement',
   add: 'ajouter',
 } as const;
 
@@ -23,6 +24,7 @@ export const EXPENSE_ADD_LINK = `/${APP_PATHS.expenses}/${APP_PATHS.add}`;
 export const GARDEN_LINK = `/${APP_PATHS.garden}`;
 export const GARDEN_ADD_LINK = `/${APP_PATHS.garden}/${APP_PATHS.add}`;
 export const PRICES_LINK = `/${APP_PATHS.prices}`;
+export const RANKINGS_LINK = `/${APP_PATHS.rankings}`;
 
 export const APP_ROUTES: Route[] = [
   {
@@ -101,6 +103,14 @@ export const APP_ROUTES: Route[] = [
     loadComponent: () => import('./features/prices/prices.component').then(m => m.PricesComponent),
     title: 'Prix — Potager',
     data: { skeleton: SKELETON_KIND.list },
+    resolve: { simulatedLoad: simulatedLoadResolver },
+  },
+  {
+    path: APP_PATHS.rankings,
+    loadComponent: () =>
+      import('./features/rankings/rankings.component').then(m => m.RankingsComponent),
+    title: 'Classement — Potager',
+    data: { skeleton: SKELETON_KIND.dashboard },
     resolve: { simulatedLoad: simulatedLoadResolver },
   },
   {

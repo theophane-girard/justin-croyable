@@ -6,6 +6,7 @@ import { createExpenseSchema, expenseSchema, updateExpenseSchema } from './expen
 import {
   gardenMemberParamsSchema,
   gardenMemberSchema,
+  gardenRankingEntrySchema,
   gardenSchema,
   inviteMemberSchema,
   updateGardenSchema,
@@ -145,6 +146,11 @@ export const gardenContract = contract.router({
     method: 'GET',
     path: '/gardens',
     responses: { 200: z.array(gardenSchema), 401: errorSchema },
+  },
+  rankings: {
+    method: 'GET',
+    path: '/gardens/rankings',
+    responses: { 200: z.array(gardenRankingEntrySchema), 401: errorSchema },
   },
   update: {
     method: 'PATCH',
