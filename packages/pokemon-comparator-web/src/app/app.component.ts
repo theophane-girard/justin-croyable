@@ -117,7 +117,7 @@ const NAV_ITEMS: readonly NavItem[] = [
           </app-header>
 
           <app-content class="min-h-0 overflow-auto p-4 sm:p-6">
-            <app-skeleton-outlet class="min-h-full">
+            <app-skeleton-outlet class="flex-1">
               <router-outlet />
             </app-skeleton-outlet>
           </app-content>

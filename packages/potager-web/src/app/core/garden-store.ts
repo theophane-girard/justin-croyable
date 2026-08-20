@@ -13,7 +13,7 @@ import {
   type VarietyId,
 } from './potager.model';
 import { ApiEntityStore } from './api-entity-store';
-import { CatalogStore } from './catalog-store';
+import { type CatalogOption, CatalogStore } from './catalog-store';
 import { HarvestStore } from './harvest-store';
 import { ExpenseStore } from './expense-store';
 
@@ -68,6 +68,24 @@ export class GardenStore extends ApiEntityStore<Plant> {
         );
       })
       .sort((a, b) => b.netSavingsEur - a.netSavingsEur);
+  });
+
+  readonly plantedVarietyIds = computed<ReadonlySet<VarietyId>>(() => {
+    const byCrop = this.#catalog.byCrop();
+    return this.entries().reduce<Set<VarietyId>>((planted, entry) => {
+      if (entry.varietyId !== null) {
+        planted.add(entry.varietyId);
+        return planted;
+      }
+      const cropVarieties = isCropId(entry.cropId) ? byCrop.get(entry.cropId) ?? [] : [];
+      cropVarieties.forEach(variety => planted.add(variety.id));
+      return planted;
+    }, new Set());
+  });
+
+  readonly plantedVarietyOptions = computed<readonly CatalogOption[]>(() => {
+    const planted = this.plantedVarietyIds();
+    return this.#catalog.varietyOptions().filter(option => planted.has(option.id));
   });
 
   readonly plantCount = computed(() =>

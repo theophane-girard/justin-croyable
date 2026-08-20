@@ -19,7 +19,7 @@ export const HARVEST_UNIT = {
 
 export type HarvestUnit = (typeof HARVEST_UNIT)[keyof typeof HARVEST_UNIT];
 
-type HarvestUnitMeta = {
+export type HarvestUnitMeta = {
   readonly quantityLabel: string;
   readonly quantityHint: string;
   readonly quantitySuffix: string;

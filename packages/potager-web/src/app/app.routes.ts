@@ -104,7 +104,6 @@ export const APP_ROUTES: Route[] = [
       import('./features/rankings/rankings.component').then(m => m.RankingsComponent),
     title: 'Classement — Potager',
     data: { skeleton: SKELETON_KIND.dashboard },
-    resolve: { simulatedLoad: simulatedLoadResolver },
   },
   {
     path: '**',

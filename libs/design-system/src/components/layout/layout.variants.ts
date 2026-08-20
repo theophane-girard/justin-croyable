@@ -36,6 +36,18 @@ export const contentVariants = cva(
   'relative flex-1 flex flex-col overflow-auto [scrollbar-gutter:stable] bg-background p-6 min-h-dvh',
 );
 
+export const contentBodyVariants = cva('flex min-h-0 flex-1 flex-col');
+
+// Espace de fin de page, pour que le dernier bloc d'une page longue ne colle
+// pas au bas de l'écran (ni sous un bouton flottant). C'est une cale et non un
+// retrait : un `pb-*` sur l'hôte n'allonge pas la zone défilante d'un conteneur
+// flex dont les enfants débordent, et un `pb-*` sur le corps resterait dans sa
+// boîte (hauteur figée par `flex-1 min-h-0`), donc au-dessus du débordement.
+// Dernier enfant flex du corps, la cale suit le contenu et allonge le défilement.
+// Corollaire pour le contenu projeté : il doit remplir la hauteur avec `flex-1`
+// et non `min-h-full`, sinon son minimum absorbe la place de la cale.
+export const contentSpacerVariants = cva('h-16 shrink-0');
+
 // Sidebar Variants
 export const sidebarVariants = cva(
   'relative flex flex-col h-full transition-all duration-300 ease-in-out border-r shrink-0 px-3 pt-6 pb-3 bg-sidebar text-sidebar-foreground border-sidebar-border',

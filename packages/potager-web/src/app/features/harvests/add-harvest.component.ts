@@ -1,28 +1,53 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 
 import {
   ButtonComponent,
   CardComponent,
   DatePickerComponent,
+  EmptyComponent,
   InputDirective,
   InputGroupComponent,
   SelectImports,
 } from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
 
-import { cropUnit, HARVEST_UNIT, HARVEST_UNIT_META } from '../../core/potager.model';
+import {
+  cropUnit,
+  HARVEST_UNIT,
+  HARVEST_UNIT_META,
+  type HarvestDraft,
+  type HarvestUnitMeta,
+} from '../../core/potager.model';
 import { CatalogStore } from '../../core/catalog-store';
+import { GardenStore } from '../../core/garden-store';
 import { HarvestStore } from '../../core/harvest-store';
-import { HARVESTS_LINK } from '../../app.routes';
+import { GARDEN_ADD_LINK, HARVESTS_LINK } from '../../app.routes';
+
+type HarvestEntry = {
+  readonly key: number;
+  readonly varietyId: string;
+  readonly weightInput: string;
+  readonly date: Date | null;
+};
+
+type HarvestEntryRow = HarvestEntry & {
+  readonly title: string;
+  readonly removeAction: string;
+  readonly unitMeta: HarvestUnitMeta;
+};
+
+const REMOVE_ACTION = 'Retirer';
 
 @Component({
   selector: 'app-add-harvest',
   imports: [
+    RouterLink,
     ...SelectImports,
     NgIcon,
     ButtonComponent,
     CardComponent,
+    EmptyComponent,
     InputDirective,
     InputGroupComponent,
     DatePickerComponent,
@@ -35,106 +60,83 @@ import { HARVESTS_LINK } from '../../app.routes';
             Renseignez la variété, la quantité et la date.
           </p>
         </div>
-        <div class="flex items-center gap-2">
-          <button appButton variant="outline" [buttonDisabled]="!canSubmit()" (click)="onSaveAndAddAnother()">
-            <ng-icon name="phosphorPlus" class="size-4" />
-            Ajouter un autre
-          </button>
+        @if (hasPlantedVarieties()) {
           <button appButton [buttonDisabled]="!canSubmit()" (click)="onSave()">
             <ng-icon name="phosphorFloppyDisk" class="size-4" />
-            Enregistrer
+            {{ saveLabel() }}
           </button>
-        </div>
+        }
       </div>
 
-      <app-card>
-        <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
-          <div class="md:col-span-2">
-            <app-select
-              label="Culture & variété"
-              placeholder="Sélectionner une variété…"
-              [required]="true"
-              [disabled]="varietyOptions().length === 0"
-              [value]="varietyId()"
-              (valueChange)="onVarietyChange($event)"
-            >
-              @for (option of varietyOptions(); track option.id) {
-                <app-select-item [value]="option.id">{{ option.label }}</app-select-item>
-              }
-            </app-select>
-          </div>
-
-          <div class="flex flex-col gap-2 md:col-span-2">
-            @if (!showCustomForm()) {
-              <button
-                type="button"
-                class="text-primary self-start text-sm font-medium hover:underline disabled:opacity-50"
-                [disabled]="referenceOptions().length === 0"
-                (click)="showCustomForm.set(true)"
-              >
-                + Nouvelle variété
-              </button>
-            } @else {
-              <div class="border-border flex flex-col gap-3 rounded-lg border p-3">
-                <app-input-group label="Nom de la variété" [required]="true">
-                  <input
-                    app-input
-                    type="text"
-                    placeholder="Ex. Tomate de mémé"
-                    [value]="customLabel()"
-                    (input)="onCustomLabelInput($event)"
-                  />
-                </app-input-group>
+      @if (!hasPlantedVarieties()) {
+        <app-empty
+          icon="phosphorPottedPlant"
+          title="Votre jardin est vide"
+          description="Seules les variétés plantées dans votre jardin peuvent être récoltées. Ajoutez d'abord un plant."
+        >
+          <a appButton [routerLink]="gardenAddLink">
+            <ng-icon name="phosphorPlus" class="size-4" />
+            Ajouter un plant
+          </a>
+        </app-empty>
+      } @else {
+        @for (entry of entryRows(); track entry.key) {
+          <app-card
+            [title]="entry.title"
+            [action]="entry.removeAction"
+            (actionClick)="onRemoveEntry(entry.key)"
+          >
+            <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+              <div class="md:col-span-2">
                 <app-select
-                  label="Variété de référence (prix)"
-                  placeholder="Sélectionner une référence…"
+                  label="Culture & variété"
+                  placeholder="Sélectionner une variété…"
                   [required]="true"
-                  [value]="customReferenceId()"
-                  (valueChange)="onCustomReferenceChange($event)"
+                  [value]="entry.varietyId"
+                  (valueChange)="onVarietyChange(entry.key, $event)"
                 >
-                  @for (option of referenceOptions(); track option.id) {
+                  @for (option of plantedOptions(); track option.id) {
                     <app-select-item [value]="option.id">{{ option.label }}</app-select-item>
                   }
                 </app-select>
-                <div class="flex items-center justify-end gap-2">
-                  <button appButton variant="outline" size="sm" (click)="cancelCustom()">Annuler</button>
-                  <button appButton size="sm" [buttonDisabled]="!canCreateCustom()" (click)="createCustom()">
-                    Créer
-                  </button>
-                </div>
               </div>
-            }
-          </div>
 
-          <app-input-group
-            [label]="unitMeta().quantityLabel"
-            [hint]="unitMeta().quantityHint"
-            [required]="true"
-          >
-            <input
-              app-input
-              type="number"
-              min="0"
-              placeholder="0"
-              [attr.inputmode]="unitMeta().inputMode"
-              [attr.step]="unitMeta().step"
-              [value]="weightInput()"
-              (input)="onWeightInput($event)"
-            />
-          </app-input-group>
+              <app-input-group
+                [label]="entry.unitMeta.quantityLabel"
+                [hint]="entry.unitMeta.quantityHint"
+                [required]="true"
+              >
+                <input
+                  app-input
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  [attr.inputmode]="entry.unitMeta.inputMode"
+                  [attr.step]="entry.unitMeta.step"
+                  [value]="entry.weightInput"
+                  (input)="onWeightInput(entry.key, $event)"
+                />
+              </app-input-group>
 
-          <div class="flex flex-col gap-2">
-            <label class="text-sm font-medium">Date de récolte</label>
-            <app-date-picker
-              placeholder="Choisir une date"
-              format="d MMMM yyyy"
-              type="outline"
-              [value]="date()"
-              (valueChange)="date.set($event)"
-            />
-          </div>
-        </div>
-      </app-card>
+              <div class="flex flex-col gap-2">
+                <label class="text-sm font-medium">Date de récolte</label>
+                <app-date-picker
+                  placeholder="Choisir une date"
+                  format="d MMMM yyyy"
+                  type="outline"
+                  [value]="entry.date"
+                  (valueChange)="onDateChange(entry.key, $event)"
+                />
+              </div>
+            </div>
+          </app-card>
+        }
+
+        <button appButton variant="outline" class="self-start" (click)="onAddEntry()">
+          <ng-icon name="phosphorPlus" class="size-4" />
+          Ajouter une récolte
+        </button>
+      }
     </div>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -142,107 +144,105 @@ import { HARVESTS_LINK } from '../../app.routes';
 export class AddHarvestComponent {
   protected readonly store = inject(HarvestStore);
   readonly #catalog = inject(CatalogStore);
+  readonly #garden = inject(GardenStore);
   readonly #router = inject(Router);
 
-  protected readonly varietyOptions = this.#catalog.varietyOptions;
-  protected readonly referenceOptions = this.#catalog.referenceOptions;
+  protected readonly gardenAddLink = GARDEN_ADD_LINK;
 
-  protected readonly varietyId = signal<string>('');
-  protected readonly weightInput = signal<string>('');
-  protected readonly date = signal<Date | null>(new Date());
+  protected readonly plantedOptions = this.#garden.plantedVarietyOptions;
+  protected readonly hasPlantedVarieties = computed(() => this.plantedOptions().length > 0);
 
-  protected readonly showCustomForm = signal(false);
-  protected readonly customLabel = signal<string>('');
-  protected readonly customReferenceId = signal<string>('');
+  readonly #entries = signal<readonly HarvestEntry[]>([this.#blankEntry(0)]);
+  #nextKey = 1;
 
-  protected readonly canCreateCustom = computed(
-    () => this.customLabel().trim().length > 0 && this.#catalog.isKnown(this.customReferenceId()),
-  );
-
-  protected readonly unitMeta = computed(() => {
-    const variety = this.#catalog.byId().get(this.varietyId());
-    const unit = variety ? cropUnit(variety.cropId) : HARVEST_UNIT.kilogram;
-    return HARVEST_UNIT_META[unit];
-  });
-
-  protected readonly weightKg = computed(() => {
-    const parsed = Number.parseFloat(this.weightInput().replace(',', '.'));
-    if (!Number.isFinite(parsed) || parsed <= 0) {
-      return null;
-    }
-    if (this.unitMeta().integerOnly && !Number.isInteger(parsed)) {
-      return null;
-    }
-    return parsed;
+  protected readonly entryRows = computed<HarvestEntryRow[]>(() => {
+    const entries = this.#entries();
+    const removeAction = entries.length > 1 ? REMOVE_ACTION : '';
+    return entries.map((entry, index) => ({
+      ...entry,
+      title: `Récolte ${index + 1}`,
+      removeAction,
+      unitMeta: this.#unitMetaFor(entry.varietyId),
+    }));
   });
 
   protected readonly canSubmit = computed(
-    () => this.#catalog.isKnown(this.varietyId()) && this.weightKg() !== null && this.date() !== null,
+    () =>
+      this.hasPlantedVarieties() &&
+      this.#entries().length > 0 &&
+      this.#entries().every(entry => this.#toDraft(entry) !== null),
   );
 
-  protected onVarietyChange(value: string | string[] | null): void {
+  protected readonly saveLabel = computed(() =>
+    this.#entries().length > 1 ? `Enregistrer (${this.#entries().length})` : 'Enregistrer',
+  );
+
+  protected onAddEntry(): void {
+    this.#entries.update(entries => [...entries, this.#blankEntry(this.#nextKey)]);
+    this.#nextKey += 1;
+  }
+
+  protected onRemoveEntry(key: number): void {
+    this.#entries.update(entries => entries.filter(entry => entry.key !== key));
+  }
+
+  protected onVarietyChange(key: number, value: string | string[] | null): void {
     if (typeof value !== 'string') {
       return;
     }
-    this.varietyId.set(value);
+    this.#patch(key, { varietyId: value });
   }
 
-  protected onCustomLabelInput(event: Event): void {
-    this.customLabel.set((event.target as HTMLInputElement).value);
+  protected onWeightInput(key: number, event: Event): void {
+    this.#patch(key, { weightInput: (event.target as HTMLInputElement).value });
   }
 
-  protected onCustomReferenceChange(value: string | string[] | null): void {
-    if (typeof value === 'string') {
-      this.customReferenceId.set(value);
-    }
-  }
-
-  protected cancelCustom(): void {
-    this.showCustomForm.set(false);
-    this.customLabel.set('');
-    this.customReferenceId.set('');
-  }
-
-  protected async createCustom(): Promise<void> {
-    const label = this.customLabel().trim();
-    const referenceId = this.customReferenceId();
-    if (label.length === 0 || !this.#catalog.isKnown(referenceId)) {
-      return;
-    }
-    const created = await this.#catalog.createCustom(label, referenceId);
-    if (!created) {
-      return;
-    }
-    this.varietyId.set(created.id);
-    this.cancelCustom();
-  }
-
-  protected onWeightInput(event: Event): void {
-    const target = event.target as HTMLInputElement;
-    this.weightInput.set(target.value);
+  protected onDateChange(key: number, date: Date | null): void {
+    this.#patch(key, { date });
   }
 
   protected onSave(): void {
-    if (this.#persist()) {
-      this.#router.navigateByUrl(HARVESTS_LINK);
+    const drafts = this.#entries()
+      .map(entry => this.#toDraft(entry))
+      .filter((draft): draft is HarvestDraft => draft !== null);
+    if (drafts.length !== this.#entries().length || drafts.length === 0) {
+      return;
     }
+    drafts.forEach(draft => this.store.add(draft));
+    this.#router.navigateByUrl(HARVESTS_LINK);
   }
 
-  protected onSaveAndAddAnother(): void {
-    if (this.#persist()) {
-      this.varietyId.set('');
-      this.weightInput.set('');
-    }
+  #blankEntry(key: number): HarvestEntry {
+    return { key, varietyId: '', weightInput: '', date: new Date() };
   }
 
-  #persist(): boolean {
-    const varietyId = this.varietyId();
-    const weightKg = this.weightKg();
-    const harvestedOn = this.date();
-    if (!this.#catalog.isKnown(varietyId) || weightKg === null || harvestedOn === null) {
-      return false;
+  #patch(key: number, patch: Partial<Omit<HarvestEntry, 'key'>>): void {
+    this.#entries.update(entries =>
+      entries.map(entry => (entry.key === key ? { ...entry, ...patch } : entry)),
+    );
+  }
+
+  #unitMetaFor(varietyId: string): HarvestUnitMeta {
+    const variety = this.#catalog.byId().get(varietyId);
+    return HARVEST_UNIT_META[variety ? cropUnit(variety.cropId) : HARVEST_UNIT.kilogram];
+  }
+
+  #toDraft(entry: HarvestEntry): HarvestDraft | null {
+    const planted = this.#garden.plantedVarietyIds();
+    if (!planted.has(entry.varietyId)) {
+      return null;
     }
-    this.store.add({ varietyId, weightKg, harvestedOn });
-    return true;
+    const parsed = Number.parseFloat(entry.weightInput.replace(',', '.'));
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      return null;
+    }
+    if (this.#unitMetaFor(entry.varietyId).integerOnly && !Number.isInteger(parsed)) {
+      return null;
+    }
+    const harvestedOn = entry.date;
+    if (harvestedOn === null) {
+      return null;
+    }
+    return { varietyId: entry.varietyId, weightKg: parsed, harvestedOn };
   }
 }

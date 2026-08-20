@@ -8,7 +8,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { NavigationEnd, NavigationStart, Router, RouterLink, RouterOutlet } from '@angular/router';
+import { Router, RouterLink, RouterOutlet, RoutesRecognized } from '@angular/router';
 import { filter, map } from 'rxjs';
 
 import {
@@ -203,7 +203,7 @@ function initialsOf(label: string): string {
             </app-header>
 
             <app-content class="min-h-0 overflow-auto p-4">
-              <app-skeleton-outlet class="min-h-full">
+              <app-skeleton-outlet class="flex-1">
                 <router-outlet />
               </app-skeleton-outlet>
             </app-content>
@@ -264,13 +264,8 @@ export class AppComponent {
   readonly #router = inject(Router);
   readonly #titlePath = toSignal(
     this.#router.events.pipe(
-      filter(
-        (event): event is NavigationStart | NavigationEnd =>
-          event instanceof NavigationStart || event instanceof NavigationEnd,
-      ),
-      map(event =>
-        normalizeUrlPath(event instanceof NavigationStart ? event.url : event.urlAfterRedirects),
-      ),
+      filter((event): event is RoutesRecognized => event instanceof RoutesRecognized),
+      map(event => normalizeUrlPath(event.urlAfterRedirects)),
     ),
     { initialValue: normalizeUrlPath(this.#router.url) },
   );

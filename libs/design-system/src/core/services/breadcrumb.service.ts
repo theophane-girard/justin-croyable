@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRouteSnapshot, NavigationEnd, Router } from '@angular/router';
+import { ActivatedRouteSnapshot, Router, RoutesRecognized } from '@angular/router';
 import { filter, map, startWith } from 'rxjs';
 
 export type Breadcrumb = { label: string; url: string };
@@ -9,8 +9,15 @@ export type Breadcrumb = { label: string; url: string };
  * Derives the breadcrumb trail from the router state.
  *
  * Each route declares its label via `data.breadcrumb`; this service walks the
- * activated route tree on every navigation and collects the segments that have
- * one, exposing the result as a signal.
+ * route tree on every navigation and collects the segments that have one,
+ * exposing the result as a signal.
+ *
+ * The trail is rebuilt on `RoutesRecognized`, from the snapshot that event
+ * carries — the incoming tree, not the committed one. That is the earliest point
+ * where the target route is known, so the breadcrumb changes in step with the
+ * page title and the navigation skeleton instead of lagging a whole navigation
+ * behind. A navigation cancelled after recognition (a guard rejecting it) would
+ * leave the trail on a page never reached; the router emits no event to undo it.
  */
 @Injectable({ providedIn: 'root' })
 export class BreadcrumbService {
@@ -18,10 +25,10 @@ export class BreadcrumbService {
 
   readonly breadcrumbs = toSignal(
     this.router.events.pipe(
-      filter((e) => e instanceof NavigationEnd),
+      filter((event): event is RoutesRecognized => event instanceof RoutesRecognized),
+      map((event) => this.build(event.state.root)),
       // Build the trail on first read too, not only after a navigation.
-      startWith(null),
-      map(() => this.build(this.router.routerState.snapshot.root)),
+      startWith(this.build(this.router.routerState.snapshot.root)),
     ),
     { initialValue: [] as Breadcrumb[] },
   );
