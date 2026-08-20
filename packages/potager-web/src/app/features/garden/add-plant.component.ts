@@ -35,8 +35,12 @@ import { GARDEN_LINK } from '../../app.routes';
         </div>
         <div class="flex items-center gap-2">
           <a appButton variant="outline" [routerLink]="gardenLink">Annuler</a>
-          <button appButton [buttonDisabled]="!canSubmit()" (click)="onSave()">
+          <button appButton variant="outline" [buttonDisabled]="!canSubmit()" (click)="onSaveAndAddAnother()">
             <ng-icon name="phosphorPlus" class="size-4" />
+            Ajouter un autre
+          </button>
+          <button appButton [buttonDisabled]="!canSubmit()" (click)="onSave()">
+            <ng-icon name="phosphorFloppyDisk" class="size-4" />
             Enregistrer
           </button>
         </div>
@@ -189,13 +193,26 @@ export class AddPlantComponent {
   }
 
   protected onSave(): void {
+    if (this.#persist()) {
+      this.#router.navigateByUrl(GARDEN_LINK);
+    }
+  }
+
+  protected onSaveAndAddAnother(): void {
+    if (this.#persist()) {
+      this.varietyId.set('');
+      this.quantityInput.set('');
+    }
+  }
+
+  #persist(): boolean {
     const varietyId = this.varietyId();
     const variety = this.#catalog.byId().get(varietyId);
     const quantity = this.quantity();
     if (!variety || quantity === null) {
-      return;
+      return false;
     }
     this.store.add({ cropId: variety.cropId, varietyId, quantity });
-    this.#router.navigateByUrl(GARDEN_LINK);
+    return true;
   }
 }
