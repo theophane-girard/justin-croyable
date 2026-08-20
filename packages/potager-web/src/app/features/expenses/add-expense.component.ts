@@ -34,7 +34,6 @@ import { EXPENSES_LINK } from '../../app.routes';
     <div class="mx-auto flex w-full max-w-2xl flex-col gap-4">
       <div class="flex items-center justify-between gap-2">
         <div class="flex flex-col">
-          <h2 class="text-foreground text-lg font-semibold">Nouvelle dépense</h2>
           <p class="text-muted-foreground text-sm">Renseignez le libellé, la catégorie et le montant.</p>
         </div>
         <div class="flex items-center gap-2">

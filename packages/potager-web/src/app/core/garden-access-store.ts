@@ -3,6 +3,7 @@ import { GARDEN_ROLE, type Garden, type GardenRole } from '@justin-croyable/api-
 
 import { ApiService } from './api.service';
 import { AuthService } from './auth.service';
+import { UserStore } from './user-store';
 
 const MANAGER_ROLES: ReadonlySet<GardenRole> = new Set([GARDEN_ROLE.owner, GARDEN_ROLE.coOwner]);
 const WRITABLE_ROLES: ReadonlySet<GardenRole> = new Set([
@@ -16,9 +17,10 @@ const WRITABLE_ROLES: ReadonlySet<GardenRole> = new Set([
 export class GardenAccessStore {
   readonly #api = inject(ApiService);
   readonly #auth = inject(AuthService);
+  readonly #users = inject(UserStore);
 
   readonly #gardens = signal<readonly Garden[]>([]);
-  readonly #activeId = signal<string | null>(null);
+  readonly #selectedId = signal<string | null>(null);
 
   readonly gardens = this.#gardens.asReadonly();
 
@@ -26,7 +28,15 @@ export class GardenAccessStore {
     () => this.#gardens().find(garden => garden.role === GARDEN_ROLE.owner)?.id ?? null,
   );
 
-  readonly activeId = computed(() => this.#activeId() ?? this.#personalId());
+  readonly #autoId = computed(() => {
+    const defaultId = this.#users.defaultGardenId();
+    if (defaultId && this.#gardens().some(garden => garden.id === defaultId)) {
+      return defaultId;
+    }
+    return this.#personalId();
+  });
+
+  readonly activeId = computed(() => this.#selectedId() ?? this.#autoId());
 
   readonly active = computed<Garden | null>(() => {
     const id = this.activeId();
@@ -45,6 +55,8 @@ export class GardenAccessStore {
     return role !== undefined && WRITABLE_ROLES.has(role);
   });
 
+  readonly activeIsDefault = computed(() => this.active()?.id === this.#users.defaultGardenId());
+
   constructor() {
     effect(() => {
       if (this.#auth.isAuthenticated()) {
@@ -52,7 +64,11 @@ export class GardenAccessStore {
         return;
       }
       this.#gardens.set([]);
-      this.setActive(null);
+      this.#selectedId.set(null);
+    });
+    effect(() => {
+      const id = this.activeId();
+      this.#api.setActiveGardenId(id && id !== this.#personalId() ? id : null);
     });
   }
 
@@ -63,10 +79,27 @@ export class GardenAccessStore {
     }
   }
 
-  setActive(gardenId: string | null): void {
-    const personalId = this.#personalId();
-    const isPersonal = gardenId === null || gardenId === personalId;
-    this.#activeId.set(isPersonal ? null : gardenId);
-    this.#api.setActiveGardenId(isPersonal ? null : gardenId);
+  setActive(gardenId: string): void {
+    this.#selectedId.set(gardenId);
+  }
+
+  async setDefault(gardenId: string): Promise<boolean> {
+    const succeeded = await this.#users.setDefaultGarden(gardenId);
+    if (succeeded) {
+      this.#selectedId.set(gardenId);
+    }
+    return succeeded;
+  }
+
+  async remove(gardenId: string): Promise<boolean> {
+    const response = await this.#api.removeGarden(gardenId);
+    if (response.status !== 200) {
+      return false;
+    }
+    if (this.#selectedId() === gardenId) {
+      this.#selectedId.set(null);
+    }
+    await this.reload();
+    return true;
   }
 }

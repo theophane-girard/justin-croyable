@@ -1,7 +1,7 @@
 import { initContract } from '@ts-rest/core';
 import { z } from 'zod';
 
-import { updateProfileSchema, userProfileSchema } from './user.schema';
+import { setDefaultGardenSchema, updateProfileSchema, userProfileSchema } from './user.schema';
 
 const contract = initContract();
 
@@ -27,6 +27,17 @@ export const userContract = contract.router(
         401: unauthorizedSchema,
       },
       summary: "Met à jour le profil de l'utilisateur authentifié",
+    },
+    setDefaultGarden: {
+      method: 'PATCH',
+      path: '/me/default-garden',
+      body: setDefaultGardenSchema,
+      responses: {
+        200: userProfileSchema,
+        400: unauthorizedSchema,
+        401: unauthorizedSchema,
+      },
+      summary: "Définit le jardin par défaut de l'utilisateur",
     },
   },
   { pathPrefix: '/users' },

@@ -15,8 +15,11 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import { FirebaseAuthGuard } from '../auth/firebase-auth.guard';
 import { type Database, DRIZZLE } from '../db/drizzle';
 import {
+  expenses,
   gardenMembers,
   gardens,
+  harvests,
+  plants,
   users,
   type GardenMemberRecord,
   type GardenRecord,
@@ -142,6 +145,44 @@ export class GardenService {
       this.toGarden(personal, GARDEN_ROLE.owner),
       ...shared.filter((garden): garden is Garden => garden !== null),
     ];
+  }
+
+  async removeForUser(
+    user: UserRecord,
+    gardenId: string,
+  ): Promise<'ok' | 'not-found' | 'last'> {
+    const role = await this.roleFor(user, gardenId);
+    if (role === null) {
+      return 'not-found';
+    }
+    const accessible = await this.accessibleGardenIds(user);
+    if (accessible.length <= 1) {
+      return 'last';
+    }
+    const garden = await this.db.query.gardens.findFirst({ where: eq(gardens.id, gardenId) });
+    if (!garden) {
+      return 'not-found';
+    }
+    if (garden.ownerUserId === user.id) {
+      await this.#deleteOwnedGarden(garden);
+      return 'ok';
+    }
+    await this.db
+      .delete(gardenMembers)
+      .where(
+        and(
+          eq(gardenMembers.gardenId, gardenId),
+          or(eq(gardenMembers.userId, user.id), eq(gardenMembers.email, user.email)),
+        ),
+      );
+    return 'ok';
+  }
+
+  async #deleteOwnedGarden(garden: GardenRecord): Promise<void> {
+    await this.db.delete(harvests).where(eq(harvests.userId, garden.ownerUserId));
+    await this.db.delete(plants).where(eq(plants.userId, garden.ownerUserId));
+    await this.db.delete(expenses).where(eq(expenses.userId, garden.ownerUserId));
+    await this.db.delete(gardens).where(eq(gardens.id, garden.id));
   }
 
   async resolveDataOwnerId(user: UserRecord, activeGardenId: string | null): Promise<string | null> {
@@ -311,6 +352,16 @@ export class GardenController {
         return { status: 200, body: this.gardens.toGarden(garden, GARDEN_ROLE.owner) };
       },
       list: async () => ({ status: 200, body: await this.gardens.listAccessibleGardens(user) }),
+      remove: async ({ params }) => {
+        const outcome = await this.gardens.removeForUser(user, params.id);
+        if (outcome === 'not-found') {
+          return { status: 404, body: { message: 'Jardin introuvable.' } };
+        }
+        if (outcome === 'last') {
+          return { status: 400, body: { message: 'Impossible de supprimer votre dernier jardin.' } };
+        }
+        return { status: 200, body: { id: params.id } };
+      },
       members: async ({ params }) => {
         const outcome = await this.gardens.listMembers(user, params.id);
         if (outcome === 'not-found') {

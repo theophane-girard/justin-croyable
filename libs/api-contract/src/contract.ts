@@ -145,6 +145,18 @@ export const gardenContract = contract.router({
     path: '/gardens',
     responses: { 200: z.array(gardenSchema), 401: errorSchema },
   },
+  remove: {
+    method: 'DELETE',
+    path: '/gardens/:id',
+    pathParams: idParamSchema,
+    responses: {
+      200: deletedSchema,
+      400: errorSchema,
+      401: errorSchema,
+      403: errorSchema,
+      404: errorSchema,
+    },
+  },
   members: {
     method: 'GET',
     path: '/gardens/:id/members',

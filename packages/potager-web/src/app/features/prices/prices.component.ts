@@ -296,7 +296,6 @@ function parsePositive(raw: string): number | null {
     <div class="flex flex-col gap-4">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex flex-col">
-          <h2 class="text-foreground text-lg font-semibold">Prix</h2>
           <p class="text-muted-foreground text-sm">
             Prix de référence par variété, d'après les prix moyens français (FranceAgriMer — RNM).
           </p>

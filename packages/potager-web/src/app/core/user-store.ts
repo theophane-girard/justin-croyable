@@ -13,6 +13,7 @@ export class UserStore {
   readonly profile = this.#profile.asReadonly();
 
   readonly isAdmin = computed(() => this.#profile()?.role === USER_ROLE.admin);
+  readonly defaultGardenId = computed(() => this.#profile()?.defaultGardenId ?? null);
 
   constructor() {
     effect(() => {
@@ -29,5 +30,14 @@ export class UserStore {
     if (response.status === 200) {
       this.#profile.set(response.body);
     }
+  }
+
+  async setDefaultGarden(gardenId: string | null): Promise<boolean> {
+    const response = await this.#api.setDefaultGarden(gardenId);
+    if (response.status !== 200) {
+      return false;
+    }
+    this.#profile.set(response.body);
+    return true;
   }
 }

@@ -114,7 +114,6 @@ const SAVINGS_GROUP_TITLE: Readonly<Record<SavingsGroup, string>> = {
     <div class="flex flex-col gap-4">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex flex-col">
-          <h2 class="text-foreground text-lg font-semibold">Tableau de bord</h2>
           <p class="text-muted-foreground text-sm">
             Économies nettes : valeur récoltée aux prix moyens français, dépenses déduites.
           </p>

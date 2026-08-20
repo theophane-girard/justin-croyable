@@ -41,6 +41,15 @@ export class UserService {
     return updated;
   }
 
+  async setDefaultGarden(userId: string, gardenId: string | null): Promise<UserRecord> {
+    const [updated] = await this.db
+      .update(users)
+      .set({ defaultGardenId: gardenId, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    return updated;
+  }
+
   #findByFirebaseUid(uid: string): Promise<UserRecord | undefined> {
     return this.db.query.users.findFirst({ where: eq(users.firebaseUid, uid) });
   }
