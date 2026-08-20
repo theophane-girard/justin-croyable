@@ -9,12 +9,23 @@ on:
       - '.github/workflows/migrate-db.yml'
   # Déclenchement manuel : Actions → Migrate & Seed DB → Run workflow (sur la
   # branche de ton choix), pour appliquer migrations + seed sans merger dans
-  # master.
+  # master. L'environnement se choisit ici ; par défaut le staging, le moins
+  # risqué. Un push sur master, lui, vise toujours la production.
   workflow_dispatch:
+    inputs:
+      environnement:
+        description: Base de données ciblée
+        type: choice
+        default: staging
+        options:
+          - staging
+          - production
 
-# Une seule migration à la fois, jamais interrompue en cours de route.
+# Une seule migration à la fois, jamais interrompue en cours de route. Le groupe
+# inclut l'environnement : une migration de staging n'a aucune raison d'attendre
+# celle de la production.
 concurrency:
-  group: migrate-db
+  group: migrate-db-${{ inputs.environnement || 'production' }}
   cancel-in-progress: false
 
 jobs:
@@ -23,18 +34,34 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      # Tant que le secret GARDEN_HARVEST_DATABASE_URL n'est pas configuré, tout
+      # Résolu avant toute lecture de secret : cette étape ne fait que traduire
+      # l'événement en nom de secret GitHub, consommé par index (`secrets[...]`)
+      # dans les étapes suivantes. Aucun repli d'un environnement sur l'autre.
+      - name: Environnement ciblé
+        id: target
+        env:
+          TARGET_ENVIRONMENT: ${{ inputs.environnement || 'production' }}
+        run: |
+          echo "environment=$TARGET_ENVIRONMENT" >> "$GITHUB_OUTPUT"
+          if [ "$TARGET_ENVIRONMENT" = 'production' ]; then
+            echo 'db_url_secret=GARDEN_HARVEST_DATABASE_URL' >> "$GITHUB_OUTPUT"
+          else
+            echo 'db_url_secret=GARDEN_HARVEST_DATABASE_URL_STAGING' >> "$GITHUB_OUTPUT"
+          fi
+
+      # Tant que le secret de l'environnement ciblé n'est pas configuré, tout
       # est ignoré : le job reste vert (même garde que le déploiement Firebase).
       - name: Base de données configurée ?
         id: db
         env:
-          DB_URL: ${{ secrets.GARDEN_HARVEST_DATABASE_URL }}
+          DB_URL: ${{ secrets[steps.target.outputs.db_url_secret] }}
+          DB_URL_SECRET: ${{ steps.target.outputs.db_url_secret }}
         run: |
           if [ -n "$DB_URL" ]; then
             echo 'ready=true' >> "$GITHUB_OUTPUT"
           else
             echo 'ready=false' >> "$GITHUB_OUTPUT"
-            echo "::warning::Migration ignorée : secret GARDEN_HARVEST_DATABASE_URL absent (Settings → Secrets and variables → Actions)."
+            echo "::warning::Migration ignorée : secret $DB_URL_SECRET absent (Settings → Secrets and variables → Actions)."
           fi
 
       - name: Checkout
@@ -52,7 +79,7 @@ jobs:
       - name: Migrations Drizzle
         if: steps.db.outputs.ready == 'true'
         env:
-          DATABASE_URL: ${{ secrets.GARDEN_HARVEST_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets[steps.target.outputs.db_url_secret] }}
         run: npx nx db-migrate potager-api
 
       # Seed idempotent : n'insère que les variétés et prix de référence
@@ -61,5 +88,5 @@ jobs:
       - name: Seed de référence
         if: steps.db.outputs.ready == 'true'
         env:
-          DATABASE_URL: ${{ secrets.GARDEN_HARVEST_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets[steps.target.outputs.db_url_secret] }}
         run: npx nx db-seed potager-api
