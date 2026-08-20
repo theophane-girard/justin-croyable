@@ -42,6 +42,12 @@ const NAV_ITEMS: readonly NavItem[] = [
     label: 'Types & Faiblesses',
     icon: 'phosphorShield',
   },
+  {
+    path: APP_PATHS.fight,
+    link: `/${APP_PATHS.fight}`,
+    label: 'Simulateur de combat',
+    icon: 'phosphorSword',
+  },
 ];
 
 @Component({

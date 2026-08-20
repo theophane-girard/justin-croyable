@@ -25,6 +25,7 @@ import {
   FabContainerComponent,
   FabListComponent,
   InputDirective,
+  InputGroupComponent,
   injectQueryFilters,
   BadgeComponent,
   SegmentComponent,
@@ -171,6 +172,7 @@ function toTile(pokemon: Pokemon): PokedexTile {
     FabContainerComponent,
     FabListComponent,
     InputDirective,
+    InputGroupComponent,
     SegmentComponent,
     ToggleGroupComponent,
     PokemonSpriteComponent,
@@ -178,18 +180,18 @@ function toTile(pokemon: Pokemon): PokedexTile {
   ],
   template: `
     <div class="flex min-h-0 flex-col gap-3">
-      <div class="border-border flex items-center gap-2 rounded-lg border px-3">
-        <ng-icon name="phosphorMagnifyingGlass" class="text-muted-foreground size-4 shrink-0" />
+      <app-input-group [addonBefore]="searchIcon">
         <input
           app-input
-          borderless
           type="text"
           placeholder="Rechercher un Pokémon (fr, en, de, ja, « mega »…)"
-          class="flex-1"
           [value]="query()"
           (input)="onSearchInput($event)"
         />
-      </div>
+      </app-input-group>
+      <ng-template #searchIcon>
+        <ng-icon name="phosphorMagnifyingGlass" class="text-muted-foreground size-4" />
+      </ng-template>
 
       @if (disabledPicking()) {
         <p class="text-muted-foreground text-center text-xs">{{ disabledHint() }}</p>

@@ -1,9 +1,11 @@
+import { NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
   computed,
   inject,
   input,
+  output,
   signal,
   type TemplateRef,
   ViewContainerRef,
@@ -16,6 +18,8 @@ import {
   FabButtonComponent,
   FabContainerComponent,
   FabListComponent,
+  InputDirective,
+  InputGroupComponent,
   PopoverComponent,
   PopoverDirective,
   SheetService,
@@ -26,6 +30,7 @@ import {
 import { NgIcon } from '@ng-icons/core';
 
 import { type PokemonMove } from '../../core/pokemon-detail';
+import { normalizeText } from '../../core/pokemon-search';
 import { typeLabel, TYPE_SLUGS, typeTileClass } from '../../core/pokemon-type';
 
 const DAMAGE_CLASS_LABEL = new Map<string, string>([
@@ -60,8 +65,19 @@ const DIRECTION_ITEMS: ToggleGroupItem[] = [
   { value: 'asc', label: 'Croissant' },
 ];
 
+const ROW_BASE = 'flex w-full items-center gap-2 rounded-lg border p-2 text-left transition-colors';
+const ROW_UNSELECTED = 'border-border hover:bg-muted/50';
+const ROW_SELECTED = 'border-primary bg-primary/10';
+
+function rowClassFor(selected: boolean): string {
+  return `${ROW_BASE} ${selected ? ROW_SELECTED : ROW_UNSELECTED}`;
+}
+
 interface MoveView {
   readonly key: string;
+  readonly slug: string;
+  readonly selected: boolean;
+  readonly rowClass: string;
   readonly name: string;
   readonly type: string;
   readonly typeLabel: string;
@@ -81,9 +97,12 @@ function asArray(value: string | string[]): string[] {
   return Array.isArray(value) ? value : [value];
 }
 
-function toMoveView(move: PokemonMove): MoveView {
+function toMoveView(move: PokemonMove, selected: boolean): MoveView {
   return {
     key: `${move.name}-${move.type}-${move.damageClass}`,
+    slug: move.slug,
+    selected,
+    rowClass: rowClassFor(selected),
     name: move.name,
     type: move.type,
     typeLabel: typeLabel(move.type),
@@ -106,9 +125,12 @@ function toMoveView(move: PokemonMove): MoveView {
     NgIcon,
     ButtonComponent,
     EmptyComponent,
+    NgTemplateOutlet,
     FabButtonComponent,
     FabContainerComponent,
     FabListComponent,
+    InputDirective,
+    InputGroupComponent,
     PopoverComponent,
     PopoverDirective,
     SkeletonComponent,
@@ -129,28 +151,54 @@ function toMoveView(move: PokemonMove): MoveView {
       />
     } @else {
       <div class="flex flex-col gap-2">
+        <app-input-group [addonBefore]="searchIcon">
+          <input
+            app-input
+            type="text"
+            placeholder="Rechercher une attaque (fr, en, de, ja…)"
+            [value]="search()"
+            (input)="onSearchInput($event)"
+          />
+        </app-input-group>
         <span class="text-muted-foreground text-sm">{{ visibleMoves().length }} attaque(s)</span>
-        <div class="flex max-h-[26rem] flex-col gap-2 overflow-y-auto pr-1">
+        <div class="flex flex-col gap-2 overflow-y-auto pr-1" [class]="viewportClass()">
+          @if (visibleMoves().length === 0) {
+            <p class="text-muted-foreground py-6 text-center text-sm">
+              Aucune attaque ne correspond à votre recherche.
+            </p>
+          }
           @for (move of visibleMoves(); track move.key) {
-            <button
-              type="button"
-              class="border-border hover:bg-muted/50 flex w-full items-center gap-2 rounded-lg border p-2 text-left transition-colors"
-              appPopover
-              [content]="movePopover"
-              (click)="selectedMove.set(move)"
-            >
-              <span class="min-w-0 flex-1 truncate text-sm font-medium">{{ move.name }}</span>
-              <span [class]="move.typeClass" class="rounded-full px-2 py-0.5 text-xs font-medium">
-                {{ move.typeLabel }}
-              </span>
-              <span [class]="move.damageTag" class="rounded-full px-2 py-0.5 text-xs font-medium">
-                {{ move.damageLabel }}
-              </span>
-              <span class="w-9 shrink-0 text-right text-sm tabular-nums">{{ move.powerLabel }}</span>
-              <span class="text-muted-foreground w-12 shrink-0 text-right text-sm tabular-nums">
-                {{ move.accuracyLabel }}
-              </span>
-            </button>
+            @if (selectable()) {
+              <div [class]="move.rowClass">
+                <button
+                  type="button"
+                  class="flex min-w-0 flex-1 items-center gap-2 text-left"
+                  (click)="toggleMove(move)"
+                >
+                  <ng-container [ngTemplateOutlet]="moveRow" [ngTemplateOutletContext]="{ $implicit: move }" />
+                </button>
+                <button
+                  type="button"
+                  class="text-muted-foreground hover:text-foreground -m-1 flex shrink-0 items-center rounded-md p-1 transition-colors"
+                  aria-label="Détail de l'attaque"
+                  appPopover
+                  [content]="movePopover"
+                  (click)="selectedMove.set(move)"
+                >
+                  <ng-icon name="phosphorInfo" class="size-5" />
+                </button>
+              </div>
+            } @else {
+              <button
+                type="button"
+                [class]="move.rowClass"
+                appPopover
+                [content]="movePopover"
+                (click)="selectedMove.set(move)"
+              >
+                <ng-container [ngTemplateOutlet]="moveRow" [ngTemplateOutletContext]="{ $implicit: move }" />
+              </button>
+            }
           }
         </div>
       </div>
@@ -166,6 +214,10 @@ function toMoveView(move: PokemonMove): MoveView {
         </app-fab-list>
       </app-fab>
     }
+
+    <ng-template #searchIcon>
+      <ng-icon name="phosphorMagnifyingGlass" class="text-muted-foreground size-4" />
+    </ng-template>
 
     <ng-template #filtersSheet>
       <div class="flex flex-col gap-5">
@@ -271,12 +323,34 @@ function toMoveView(move: PokemonMove): MoveView {
         }
       </app-popover>
     </ng-template>
+
+    <ng-template #moveRow let-move>
+      @if (move.selected) {
+        <ng-icon name="phosphorCheck" class="text-primary size-4 shrink-0" />
+      }
+      <span class="min-w-0 flex-1 truncate text-sm font-medium">{{ move.name }}</span>
+      <span [class]="move.typeClass" class="rounded-full px-2 py-0.5 text-xs font-medium">
+        {{ move.typeLabel }}
+      </span>
+      <span [class]="move.damageTag" class="rounded-full px-2 py-0.5 text-xs font-medium">
+        {{ move.damageLabel }}
+      </span>
+      <span class="w-9 shrink-0 text-right text-sm tabular-nums">{{ move.powerLabel }}</span>
+      <span class="text-muted-foreground w-12 shrink-0 text-right text-sm tabular-nums">
+        {{ move.accuracyLabel }}
+      </span>
+    </ng-template>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PokemonMovesComponent {
   readonly moves = input.required<readonly PokemonMove[]>();
   readonly loading = input<boolean>(false);
+  readonly selectable = input<boolean>(false);
+  readonly selected = input<readonly string[]>([]);
+  readonly viewportClass = input<string>('max-h-[26rem]');
+
+  readonly selectedChange = output<string[]>();
 
   readonly #sheet = inject(SheetService);
   readonly #viewContainerRef = inject(ViewContainerRef);
@@ -292,12 +366,14 @@ export class PokemonMovesComponent {
   protected readonly directionItems = DIRECTION_ITEMS;
   protected readonly skeletonRows = [0, 1, 2, 3, 4, 5];
 
+  readonly #search = signal('');
   readonly #selectedTypes = signal<string[]>([]);
   readonly #selectedDamage = signal<string[]>([]);
   readonly #sortField = signal<string>('type');
   readonly #sortDirection = signal<string>('asc');
   readonly #resetKey = signal(0);
 
+  protected readonly search = this.#search.asReadonly();
   protected readonly selectedTypes = this.#selectedTypes.asReadonly();
   protected readonly selectedDamage = this.#selectedDamage.asReadonly();
   protected readonly sortField = this.#sortField.asReadonly();
@@ -307,12 +383,15 @@ export class PokemonMovesComponent {
   protected readonly visibleMoves = computed<readonly MoveView[]>(() => {
     const types = new Set(this.#selectedTypes());
     const damage = new Set(this.#selectedDamage());
+    const selectedSlugs = new Set(this.selected());
+    const needle = normalizeText(this.#search());
     const field = this.#sortField();
     const ascending = this.#sortDirection() === 'asc';
 
     const filtered = this.moves()
       .filter(move => types.size === 0 || types.has(move.type))
-      .filter(move => damage.size === 0 || damage.has(move.damageClass));
+      .filter(move => damage.size === 0 || damage.has(move.damageClass))
+      .filter(move => needle.length === 0 || move.searchNames.some(name => name.includes(needle)));
 
     const sorted = [...filtered].sort((a, b) => {
       if (field === 'type') {
@@ -335,8 +414,20 @@ export class PokemonMovesComponent {
       return ascending ? powerA - powerB : powerB - powerA;
     });
 
-    return sorted.map(toMoveView);
+    return sorted.map(move => toMoveView(move, selectedSlugs.has(move.slug)));
   });
+
+  protected toggleMove(move: MoveView): void {
+    const current = this.selected();
+    const next = current.includes(move.slug)
+      ? current.filter(slug => slug !== move.slug)
+      : [...current, move.slug];
+    this.selectedChange.emit(next);
+  }
+
+  protected onSearchInput(event: Event): void {
+    this.#search.set((event.target as HTMLInputElement).value);
+  }
 
   protected openFilters(): void {
     this.#sheet.create({

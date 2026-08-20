@@ -6,6 +6,7 @@ export const APP_PATHS = {
   comparator: '',
   pokedex: 'pokedex',
   types: 'types',
+  fight: 'fight',
 } as const;
 
 export type AppPath = (typeof APP_PATHS)[keyof typeof APP_PATHS];
@@ -36,6 +37,13 @@ export const APP_ROUTES: Route[] = [
     loadComponent: () =>
       import('./features/types/type-chart.component').then(m => m.TypeChartComponent),
     title: 'Types & Faiblesses — Pokémon Comparator',
+    data: { skeleton: SKELETON_KIND.generic },
+  },
+  {
+    path: APP_PATHS.fight,
+    loadComponent: () =>
+      import('./features/fight/fight-simulator.component').then(m => m.FightSimulatorComponent),
+    title: 'Simulateur de combat — Pokémon Comparator',
     data: { skeleton: SKELETON_KIND.generic },
   },
   {

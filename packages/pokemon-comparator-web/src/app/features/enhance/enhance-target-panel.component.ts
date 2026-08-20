@@ -5,6 +5,7 @@ import { NgIcon } from '@ng-icons/core';
 
 import { type Stat, STAT_META, STAT_ORDER } from '../../core/pokemon.model';
 import {
+  applyEnhancedStats,
   EV_STEP,
   evsTotal,
   MAX_EV_PER_STAT,
@@ -59,7 +60,14 @@ export interface EvChange {
           <div class="flex flex-col gap-1">
             <div class="flex items-center justify-between">
               <span class="text-muted-foreground text-sm">{{ statMeta[stat].label }}</span>
-              <span class="text-sm font-medium tabular-nums">{{ evs()[stat] }}</span>
+              @if (statValues(); as stats) {
+                <span class="flex items-baseline gap-2 tabular-nums">
+                  <span class="text-sm font-semibold">{{ stats[stat] }}</span>
+                  <span class="text-muted-foreground text-xs">{{ evs()[stat] }} EV</span>
+                </span>
+              } @else {
+                <span class="text-sm font-medium tabular-nums">{{ evs()[stat] }}</span>
+              }
             </div>
             <div class="flex items-center gap-2">
               <button
@@ -103,6 +111,8 @@ export interface EvChange {
 export class EnhanceTargetPanelComponent {
   readonly nature = input.required<string>();
   readonly evs = input.required<Readonly<Record<Stat, number>>>();
+  readonly displayStats = input(false);
+  readonly baseStats = input<Readonly<Record<Stat, number>> | null>(null);
 
   readonly natureChange = output<string>();
   readonly evChange = output<EvChange>();
@@ -119,6 +129,13 @@ export class EnhanceTargetPanelComponent {
   }));
 
   protected readonly natureEffect = computed(() => natureEffectLabel(natureById(this.nature())));
+  protected readonly statValues = computed<Readonly<Record<Stat, number>> | null>(() => {
+    const base = this.baseStats();
+    if (!this.displayStats() || !base) {
+      return null;
+    }
+    return applyEnhancedStats(base, { level100: true, nature: this.nature(), evs: this.evs() });
+  });
   protected readonly evTotal = computed(() => evsTotal(this.evs()));
   protected readonly evValues = computed<Record<Stat, number[]>>(() => {
     const evs = this.evs();

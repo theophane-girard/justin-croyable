@@ -1,3 +1,5 @@
+import { normalizeText } from './pokemon-search';
+
 export const POKEAPI_GRAPHQL_URL = 'https://graphql.pokeapi.co/v1beta2';
 
 export interface PokemonAbility {
@@ -9,6 +11,7 @@ export interface PokemonAbility {
 export interface PokemonMove {
   readonly name: string;
   readonly slug: string;
+  readonly searchNames: readonly string[];
   readonly power: number | null;
   readonly accuracy: number | null;
   readonly type: string;
@@ -47,7 +50,7 @@ query PokemonDetail($id: Int!) {
         name
         power
         accuracy
-        movenames(where: { language: { name: { _in: ["fr", "en"] } } }) {
+        movenames {
           name
           language { name }
         }
@@ -104,6 +107,13 @@ function pickName(names: readonly LocalizedName[], fallback: string): string {
   return french?.name ?? english?.name ?? fallback;
 }
 
+function buildSearchNames(names: readonly LocalizedName[], slug: string): readonly string[] {
+  const normalized = [...names.map(entry => entry.name), slug]
+    .map(normalizeText)
+    .filter(value => value.length > 0);
+  return [...new Set(normalized)];
+}
+
 function pickEffect(texts: readonly EffectText[]): string {
   const french = texts.find(entry => entry.language.name === 'fr');
   const english = texts.find(entry => entry.language.name === 'en');
@@ -132,6 +142,7 @@ export function parsePokemonDetail(value: unknown): PokemonDetailData {
     .map(entry => ({
       name: pickName(entry.move.movenames, entry.move.name),
       slug: entry.move.name,
+      searchNames: buildSearchNames(entry.move.movenames, entry.move.name),
       power: entry.move.power,
       accuracy: entry.move.accuracy,
       type: entry.move.type?.name ?? '',
