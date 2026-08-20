@@ -112,6 +112,52 @@ export class GardenService {
     return Array.from(new Set([personal.id, ...shared]));
   }
 
+  async listAccessibleGardens(user: UserRecord): Promise<Garden[]> {
+    const personal = await this.currentGarden(user);
+    const memberships = await this.db.query.gardenMembers.findMany({
+      where: or(eq(gardenMembers.userId, user.id), eq(gardenMembers.email, user.email)),
+    });
+    const now = new Date();
+    const shared = await Promise.all(
+      memberships
+        .filter(member => member.gardenId !== personal.id)
+        .map(async member => {
+          const role = effectiveRole(member.role, member.expiresAt, now);
+          if (role === null) {
+            return null;
+          }
+          const record = await this.db.query.gardens.findFirst({
+            where: eq(gardens.id, member.gardenId),
+          });
+          if (!record) {
+            return null;
+          }
+          const owner = await this.db.query.users.findFirst({
+            where: eq(users.id, record.ownerUserId),
+          });
+          return this.toGarden(record, role, owner?.email ?? null);
+        }),
+    );
+    return [
+      this.toGarden(personal, GARDEN_ROLE.owner),
+      ...shared.filter((garden): garden is Garden => garden !== null),
+    ];
+  }
+
+  async resolveDataOwnerId(user: UserRecord, activeGardenId: string | null): Promise<string | null> {
+    if (activeGardenId === null) {
+      return user.id;
+    }
+    const garden = await this.db.query.gardens.findFirst({
+      where: eq(gardens.id, activeGardenId),
+    });
+    if (!garden) {
+      return null;
+    }
+    const role = await this.roleFor(user, activeGardenId);
+    return role === null ? null : garden.ownerUserId;
+  }
+
   async roleFor(user: UserRecord, gardenId: string): Promise<GardenRole | null> {
     const garden = await this.db.query.gardens.findFirst({ where: eq(gardens.id, gardenId) });
     if (garden && garden.ownerUserId === user.id) {
@@ -129,11 +175,12 @@ export class GardenService {
     return effectiveRole(membership.role, membership.expiresAt, new Date());
   }
 
-  toGarden(record: GardenRecord, role: GardenRole): Garden {
+  toGarden(record: GardenRecord, role: GardenRole, ownerEmail: string | null = null): Garden {
     return {
       id: record.id,
       name: record.name,
       role,
+      ownerEmail,
       createdAt: record.createdAt.toISOString(),
     };
   }
@@ -263,6 +310,7 @@ export class GardenController {
         const garden = await this.gardens.currentGarden(user);
         return { status: 200, body: this.gardens.toGarden(garden, GARDEN_ROLE.owner) };
       },
+      list: async () => ({ status: 200, body: await this.gardens.listAccessibleGardens(user) }),
       members: async ({ params }) => {
         const outcome = await this.gardens.listMembers(user, params.id);
         if (outcome === 'not-found') {
