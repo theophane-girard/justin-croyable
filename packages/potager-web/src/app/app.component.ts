@@ -8,6 +8,7 @@ import {
   LayoutImports,
   SegmentComponent,
   type SegmentItem,
+  SelectImports,
   SkeletonComponent,
   SkeletonOutletComponent,
   SonnerComponent,
@@ -17,6 +18,7 @@ import { NgIcon } from '@ng-icons/core';
 
 import { AUTH_GATE_ENABLED } from './core/app-config';
 import { AuthService } from './core/auth.service';
+import { GardenAccessStore } from './core/garden-access-store';
 import { HarvestStore } from './core/harvest-store';
 import { PRICE_MODE } from './core/potager.model';
 import { AuthMenuComponent } from './features/auth/auth-menu.component';
@@ -44,6 +46,7 @@ const THEME_VALUE = { light: 'light', dark: 'dark' } as const;
     NgIcon,
     SegmentComponent,
     BadgeComponent,
+    ...SelectImports,
     SkeletonComponent,
     SkeletonOutletComponent,
     SonnerComponent,
@@ -105,6 +108,18 @@ const THEME_VALUE = { light: 'light', dark: 'dark' } as const;
                 <p class="text-sm font-medium">Mon Potager</p>
               </div>
               <div class="ml-auto flex items-center gap-2">
+                @if (access.hasMultiple()) {
+                  <app-select
+                    class="w-48"
+                    prefixIcon="phosphorHouseLine"
+                    [value]="access.activeId()"
+                    (valueChange)="onGardenChange($event)"
+                  >
+                    @for (option of gardenOptions(); track option.id) {
+                      <app-select-item [value]="option.id">{{ option.label }}</app-select-item>
+                    }
+                  </app-select>
+                }
                 @if (priceModeBio()) {
                   <app-badge type="secondary" class="gap-1">
                     <ng-icon name="phosphorLeaf" />
@@ -134,8 +149,16 @@ const THEME_VALUE = { light: 'light', dark: 'dark' } as const;
 })
 export class AppComponent {
   protected readonly theme = inject(ThemeService);
+  protected readonly access = inject(GardenAccessStore);
   readonly #store = inject(HarvestStore);
   readonly #auth = inject(AuthService);
+
+  protected readonly gardenOptions = computed(() =>
+    this.access.gardens().map(garden => ({
+      id: garden.id,
+      label: garden.ownerEmail ?? garden.name,
+    })),
+  );
 
   protected readonly sidebarCollapsed = signal(false);
 
@@ -176,5 +199,11 @@ export class AppComponent {
 
   protected onThemeChange(value: string): void {
     this.theme.set(value === THEME_VALUE.dark ? THEME_VALUE.dark : THEME_VALUE.light);
+  }
+
+  protected onGardenChange(value: string | string[] | null): void {
+    if (typeof value === 'string') {
+      this.access.setActive(value);
+    }
   }
 }

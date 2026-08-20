@@ -8,9 +8,11 @@ import { Controller, Inject, Injectable, Module, UseGuards } from '@nestjs/commo
 import { TsRestHandler, tsRestHandler } from '@ts-rest/nest';
 import { and, eq } from 'drizzle-orm';
 
+import { ActiveGardenId } from '../auth/active-garden.decorator';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { FirebaseAuthGuard } from '../auth/firebase-auth.guard';
 import { type Database, DRIZZLE } from '../db/drizzle';
+import { GardenModule, GardenService } from '../gardens/garden.module';
 import { plants, type PlantRecord, type UserRecord } from '../db/schema';
 
 function toPlant(record: PlantRecord): Plant {
@@ -71,12 +73,21 @@ export class PlantService {
 @Controller()
 @UseGuards(FirebaseAuthGuard)
 export class PlantController {
-  constructor(private readonly plants: PlantService) {}
+  constructor(
+    private readonly plants: PlantService,
+    private readonly gardens: GardenService,
+  ) {}
 
   @TsRestHandler(plantContract)
-  async handler(@CurrentUser() user: UserRecord) {
+  async handler(
+    @CurrentUser() user: UserRecord,
+    @ActiveGardenId() activeGardenId: string | null,
+  ) {
     return tsRestHandler(plantContract, {
-      list: async () => ({ status: 200, body: await this.plants.list(user.id) }),
+      list: async () => {
+        const ownerId = await this.gardens.resolveDataOwnerId(user, activeGardenId);
+        return { status: 200, body: ownerId ? await this.plants.list(ownerId) : [] };
+      },
       create: async ({ body }) => ({ status: 201, body: await this.plants.create(user.id, body) }),
       update: async ({ params, body }) => {
         const updated = await this.plants.update(user.id, params.id, body);
@@ -96,5 +107,5 @@ export class PlantController {
   }
 }
 
-@Module({ controllers: [PlantController], providers: [PlantService] })
+@Module({ imports: [GardenModule], controllers: [PlantController], providers: [PlantService] })
 export class PlantModule {}

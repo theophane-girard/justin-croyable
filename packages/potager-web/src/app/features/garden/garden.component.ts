@@ -43,6 +43,7 @@ import {
 } from '../../core/potager.model';
 import { CULTURE_FILTER_ALL, CULTURE_FILTER_OPTIONS } from '../../core/catalog-filter';
 import { buildYearOptions, parseYearValue, yearFilterToValue } from '../../core/period-selector';
+import { GardenAccessStore } from '../../core/garden-access-store';
 import { GardenStore } from '../../core/garden-store';
 import { HarvestStore } from '../../core/harvest-store';
 import { SeasonStore } from '../../core/season-store';
@@ -226,22 +227,26 @@ const INVITE_ROLE_OPTIONS: readonly { readonly value: ShareableRole; readonly la
               <ng-icon name="phosphorFunnel" class="size-4" />
               Filtrer
             </button>
-            <button
-              appButton
-              variant="outline"
-              size="sm"
-              class="hidden sm:inline-flex"
-              [buttonDisabled]="!selectedId()"
-              (click)="onDelete()"
-            >
-              <ng-icon name="phosphorTrash" class="size-4" />
-              Supprimer
-            </button>
+            @if (canWrite()) {
+              <button
+                appButton
+                variant="outline"
+                size="sm"
+                class="hidden sm:inline-flex"
+                [buttonDisabled]="!selectedId()"
+                (click)="onDelete()"
+              >
+                <ng-icon name="phosphorTrash" class="size-4" />
+                Supprimer
+              </button>
+            }
           }
-          <a appButton size="sm" class="hidden sm:inline-flex" [routerLink]="addLink">
-            <ng-icon name="phosphorPlus" class="size-4" />
-            Ajouter
-          </a>
+          @if (canWrite()) {
+            <a appButton size="sm" class="hidden sm:inline-flex" [routerLink]="addLink">
+              <ng-icon name="phosphorPlus" class="size-4" />
+              Ajouter
+            </a>
+          }
         </div>
       </div>
 
@@ -251,10 +256,12 @@ const INVITE_ROLE_OPTIONS: readonly { readonly value: ShareableRole; readonly la
           title="Aucun plant"
           description="Ajoutez vos plants pour suivre le rendement de votre potager."
         >
-          <a appButton [routerLink]="addLink">
-            <ng-icon name="phosphorPlus" class="size-4" />
-            Ajouter un plant
-          </a>
+          @if (canWrite()) {
+            <a appButton [routerLink]="addLink">
+              <ng-icon name="phosphorPlus" class="size-4" />
+              Ajouter un plant
+            </a>
+          }
         </app-empty>
       } @else {
         <app-table
@@ -275,9 +282,11 @@ const INVITE_ROLE_OPTIONS: readonly { readonly value: ShareableRole; readonly la
         triggerLabel="Actions sur le jardin"
       >
         <app-fab-list>
-          <a appFabButton [routerLink]="addLink" aria-label="Ajouter un plant">
-            <ng-icon name="phosphorPlus" />
-          </a>
+          @if (canWrite()) {
+            <a appFabButton [routerLink]="addLink" aria-label="Ajouter un plant">
+              <ng-icon name="phosphorPlus" />
+            </a>
+          }
           <button appFabButton type="button" variant="secondary" (click)="openFilter()" aria-label="Filtrer">
             <ng-icon name="phosphorFunnel" />
           </button>
@@ -369,8 +378,11 @@ export class GardenComponent {
   protected readonly store = inject(GardenStore);
   protected readonly season = inject(SeasonStore);
   protected readonly sharing = inject(SharingStore);
+  readonly #access = inject(GardenAccessStore);
   readonly #harvests = inject(HarvestStore);
   readonly #sheet = inject(SheetService);
+
+  protected readonly canWrite = this.#access.canWriteActive;
 
   private readonly filterSheetTemplate = viewChild.required<TemplateRef<unknown>>('filterSheet');
   private readonly shareSheetTemplate = viewChild.required<TemplateRef<unknown>>('shareSheet');
