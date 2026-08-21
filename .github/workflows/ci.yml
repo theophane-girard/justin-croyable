@@ -186,23 +186,38 @@ jobs:
           done
           exit 1
 
-      # L'URL de l'API de staging (Cloud Run) est injectée dans le fichier
-      # d'environnement de production AVANT le build : le build produit ici est
-      # celui qui part en déploiement, il n'est donc jamais recompilé plus loin.
-      # Sans le secret, on garde le placeholder (le build reste fonctionnel mais
+      # L'URL de l'API (Cloud Run) est injectée dans le fichier d'environnement
+      # de production AVANT le build : le build produit ici est celui qui part
+      # en déploiement, il n'est donc jamais recompilé plus loin.
+      # Un push sur master vise l'API de production, une PR vise celle de
+      # staging — même règle que le job de déploiement backend plus bas.
+      # Sans URL, on garde le placeholder (le build reste fonctionnel mais
       # l'API est injoignable).
-      - name: Injecte l'URL de l'API de staging
+      - name: Injecte l'URL de l'API
         if: steps.affected.outputs.potager == 'true'
         env:
+          PRODUCTION_API_URL: ${{ secrets.GARDEN_HARVEST_PROD_API_URL }}
           STAGING_API_URL: ${{ secrets.GARDEN_HARVEST_STAGING_API_URL }}
+          IS_PRODUCTION: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
           ENV_FILE: packages/potager-web/src/environments/environment.production.ts
           API_URL_PLACEHOLDER: https://REMPLACER-PAR-URL-CLOUD-RUN
         run: |
-          if [ -n "$STAGING_API_URL" ]; then
-            sed -i "s|${API_URL_PLACEHOLDER}|${STAGING_API_URL}|" "$ENV_FILE"
+          if [ "$IS_PRODUCTION" = 'true' ]; then
+            # Repli sur l'API de staging tant que le secret de production n'est
+            # pas créé : c'est le comportement d'avant la séparation des
+            # environnements, préférable à un front qui ne joint plus rien.
+            API_URL="${PRODUCTION_API_URL:-$STAGING_API_URL}"
+            if [ -z "$PRODUCTION_API_URL" ]; then
+              echo "::warning::GARDEN_HARVEST_PROD_API_URL absent : le front live pointe vers l'API de staging."
+            fi
           else
-            echo "::warning::GARDEN_HARVEST_STAGING_API_URL absent : le front pointera vers le placeholder."
+            API_URL="$STAGING_API_URL"
           fi
+          if [ -z "$API_URL" ]; then
+            echo "::warning::Aucune URL d'API configurée : le front pointera vers le placeholder."
+            exit 0
+          fi
+          sed -i "s|${API_URL_PLACEHOLDER}|${API_URL}|" "$ENV_FILE"
 
       - name: Build du Storybook web
         if: steps.affected.outputs.storybook == 'true'
@@ -332,27 +347,61 @@ jobs:
       contents: read
       pull-requests: write
     env:
-      SERVICE: potager-api
       REGION: europe-west1
       ARTIFACT_REPO: potager
+      # Production et staging sont deux services Cloud Run distincts vivant, par
+      # défaut, dans le MÊME projet GCP : seuls le nom du service et le secret
+      # de base de données changent. Les secrets *_STAGING sont facultatifs —
+      # les renseigner suffit à déplacer le staging dans un projet GCP dédié,
+      # sans retoucher ce workflow.
+      GCP_PROJECT_ID: ${{ (github.event_name == 'pull_request' && secrets.GARDEN_HARVEST_GCP_PROJECT_ID_STAGING) || secrets.GARDEN_HARVEST_GCP_PROJECT_ID }}
+      GCP_SA_KEY: ${{ (github.event_name == 'pull_request' && secrets.GARDEN_HARVEST_GCP_SA_KEY_STAGING) || secrets.GARDEN_HARVEST_GCP_SA_KEY }}
+      # Partagées par les deux environnements. Les canaux Firebase Hosting
+      # (live et prévisualisations) sont reconnus par l'API elle-même
+      # (packages/potager-api/src/config/cors-origin.ts) : ces deux secrets ne
+      # couvrent que les origines hors Firebase Hosting.
+      API_ENV_VARS: '^@^NODE_ENV=production@CORS_ORIGIN=${{ secrets.GARDEN_HARVEST_API_CORS_ORIGIN }}@CORS_ORIGIN_REGEX=${{ secrets.GARDEN_HARVEST_API_CORS_ORIGIN_REGEX }}@RNM_REFRESH_TOKEN=${{ secrets.GARDEN_HARVEST_RNM_REFRESH_TOKEN }}'
+      FIREBASE_SECRETS: FIREBASE_PROJECT_ID=FIREBASE_PROJECT_ID:latest,FIREBASE_CLIENT_EMAIL=FIREBASE_CLIENT_EMAIL:latest,FIREBASE_PRIVATE_KEY=FIREBASE_PRIVATE_KEY:latest
     steps:
+      # Un push sur master déploie la production, toute PR déploie le staging.
+      # `db_secret` est le nom du secret Secret Manager monté dans le conteneur :
+      # c'est LUI qui décide de la base que verra l'API en ligne. `db_url_secret`
+      # est le secret GitHub servant aux migrations. Les deux sont suffixés en
+      # staging, donc aucune faute de frappe ne peut faire pointer un
+      # environnement sur la base de l'autre.
+      - name: Environnement ciblé
+        id: target
+        env:
+          IS_PRODUCTION: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+        run: |
+          if [ "$IS_PRODUCTION" = 'true' ]; then
+            {
+              echo 'environment=production'
+              echo 'service=potager-api'
+              echo 'db_secret=DATABASE_URL'
+              echo 'db_url_secret=GARDEN_HARVEST_DATABASE_URL'
+            } >> "$GITHUB_OUTPUT"
+          else
+            {
+              echo 'environment=staging'
+              echo 'service=potager-api-staging'
+              echo 'db_secret=DATABASE_URL_STAGING'
+              echo 'db_url_secret=GARDEN_HARVEST_DATABASE_URL_STAGING'
+            } >> "$GITHUB_OUTPUT"
+          fi
+
       # Tant que les secrets GCP ne sont pas configurés, tout est ignoré : le job
       # reste vert (même logique de garde que le déploiement Firebase). Ce
       # garde-fou reste local au job : il n'intéresse que le backend.
       - name: GCP configuré ?
         id: gcp
-        env:
-          SA_KEY: ${{ secrets.GARDEN_HARVEST_GCP_SA_KEY }}
-          PROJECT_ID: ${{ secrets.GARDEN_HARVEST_GCP_PROJECT_ID }}
-          DB_URL: ${{ secrets.GARDEN_HARVEST_DATABASE_URL }}
         run: |
-          if [ -n "$SA_KEY" ] && [ -n "$PROJECT_ID" ]; then
+          if [ -n "$GCP_SA_KEY" ] && [ -n "$GCP_PROJECT_ID" ]; then
             echo 'ready=true' >> "$GITHUB_OUTPUT"
           else
             echo 'ready=false' >> "$GITHUB_OUTPUT"
             echo "::warning::Déploiement backend ignoré : secrets GCP absents (GARDEN_HARVEST_GCP_SA_KEY, GARDEN_HARVEST_GCP_PROJECT_ID). Voir docs/deploy-backend.md."
           fi
-          echo "migrate=$([ -n "$DB_URL" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
 
       - name: Checkout
         if: steps.gcp.outputs.ready == 'true'
@@ -372,64 +421,88 @@ jobs:
         if: steps.gcp.outputs.ready == 'true'
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GARDEN_HARVEST_GCP_SA_KEY }}
+          credentials_json: ${{ env.GCP_SA_KEY }}
+          project_id: ${{ env.GCP_PROJECT_ID }}
 
       - name: Setup gcloud
         if: steps.gcp.outputs.ready == 'true'
         uses: google-github-actions/setup-gcloud@v2
 
-      # Migrations Drizzle appliquées à la base cible avant le déploiement.
-      # Optionnel : ne s'exécute que si le secret DATABASE_URL est fourni.
+      # Migrations Drizzle appliquées à la base de l'environnement ciblé, avant
+      # le déploiement. Aucun repli d'un environnement sur l'autre : sans le
+      # secret correspondant, l'étape est sautée plutôt que de risquer de migrer
+      # la mauvaise base.
       - name: Migrations Drizzle
-        if: steps.gcp.outputs.ready == 'true' && steps.gcp.outputs.migrate == 'true'
+        if: steps.gcp.outputs.ready == 'true'
         env:
-          DATABASE_URL: ${{ secrets.GARDEN_HARVEST_DATABASE_URL }}
-        run: npx nx db-migrate potager-api
+          DATABASE_URL: ${{ secrets[steps.target.outputs.db_url_secret] }}
+          TARGET_ENVIRONMENT: ${{ steps.target.outputs.environment }}
+          DB_URL_SECRET: ${{ steps.target.outputs.db_url_secret }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::warning::Migrations $TARGET_ENVIRONMENT ignorées : secret $DB_URL_SECRET absent."
+            exit 0
+          fi
+          npx nx db-migrate potager-api
 
+      # Une seule image par commit, poussée dans le dépôt du projet ciblé. En
+      # mode « un seul projet GCP », staging et production partagent donc
+      # exactement le même digest : ce qui a été validé en staging est bit pour
+      # bit ce qui part en production.
       - name: Build & push de l'image
         id: image
         if: steps.gcp.outputs.ready == 'true'
         run: |
-          IMAGE="${REGION}-docker.pkg.dev/${{ secrets.GARDEN_HARVEST_GCP_PROJECT_ID }}/${ARTIFACT_REPO}/${SERVICE}:${{ github.sha }}"
+          IMAGE="${REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${ARTIFACT_REPO}/potager-api:${{ github.sha }}"
           gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
           docker build -f packages/potager-api/Dockerfile -t "$IMAGE" .
           docker push "$IMAGE"
           echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
 
-      - name: Déploiement live (master)
-        if: steps.gcp.outputs.ready == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master'
+      - name: Déploiement production (master)
+        if: steps.gcp.outputs.ready == 'true' && steps.target.outputs.environment == 'production'
+        env:
+          SERVICE: ${{ steps.target.outputs.service }}
+          DB_SECRET: ${{ steps.target.outputs.db_secret }}
+          IMAGE: ${{ steps.image.outputs.image }}
         run: |
           gcloud run deploy "$SERVICE" \
-            --image "${{ steps.image.outputs.image }}" \
+            --project "$GCP_PROJECT_ID" \
+            --image "$IMAGE" \
             --region "$REGION" \
             --platform managed \
             --allow-unauthenticated \
-            --set-env-vars "^@^NODE_ENV=production@CORS_ORIGIN=${{ secrets.GARDEN_HARVEST_API_CORS_ORIGIN }}@CORS_ORIGIN_REGEX=${{ secrets.GARDEN_HARVEST_API_CORS_ORIGIN_REGEX }}@RNM_REFRESH_TOKEN=${{ secrets.GARDEN_HARVEST_RNM_REFRESH_TOKEN }}" \
-            --set-secrets "DATABASE_URL=DATABASE_URL:latest,FIREBASE_PROJECT_ID=FIREBASE_PROJECT_ID:latest,FIREBASE_CLIENT_EMAIL=FIREBASE_CLIENT_EMAIL:latest,FIREBASE_PRIVATE_KEY=FIREBASE_PRIVATE_KEY:latest"
-          # Les déploiements de preview (--no-traffic --tag) épinglent le trafic ;
-          # on force donc la dernière révision à servir 100 % du trafic en live.
-          gcloud run services update-traffic "$SERVICE" --region "$REGION" --to-latest
+            --set-env-vars "$API_ENV_VARS" \
+            --set-secrets "DATABASE_URL=${DB_SECRET}:latest,${FIREBASE_SECRETS}"
+          # Filet de sécurité : d'anciennes révisions taguées (les
+          # prévisualisations d'avant la séparation des environnements) peuvent
+          # encore épingler du trafic sur ce service.
+          gcloud run services update-traffic "$SERVICE" --project "$GCP_PROJECT_ID" --region "$REGION" --to-latest
 
-      - name: Déploiement prévisualisation (PR)
+      # Chaque PR pousse une révision taguée `pr-<n>` sur le service de staging,
+      # branchée sur la base de staging. La révision prend le trafic du service :
+      # l'URL racine du staging sert donc toujours la dernière PR déployée (c'est
+      # elle que voient les prévisualisations front, cf. GARDEN_HARVEST_STAGING_API_URL),
+      # tandis que l'URL taguée reste stable pour la PR.
+      - name: Déploiement staging (PR)
         id: preview
-        if: steps.gcp.outputs.ready == 'true' && github.event_name == 'pull_request'
+        if: steps.gcp.outputs.ready == 'true' && steps.target.outputs.environment == 'staging' && github.event_name == 'pull_request'
+        env:
+          SERVICE: ${{ steps.target.outputs.service }}
+          DB_SECRET: ${{ steps.target.outputs.db_secret }}
+          IMAGE: ${{ steps.image.outputs.image }}
+          TAG: pr-${{ github.event.number }}
         run: |
-          TAG="pr-${{ github.event.number }}"
-          if gcloud run services describe "$SERVICE" --region "$REGION" >/dev/null 2>&1; then
-            NO_TRAFFIC="--no-traffic"
-          else
-            NO_TRAFFIC=""
-          fi
           gcloud run deploy "$SERVICE" \
-            --image "${{ steps.image.outputs.image }}" \
+            --project "$GCP_PROJECT_ID" \
+            --image "$IMAGE" \
             --region "$REGION" \
             --platform managed \
             --allow-unauthenticated \
             --tag "$TAG" \
-            $NO_TRAFFIC \
-            --set-env-vars "^@^NODE_ENV=production@CORS_ORIGIN=${{ secrets.GARDEN_HARVEST_API_CORS_ORIGIN }}@CORS_ORIGIN_REGEX=${{ secrets.GARDEN_HARVEST_API_CORS_ORIGIN_REGEX }}@RNM_REFRESH_TOKEN=${{ secrets.GARDEN_HARVEST_RNM_REFRESH_TOKEN }}" \
-            --set-secrets "DATABASE_URL=DATABASE_URL:latest,FIREBASE_PROJECT_ID=FIREBASE_PROJECT_ID:latest,FIREBASE_CLIENT_EMAIL=FIREBASE_CLIENT_EMAIL:latest,FIREBASE_PRIVATE_KEY=FIREBASE_PRIVATE_KEY:latest"
-          URL=$(gcloud run services describe "$SERVICE" --region "$REGION" --format=json | jq -r --arg t "$TAG" '.status.traffic[] | select(.tag==$t) | .url')
+            --set-env-vars "$API_ENV_VARS" \
+            --set-secrets "DATABASE_URL=${DB_SECRET}:latest,${FIREBASE_SECRETS}"
+          URL=$(gcloud run services describe "$SERVICE" --project "$GCP_PROJECT_ID" --region "$REGION" --format=json | jq -r --arg t "$TAG" '.status.traffic[] | select(.tag==$t) | .url')
           echo "url=$URL" >> "$GITHUB_OUTPUT"
 
       - name: Commentaire URL de prévisualisation
@@ -439,7 +512,7 @@ jobs:
           script: |
             const url = ${{ toJSON(steps.preview.outputs.url) }};
             const marker = '<!-- preview-backend -->';
-            const body = `${marker}\n🚀 **Prévisualisation backend** déployée pour le commit ${context.sha.slice(0, 7)} :\n\n${url}/api\n\n_Sonde : \`GET ${url}/api/health\`_`;
+            const body = `${marker}\n🚀 **Prévisualisation backend** (staging) déployée pour le commit ${context.sha.slice(0, 7)} :\n\n${url}/api\n\n_Base de données : **staging**. Sonde : \`GET ${url}/api/health\`_`;
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,

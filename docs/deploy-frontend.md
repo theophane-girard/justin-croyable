@@ -22,18 +22,27 @@ lint ou les tests échouent, **rien n'est déployé**.
 
 - dev / `nx serve` → `environment.ts` → `http://localhost:3000` ;
 - build `production` → `environment.production.ts`, dont l'URL est remplacée en
-  CI par le secret `GARDEN_HARVEST_STAGING_API_URL` (l'URL Cloud Run du backend).
+  CI par l'URL Cloud Run de l'environnement déployé :
+  - push sur `master` → `GARDEN_HARVEST_PROD_API_URL` (service `potager-api`,
+    base de production) ;
+  - pull request → `GARDEN_HARVEST_STAGING_API_URL` (service
+    `potager-api-staging`, base de staging).
 
 Toutes les prévisualisations front pointent vers **la même API de staging**
-partagée (l'URL live Cloud Run), conformément au choix « base de staging
-partagée ».
+partagée — l'URL racine du service de staging, qui sert la dernière révision de
+PR déployée. Aucune d'elles ne touche donc plus la base de production.
+
+> Tant que `GARDEN_HARVEST_PROD_API_URL` n'est pas créé, le build live retombe
+> sur l'URL de staging (avec un avertissement dans les logs de la CI) : c'est le
+> comportement d'avant la séparation des environnements.
 
 ## Secrets GitHub Actions (Settings → Secrets → Actions)
 
 | Secret | Valeur |
 | --- | --- |
 | `FIREBASE_SERVICE_ACCOUNT` | JSON d'un compte de service Firebase avec le rôle *Firebase Hosting Admin* (projet `justin-croyable-story`) |
-| `GARDEN_HARVEST_STAGING_API_URL` | URL publique de l'API Cloud Run (ex. `https://potager-api-xxxx-ew.a.run.app`) |
+| `GARDEN_HARVEST_PROD_API_URL` | URL publique du service `potager-api` (ex. `https://potager-api-xxxx-ew.a.run.app`) |
+| `GARDEN_HARVEST_STAGING_API_URL` | URL publique du service `potager-api-staging` |
 
 Créer le compte de service Firebase :
 
