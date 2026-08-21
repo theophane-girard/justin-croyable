@@ -131,6 +131,20 @@ export class GardenStore extends ApiEntityStore<Plant> {
     void this.removeEntry(id, () => this.api.removePlant(id));
   }
 
+  decrementVariety(varietyId: VarietyId): void {
+    const existing = this.entries().find(entry => entry.varietyId === varietyId);
+    if (!existing) {
+      return;
+    }
+    if (existing.quantity <= 1) {
+      this.remove(existing.id);
+      return;
+    }
+    void this.updateEntry(existing.id, () =>
+      this.api.updatePlant(existing.id, { quantity: existing.quantity - 1 }),
+    );
+  }
+
   protected fetchAll() {
     return this.api.listPlants();
   }

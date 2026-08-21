@@ -14,7 +14,6 @@ import {
   ButtonComponent,
   CardComponent,
   DividerComponent,
-  EmptyComponent,
   FabButtonComponent,
   FabContainerComponent,
   FabListComponent,
@@ -31,9 +30,6 @@ import { GARDEN_ROLE, type GardenRole, type ShareableRole } from '@justin-croyab
 import { NgIcon } from '@ng-icons/core';
 
 import {
-  cropUnit,
-  formatQuantity,
-  HARVEST_UNIT_META,
   isSeasonFilter,
   type PlantRow,
   SEASON,
@@ -47,18 +43,20 @@ import { GardenStore } from '../../core/garden-store';
 import { HarvestStore } from '../../core/harvest-store';
 import { SeasonStore } from '../../core/season-store';
 import { SharingStore } from '../../core/sharing-store';
+import { CatalogStore } from '../../core/catalog-store';
+import { GardenPlanStore } from './garden-plan-store';
 import { GARDEN_ADD_LINK } from '../../app.routes';
 
+import {
+  availableBedSizes,
+  type BedSize,
+  bedSizeLabel,
+} from './scene/garden-plan.model';
+import { type GardenCell, type GardenSlot } from './scene/garden-layout';
 import { GardenViewComponent } from './scene/garden-view.component';
 
 const NUMBER_FORMATTER = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
 const EUR_FORMATTER = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
-const YIELD_FORMATTER = new Intl.NumberFormat('fr-FR', {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-
-const YIELD_SUFFIX = '/plant';
 const PLANT_COUNT_PREFIX = '×';
 
 const SEASON_FILTER_ITEMS: SegmentItem[] = [
@@ -85,45 +83,36 @@ type MemberRow = {
   readonly removable: boolean;
 };
 
-type PlotMetric = {
-  readonly label: string;
-  readonly value: string;
-};
-
-type PlotDetail = {
-  readonly label: string;
-  readonly categoryLabel: string;
-  readonly metrics: readonly PlotMetric[];
-};
-
 type PlotItem = {
   readonly id: string;
   readonly label: string;
   readonly icon: string;
   readonly plants: string;
   readonly savings: string;
-  readonly selected: boolean;
+};
+
+type BedContent = {
+  readonly varietyId: string;
+  readonly label: string;
+  readonly count: string;
+};
+
+type BedDetail = {
+  readonly label: string;
+  readonly fill: string;
+  readonly contents: readonly BedContent[];
+};
+
+type BedSizeOption = {
+  readonly key: string;
+  readonly label: string;
+  readonly size: BedSize;
 };
 
 const INVITE_ROLE_OPTIONS: readonly { readonly value: ShareableRole; readonly label: string }[] = [
   { value: GARDEN_ROLE.viewer, label: ROLE_LABEL[GARDEN_ROLE.viewer] },
   { value: GARDEN_ROLE.coOwner, label: ROLE_LABEL[GARDEN_ROLE.coOwner] },
 ];
-
-function plotMetrics(row: PlantRow): PlotMetric[] {
-  const unit = cropUnit(row.cropId);
-  return [
-    { label: 'Plants', value: NUMBER_FORMATTER.format(row.quantity) },
-    { label: 'Récolté', value: formatQuantity(row.harvestedKg, unit) },
-    {
-      label: 'Rendement',
-      value: `${YIELD_FORMATTER.format(row.yieldPerPlantKg)} ${HARVEST_UNIT_META[unit].quantitySuffix}${YIELD_SUFFIX}`,
-    },
-    { label: 'Valeur récoltée', value: EUR_FORMATTER.format(row.harvestValueEur) },
-    { label: 'Dépenses', value: EUR_FORMATTER.format(row.expenseEur) },
-    { label: 'Économie', value: EUR_FORMATTER.format(row.netSavingsEur) },
-  ];
-}
 
 @Component({
   selector: 'app-garden',
@@ -140,8 +129,7 @@ function plotMetrics(row: PlantRow): PlotMetric[] {
     FabListComponent,
     InputDirective,
     InputGroupComponent,
-    EmptyComponent,
-    GardenViewComponent,
+      GardenViewComponent,
     ...SelectImports,
   ],
   template: `
@@ -149,7 +137,7 @@ function plotMetrics(row: PlantRow): PlotMetric[] {
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex flex-col">
           <p class="text-muted-foreground text-sm">
-            Votre potager en 3D : une planche par variété, la terre travaillée autour.
+            Posez vos bacs sur le champ, puis choisissez la variété de chaque case.
           </p>
         </div>
         <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
@@ -205,19 +193,6 @@ function plotMetrics(row: PlantRow): PlotMetric[] {
               <ng-icon name="phosphorFunnel" class="size-4" />
               Filtrer
             </button>
-            @if (canWrite()) {
-              <button
-                appButton
-                variant="outline"
-                size="sm"
-                class="hidden sm:inline-flex"
-                [buttonDisabled]="!selectedId()"
-                (click)="onDelete()"
-              >
-                <ng-icon name="phosphorTrash" class="size-4" />
-                Supprimer
-              </button>
-            }
           }
           @if (canWrite()) {
             <a appButton size="sm" class="hidden sm:inline-flex" [routerLink]="addLink">
@@ -228,75 +203,74 @@ function plotMetrics(row: PlantRow): PlotMetric[] {
         </div>
       </div>
 
-      @if (!hasRows()) {
-        <app-empty
-          icon="phosphorPottedPlant"
-          title="Aucun plant"
-          description="Ajoutez vos plants pour voir votre jardin pousser en 3D."
-        >
-          @if (canWrite()) {
-            <a appButton [routerLink]="addLink">
-              <ng-icon name="phosphorPlus" class="size-4" />
-              Ajouter un plant
-            </a>
-          }
-        </app-empty>
-      } @else {
-        <div class="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          <app-garden-view
-            class="block xl:col-span-2"
-            [rows]="displayedRows()"
-            [(selectedId)]="selectedId"
-          />
+      <div class="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <app-garden-view
+          class="block xl:col-span-2"
+          [rows]="displayedRows()"
+          [(selectedId)]="selectedId"
+          (slotPicked)="onSlotPicked($event)"
+          (cellPicked)="onCellPicked($event)"
+        />
 
-          <div class="flex flex-col gap-4">
-            @if (plotDetail(); as detail) {
-              <app-card [title]="detail.label" [description]="detail.categoryLabel">
-                <div class="grid grid-cols-2 gap-3">
-                  @for (metric of detail.metrics; track metric.label) {
-                    <div class="flex flex-col">
-                      <span class="text-muted-foreground text-xs">{{ metric.label }}</span>
-                      <span class="text-foreground text-sm font-semibold tabular-nums">
-                        {{ metric.value }}
+        <div class="flex flex-col gap-4">
+          @if (bedDetail(); as detail) {
+            <app-card [title]="detail.label" [description]="detail.fill">
+              @if (detail.contents.length === 0) {
+                <p class="text-muted-foreground text-sm">
+                  Touchez une case du bac pour y implanter une variété.
+                </p>
+              } @else {
+                <div class="flex flex-col gap-1">
+                  @for (content of detail.contents; track content.varietyId) {
+                    <div class="flex items-center justify-between gap-3">
+                      <span class="text-foreground min-w-0 flex-1 truncate text-sm">
+                        {{ content.label }}
+                      </span>
+                      <span class="text-muted-foreground shrink-0 text-xs tabular-nums">
+                        {{ content.count }}
                       </span>
                     </div>
                   }
                 </div>
-              </app-card>
-            } @else {
-              <app-card title="Aucune planche sélectionnée">
-                <p class="text-muted-foreground text-sm">
-                  Touchez une planche dans le jardin pour voir son rendement et son économie.
-                </p>
-              </app-card>
-            }
+              }
+              @if (canWrite()) {
+                <div card-footer class="w-full flex-row justify-end">
+                  <button appButton variant="outline" size="sm" (click)="onRemoveBed()">
+                    <ng-icon name="phosphorTrash" class="size-4" />
+                    Retirer le bac
+                  </button>
+                </div>
+              }
+            </app-card>
+          } @else {
+            <app-card title="Aucun bac sélectionné">
+              <p class="text-muted-foreground text-sm">
+                Touchez un emplacement libre du champ pour poser un bac, ou un bac existant pour
+                voir son contenu.
+              </p>
+            </app-card>
+          }
 
-            <app-card title="Les planches" [description]="plotCountLabel()">
-              <div class="flex max-h-80 flex-col gap-1 overflow-y-auto">
+          @if (hasRows()) {
+            <app-card title="Vos variétés" [description]="plotCountLabel()">
+              <div class="flex max-h-80 flex-col gap-2 overflow-y-auto">
                 @for (plot of plotItems(); track plot.id) {
-                  <button
-                    appButton
-                    type="button"
-                    size="sm"
-                    class="w-full justify-start"
-                    [variant]="plot.selected ? 'secondary' : 'ghost'"
-                    (click)="onSelectPlot(plot.id)"
-                  >
-                    <ng-icon [name]="plot.icon" class="size-4 shrink-0" />
-                    <span class="min-w-0 flex-1 truncate text-left">{{ plot.label }}</span>
+                  <div class="flex items-center gap-2">
+                    <ng-icon [name]="plot.icon" class="text-muted-foreground size-4 shrink-0" />
+                    <span class="min-w-0 flex-1 truncate text-sm">{{ plot.label }}</span>
                     <span class="text-muted-foreground shrink-0 text-xs tabular-nums">
                       {{ plot.plants }}
                     </span>
                     <span class="shrink-0 text-xs font-semibold tabular-nums">
                       {{ plot.savings }}
                     </span>
-                  </button>
+                  </div>
                 }
               </div>
             </app-card>
-          </div>
+          }
         </div>
-      }
+      </div>
     </div>
 
     @if (showMobileActions()) {
@@ -322,18 +296,18 @@ function plotMetrics(row: PlantRow): PlotMetric[] {
             >
               <ng-icon name="phosphorFunnel" />
             </button>
-            @if (canWrite()) {
-              <button
-                appFabButton
-                type="button"
-                variant="destructive"
-                [fabDisabled]="!selectedId()"
-                aria-label="Supprimer la sélection"
-                (click)="onDelete()"
-              >
-                <ng-icon name="phosphorTrash" />
-              </button>
-            }
+          }
+          @if (canWrite()) {
+            <button
+              appFabButton
+              type="button"
+              variant="destructive"
+              [fabDisabled]="!selectedId()"
+              aria-label="Retirer le bac sélectionné"
+              (click)="onRemoveBed()"
+            >
+              <ng-icon name="phosphorTrash" />
+            </button>
           }
           @if (canManage()) {
             <button
@@ -358,6 +332,58 @@ function plotMetrics(row: PlantRow): PlotMetric[] {
         </app-fab-list>
       </app-fab>
     }
+
+    <ng-template #bedSizeSheet>
+      <div class="flex flex-col gap-4 p-4">
+        <p class="text-muted-foreground text-sm">
+          Choisissez les dimensions du bac à poser sur cet emplacement.
+        </p>
+        <div class="grid grid-cols-3 gap-2">
+          @for (option of bedSizeOptions(); track option.key) {
+            <button
+              appButton
+              type="button"
+              size="sm"
+              [variant]="option.key === bedSizeKey() ? 'default' : 'outline'"
+              (click)="bedSizeKey.set(option.key)"
+            >
+              {{ option.label }}
+            </button>
+          }
+        </div>
+        @if (bedSizeOptions().length === 0) {
+          <p class="text-destructive text-sm">
+            Aucun bac ne tient sur cet emplacement : il est trop proche du bord ou d'un bac voisin.
+          </p>
+        }
+      </div>
+    </ng-template>
+
+    <ng-template #cellSheet>
+      <div class="flex flex-col gap-4 p-4">
+        <app-select
+          label="Variété"
+          prefixIcon="phosphorPlant"
+          [value]="cellVarietyId()"
+          (valueChange)="onCellVarietyChange($event)"
+        >
+          @for (option of varietyOptions(); track option.id) {
+            <app-select-item [value]="option.id">{{ option.label }}</app-select-item>
+          }
+        </app-select>
+        @if (varietyOptions().length === 0) {
+          <p class="text-muted-foreground text-sm">
+            Aucune variété au catalogue. Ajoutez-en une depuis l'écran des prix.
+          </p>
+        }
+        @if (pendingCellPlanted()) {
+          <button appButton variant="outline" size="sm" class="self-start" (click)="onClearCell()">
+            <ng-icon name="phosphorTrash" class="size-4" />
+            Vider la case
+          </button>
+        }
+      </div>
+    </ng-template>
 
     <ng-template #filterSheet>
       <div class="flex flex-col gap-4 p-4">
@@ -453,12 +479,16 @@ export class GardenComponent {
   protected readonly store = inject(GardenStore);
   protected readonly season = inject(SeasonStore);
   protected readonly sharing = inject(SharingStore);
+  protected readonly plan = inject(GardenPlanStore);
+  readonly #catalog = inject(CatalogStore);
   readonly #access = inject(GardenAccessStore);
   readonly #harvests = inject(HarvestStore);
   readonly #sheet = inject(SheetService);
 
   protected readonly canWrite = this.#access.canWriteActive;
 
+  private readonly bedSizeSheetTemplate = viewChild.required<TemplateRef<unknown>>('bedSizeSheet');
+  private readonly cellSheetTemplate = viewChild.required<TemplateRef<unknown>>('cellSheet');
   private readonly filterSheetTemplate = viewChild.required<TemplateRef<unknown>>('filterSheet');
   private readonly shareSheetTemplate = viewChild.required<TemplateRef<unknown>>('shareSheet');
   private readonly renameSheetTemplate = viewChild.required<TemplateRef<unknown>>('renameSheet');
@@ -474,6 +504,26 @@ export class GardenComponent {
   protected readonly inviteRole = signal<ShareableRole>(GARDEN_ROLE.viewer);
   protected readonly inviteError = signal<string | null>(null);
   protected readonly renameInput = signal<string>('');
+  protected readonly pendingSlot = signal<GardenSlot | null>(null);
+  protected readonly pendingCell = signal<GardenCell | null>(null);
+  protected readonly bedSizeKey = signal<string | null>(null);
+  protected readonly cellVarietyId = signal<string | null>(null);
+
+  protected readonly varietyOptions = this.#catalog.varietyOptions;
+
+  protected readonly bedSizeOptions = computed<BedSizeOption[]>(() => {
+    const slot = this.pendingSlot();
+    if (slot === null) {
+      return [];
+    }
+    return availableBedSizes(this.plan.beds(), slot.column, slot.row).map(size => ({
+      key: bedSizeLabel(size),
+      label: bedSizeLabel(size),
+      size,
+    }));
+  });
+
+  protected readonly pendingCellPlanted = computed(() => this.pendingCell()?.varietyId !== null);
 
   protected readonly memberRows = computed<MemberRow[]>(() =>
     this.sharing.members().map(member => ({
@@ -497,44 +547,120 @@ export class GardenComponent {
   });
 
   protected readonly hasRows = computed(() => this.store.rows().length > 0);
-  protected readonly showMobileActions = computed(() => this.hasRows() || this.canManage());
+  protected readonly showMobileActions = computed(
+    () => this.hasRows() || this.canManage() || this.canWrite(),
+  );
 
   protected readonly showYearSelector = computed(() => this.#harvests.availableYears().length >= 2);
   protected readonly yearOptions = computed(() => buildYearOptions(this.#harvests.availableYears()));
   protected readonly yearValue = computed(() => yearFilterToValue(this.#harvests.effectiveYear()));
 
-  protected readonly plotItems = computed<PlotItem[]>(() => {
-    const selected = this.selectedId();
-    return this.displayedRows().map(row => ({
+  protected readonly plotItems = computed<PlotItem[]>(() =>
+    this.displayedRows().map(row => ({
       id: row.id,
       label: row.label,
       icon: row.cropIcon,
       plants: `${PLANT_COUNT_PREFIX}${NUMBER_FORMATTER.format(row.quantity)}`,
       savings: EUR_FORMATTER.format(row.netSavingsEur),
-      selected: row.id === selected,
-    }));
-  });
+    })),
+  );
 
   protected readonly plotCountLabel = computed(() => {
     const count = this.displayedRows().length;
-    return count > 1 ? `${count} planches cultivées` : `${count} planche cultivée`;
+    return count > 1 ? `${count} variétés cultivées` : `${count} variété cultivée`;
   });
 
-  protected readonly plotDetail = computed<PlotDetail | null>(() => {
-    const selected = this.selectedId();
-    const row = this.displayedRows().find(candidate => candidate.id === selected);
-    if (!row) {
+  protected readonly bedDetail = computed<BedDetail | null>(() => {
+    const bedId = this.selectedId();
+    const bed = this.plan.beds().find(candidate => candidate.id === bedId);
+    if (!bed) {
       return null;
     }
+    const cells = this.plan.cells().filter(cell => cell.bedId === bed.id);
+    const labels = this.#catalog.byId();
+    const counts = cells.reduce<Map<string, number>>((accumulator, cell) => {
+      accumulator.set(cell.varietyId, (accumulator.get(cell.varietyId) ?? 0) + 1);
+      return accumulator;
+    }, new Map());
+    const total = bed.columns * bed.rows;
     return {
-      label: row.label,
-      categoryLabel: row.categoryLabel,
-      metrics: plotMetrics(row),
+      label: `Bac ${bed.columns} × ${bed.rows}`,
+      fill: `${cells.length} case${cells.length > 1 ? 's' : ''} plantée${cells.length > 1 ? 's' : ''} sur ${total}`,
+      contents: Array.from(counts.entries()).map(([varietyId, count]) => ({
+        varietyId,
+        label: labels.get(varietyId)?.label ?? varietyId,
+        count: `${PLANT_COUNT_PREFIX}${NUMBER_FORMATTER.format(count)}`,
+      })),
     };
   });
 
-  protected onSelectPlot(id: string): void {
-    this.selectedId.set(this.selectedId() === id ? null : id);
+  protected onSlotPicked(slot: GardenSlot): void {
+    this.pendingSlot.set(slot);
+    const [first] = availableBedSizes(this.plan.beds(), slot.column, slot.row);
+    this.bedSizeKey.set(first ? bedSizeLabel(first) : null);
+    this.#sheet.create({
+      title: 'Poser un bac',
+      side: 'bottom',
+      okText: 'Poser',
+      cancelText: 'Annuler',
+      content: this.bedSizeSheetTemplate(),
+      onOk: () => this.#placeBed(),
+    });
+  }
+
+  protected onCellPicked(cell: GardenCell): void {
+    this.pendingCell.set(cell);
+    this.cellVarietyId.set(cell.varietyId);
+    this.#sheet.create({
+      title: cell.varietyId === null ? 'Planter une variété' : 'Changer de variété',
+      side: 'bottom',
+      okText: 'Valider',
+      cancelText: 'Annuler',
+      content: this.cellSheetTemplate(),
+      onOk: () => this.#assignCell(),
+    });
+  }
+
+  protected onCellVarietyChange(value: string | string[] | null): void {
+    if (typeof value === 'string') {
+      this.cellVarietyId.set(value);
+    }
+  }
+
+  protected onClearCell(): void {
+    const cell = this.pendingCell();
+    if (cell === null) {
+      return;
+    }
+    this.plan.clearCell(cell.bedId, cell.column, cell.row);
+    this.cellVarietyId.set(null);
+  }
+
+  protected onRemoveBed(): void {
+    const bedId = this.selectedId();
+    if (bedId === null) {
+      return;
+    }
+    this.plan.removeBed(bedId);
+    this.selectedId.set(null);
+  }
+
+  #placeBed(): void {
+    const slot = this.pendingSlot();
+    const option = this.bedSizeOptions().find(candidate => candidate.key === this.bedSizeKey());
+    if (slot === null || !option) {
+      return;
+    }
+    this.plan.addBed(slot.column, slot.row, option.size);
+  }
+
+  #assignCell(): void {
+    const cell = this.pendingCell();
+    const varietyId = this.cellVarietyId();
+    if (cell === null || varietyId === null) {
+      return;
+    }
+    this.plan.assignCell(cell.bedId, cell.column, cell.row, varietyId);
   }
 
   protected onSeasonChange(value: string | null): void {
@@ -633,12 +759,4 @@ export class GardenComponent {
     }
   }
 
-  protected onDelete(): void {
-    const id = this.selectedId();
-    if (id === null) {
-      return;
-    }
-    this.store.remove(id);
-    this.selectedId.set(null);
-  }
 }

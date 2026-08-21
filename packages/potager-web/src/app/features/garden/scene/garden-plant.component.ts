@@ -65,11 +65,12 @@ export class GardenPlantComponent {
       if (!group) {
         return;
       }
+      const fit = this.spot().scale;
       const sway = this.#sway();
       if (sway === NO_SWAY) {
         group.rotation.z = NO_SWAY;
         group.rotation.x = NO_SWAY;
-        group.scale.setScalar(FULL_SCALE);
+        group.scale.setScalar(fit);
         return;
       }
       const elapsed = clock.elapsedTime;
@@ -78,7 +79,7 @@ export class GardenPlantComponent {
       group.rotation.x =
         Math.cos(elapsed * SWAY_SPEED * CROSS_SWAY_RATIO + phase) * sway * CROSS_SWAY_AMPLITUDE;
       const growth = Math.min(FULL_SCALE, elapsed * GROWTH_SPEED - phase * GROWTH_STAGGER);
-      group.scale.setScalar(Math.max(MIN_GROWTH_SCALE, growth));
+      group.scale.setScalar(Math.max(MIN_GROWTH_SCALE, growth) * fit);
     });
   }
 }
