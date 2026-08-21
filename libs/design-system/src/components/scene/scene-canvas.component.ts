@@ -6,6 +6,7 @@ import {
   contentChild,
   Directive,
   inject,
+  Injector,
   input,
   TemplateRef,
   ViewEncapsulation,
@@ -46,6 +47,20 @@ const DEMAND_FRAMELOOP: NgtFrameloop = 'demand';
 export class SceneContentDirective {}
 
 /**
+ * Capte l'injecteur *à l'intérieur* de l'arbre `angular-three`.
+ *
+ * `NgtCanvas` instancie son contenu avec son propre injecteur, celui qui porte
+ * `NGT_STORE`. Un `ngTemplateOutlet` réinstancierait le gabarit du consommateur
+ * avec l'injecteur de son site de déclaration — hors du canvas — et
+ * `injectStore()` / `beforeRender()` y échoueraient. Cet injecteur est donc
+ * passé à `ngTemplateOutletInjector`.
+ */
+@Directive({ selector: 'ng-container[sceneContentHost]', exportAs: 'sceneContentHost' })
+export class SceneContentHostDirective {
+  readonly injector = inject(Injector);
+}
+
+/**
  * Coquille d'une scène 3D : dimensionnement, fond dégradé suivant le thème,
  * brouillard, éclairage trois points, orbite, squelette de chargement et
  * étiquette d'accessibilité.
@@ -58,7 +73,13 @@ export class SceneContentDirective {}
  */
 @Component({
   selector: 'app-scene-canvas',
-  imports: [NgtCanvas, NgTemplateOutlet, SceneEnvironmentComponent, SceneOrbitControlsComponent],
+  imports: [
+    NgtCanvas,
+    NgTemplateOutlet,
+    SceneContentHostDirective,
+    SceneEnvironmentComponent,
+    SceneOrbitControlsComponent,
+  ],
   template: `
     <ngt-canvas
       class="block size-full"
@@ -72,7 +93,11 @@ export class SceneContentDirective {}
         @if (orbit()) {
           <app-scene-orbit-controls [bounds]="bounds()" [autoRotate]="autoRotate()" />
         }
-        <ng-container [ngTemplateOutlet]="contentTemplate()" />
+        <ng-container sceneContentHost #contentHost="sceneContentHost" />
+        <ng-container
+          [ngTemplateOutlet]="contentTemplate()"
+          [ngTemplateOutletInjector]="contentHost.injector"
+        />
       </ng-container>
     </ngt-canvas>
 
