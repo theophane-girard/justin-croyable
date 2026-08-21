@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, model, output, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  model,
+  output,
+  signal,
+} from '@angular/core';
 import { CardComponent, ViewportService } from '@justin-croyable/design-system';
 import {
   type SceneBounds,
@@ -8,10 +16,9 @@ import {
 import type { NgtFrameloop } from 'angular-three';
 import { NgIcon } from '@ng-icons/core';
 
-import { GardenPlanStore } from '../garden-plan-store';
-import { cropUnit, formatQuantity, type PlantRow } from '../../../core/potager.model';
+import { GardenPlanStore } from '../plan/garden-plan-store';
 
-import { buildGardenField, type GardenCell, type GardenSlot } from './garden-layout';
+import { buildGardenField, type GardenCell } from './garden-layout';
 import { GardenSceneComponent } from './garden-scene.component';
 
 type FocusInfo = {
@@ -21,18 +28,22 @@ type FocusInfo = {
 
 const MOBILE_HEIGHT = '22rem';
 const DESKTOP_HEIGHT = '32rem';
-const SCENE_HEIGHT = 2.4;
-const SCENE_LABEL = 'Votre potager en trois dimensions, un bac par zone cultivée';
+const SCENE_LABEL = 'Votre potager en trois dimensions, une grille de culture par parcelle';
 const ANIMATED_FRAMELOOP: NgtFrameloop = 'always';
 const STILL_FRAMELOOP: NgtFrameloop = 'demand';
-const CELLS_SUFFIX = 'case';
-const CELLS_SUFFIX_PLURAL = 'cases';
-const EMPTY_BED_DETAIL = 'Bac vide · touchez une case pour planter';
-const DETAIL_SEPARATOR = ' · ';
+const EMPTY_PARCEL_DETAIL = 'Parcelle vide · touchez une case pour semer';
+const FREE_CELL_LABEL = 'Case libre';
+const FREE_CELL_DETAIL = 'Touchez pour semer';
 
 @Component({
   selector: 'app-garden-view',
-  imports: [SceneCanvasComponent, SceneContentDirective, CardComponent, GardenSceneComponent, NgIcon],
+  imports: [
+    SceneCanvasComponent,
+    SceneContentDirective,
+    CardComponent,
+    GardenSceneComponent,
+    NgIcon,
+  ],
   template: `
     <app-scene-canvas
       [class.cursor-pointer]="pointerActive()"
@@ -47,13 +58,10 @@ const DETAIL_SEPARATOR = ' · ';
           [selectedId]="selectedId()"
           [hoveredId]="hoveredId()"
           [hoveredCellKey]="hoveredCellKey()"
-          [hoveredSlotKey]="hoveredSlotKey()"
           (picked)="onPicked($event)"
           (hoverChange)="hoveredId.set($event)"
           (cellPicked)="cellPicked.emit($event)"
           (cellHoverChange)="hoveredCellKey.set($event)"
-          (slotPicked)="slotPicked.emit($event)"
-          (slotHoverChange)="hoveredSlotKey.set($event)"
         />
       </ng-template>
 
@@ -80,23 +88,19 @@ const DETAIL_SEPARATOR = ' · ';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class GardenViewComponent {
-  readonly rows = input.required<readonly PlantRow[]>();
   readonly selectedId = model<string | null>(null);
 
   readonly cellPicked = output<GardenCell>();
-  readonly slotPicked = output<GardenSlot>();
 
   readonly #viewport = inject(ViewportService);
   readonly #plan = inject(GardenPlanStore);
 
   protected readonly hoveredId = signal<string | null>(null);
   protected readonly hoveredCellKey = signal<string | null>(null);
-  protected readonly hoveredSlotKey = signal<string | null>(null);
   protected readonly sceneLabel = SCENE_LABEL;
 
   protected readonly pointerActive = computed(
-    () =>
-      this.hoveredId() !== null || this.hoveredCellKey() !== null || this.hoveredSlotKey() !== null,
+    () => this.hoveredId() !== null || this.hoveredCellKey() !== null,
   );
 
   protected readonly height = computed(() =>
@@ -107,12 +111,12 @@ export class GardenViewComponent {
     this.#viewport.prefersReducedMotion() ? STILL_FRAMELOOP : ANIMATED_FRAMELOOP,
   );
 
-  protected readonly field = computed(() => buildGardenField(this.#plan.plan(), this.rows()));
+  protected readonly field = computed(() => buildGardenField(this.#plan.plan()));
 
   protected readonly bounds = computed<SceneBounds>(() => ({
     width: this.field().width,
     depth: this.field().depth,
-    height: SCENE_HEIGHT,
+    height: this.field().height,
   }));
 
   protected readonly focus = computed<FocusInfo | null>(() => {
@@ -120,41 +124,39 @@ export class GardenViewComponent {
     if (cellKey !== null) {
       return this.#cellFocus(cellKey);
     }
-    const bedId = this.hoveredId() ?? this.selectedId();
-    return bedId === null ? null : this.#bedFocus(bedId);
+    const parcelId = this.hoveredId() ?? this.selectedId();
+    return parcelId === null ? null : this.#parcelFocus(parcelId);
   });
 
   #cellFocus(cellKey: string): FocusInfo | null {
     const cell = this.field()
-      .beds.flatMap(bed => bed.cells)
+      .parcels.flatMap(parcel => parcel.cells)
       .find(candidate => candidate.key === cellKey);
     if (!cell) {
       return null;
     }
     if (cell.varietyId === null) {
-      return { label: 'Case libre', detail: 'Touchez pour choisir une variété' };
+      return { label: FREE_CELL_LABEL, detail: FREE_CELL_DETAIL };
     }
-    const row = this.rows().find(candidate => candidate.varietyId === cell.varietyId);
-    const harvested = row ? formatQuantity(row.harvestedKg, cropUnit(row.cropId)) : '';
     return {
       label: cell.label,
-      detail: [row?.categoryLabel, harvested].filter(Boolean).join(DETAIL_SEPARATOR),
+      detail: `Récolté : ${cell.harvestedKg.toFixed(1).replace('.', ',')} kg`,
     };
   }
 
-  #bedFocus(bedId: string): FocusInfo | null {
-    const bed = this.field().beds.find(candidate => candidate.id === bedId);
-    if (!bed) {
+  #parcelFocus(parcelId: string): FocusInfo | null {
+    const parcel = this.field().parcels.find(candidate => candidate.id === parcelId);
+    if (!parcel) {
       return null;
     }
-    const total = bed.columns * bed.rows;
-    if (bed.plantedCount === 0) {
-      return { label: `Bac ${bed.columns} × ${bed.rows}`, detail: EMPTY_BED_DETAIL };
+    const total = parcel.columns * parcel.rows;
+    if (parcel.plantedCount === 0) {
+      return { label: parcel.name, detail: EMPTY_PARCEL_DETAIL };
     }
-    const suffix = bed.plantedCount > 1 ? CELLS_SUFFIX_PLURAL : CELLS_SUFFIX;
+    const plural = parcel.plantedCount > 1 ? 's' : '';
     return {
-      label: `Bac ${bed.columns} × ${bed.rows}`,
-      detail: `${bed.plantedCount} ${suffix} plantée${bed.plantedCount > 1 ? 's' : ''} sur ${total}`,
+      label: parcel.name,
+      detail: `${parcel.plantedCount} case${plural} semée${plural} sur ${total}`,
     };
   }
 

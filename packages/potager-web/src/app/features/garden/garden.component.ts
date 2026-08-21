@@ -26,6 +26,7 @@ import {
   SheetService,
   stringFilter,
 } from '@justin-croyable/design-system';
+import { type SheetRef } from '@justin-croyable/design-system/components/sheet';
 import { GARDEN_ROLE, type GardenRole, type ShareableRole } from '@justin-croyable/api-contract';
 import { NgIcon } from '@ng-icons/core';
 
@@ -43,26 +44,42 @@ import { GardenStore } from '../../core/garden-store';
 import { HarvestStore } from '../../core/harvest-store';
 import { SeasonStore } from '../../core/season-store';
 import { SharingStore } from '../../core/sharing-store';
-import { CatalogStore } from '../../core/catalog-store';
-import { GardenPlanStore } from './garden-plan-store';
-import { GARDEN_ADD_LINK } from '../../app.routes';
+import { GARDEN_ADD_LINK, GARDEN_SETUP_LINK } from '../../app.routes';
 
+import { CATALOG_VARIETIES, varietyLabel } from './plan/garden-catalog';
+import { GardenPlanStore } from './plan/garden-plan-store';
 import {
-  availableBedSizes,
-  type BedSize,
-  bedSizeLabel,
-} from './scene/garden-plan.model';
-import { type GardenCell, type GardenSlot } from './scene/garden-layout';
+  formatMetres,
+  gridLabel,
+  type Parcel,
+  parcelFootprint,
+  SOW_MODE,
+  type SowMode,
+} from './plan/parcel.model';
+import { type GardenCell } from './scene/garden-layout';
 import { GardenViewComponent } from './scene/garden-view.component';
 
-const NUMBER_FORMATTER = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
-const EUR_FORMATTER = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
+const NUMBER_FORMATTER = new Intl.NumberFormat('fr-FR', {
+  maximumFractionDigits: 0,
+});
+const EUR_FORMATTER = new Intl.NumberFormat('fr-FR', {
+  style: 'currency',
+  currency: 'EUR',
+});
 const PLANT_COUNT_PREFIX = '×';
 
 const SEASON_FILTER_ITEMS: SegmentItem[] = [
   { value: SEASON_FILTER_ALL, label: 'Année entière' },
-  { value: SEASON.summer, label: SEASON_META.summer.label, icon: SEASON_META.summer.icon },
-  { value: SEASON.winter, label: SEASON_META.winter.label, icon: SEASON_META.winter.icon },
+  {
+    value: SEASON.summer,
+    label: SEASON_META.summer.label,
+    icon: SEASON_META.summer.icon,
+  },
+  {
+    value: SEASON.winter,
+    label: SEASON_META.winter.label,
+    icon: SEASON_META.winter.icon,
+  },
 ];
 
 const ROLE_LABEL: Readonly<Record<GardenRole, string>> = {
@@ -91,25 +108,64 @@ type PlotItem = {
   readonly savings: string;
 };
 
-type BedContent = {
+type ParcelContent = {
   readonly varietyId: string;
   readonly label: string;
   readonly count: string;
 };
 
-type BedDetail = {
+type ParcelDetail = {
   readonly label: string;
   readonly fill: string;
-  readonly contents: readonly BedContent[];
+  readonly surface: string;
+  readonly contents: readonly ParcelContent[];
 };
 
-type BedSizeOption = {
-  readonly key: string;
+type SowOption = {
+  readonly mode: SowMode;
   readonly label: string;
-  readonly size: BedSize;
+  readonly description: string;
 };
 
-const INVITE_ROLE_OPTIONS: readonly { readonly value: ShareableRole; readonly label: string }[] = [
+const SOW_OPTIONS: readonly SowOption[] = [
+  {
+    mode: SOW_MODE.single,
+    label: 'Semence unitaire',
+    description: 'Uniquement cette case.',
+  },
+  {
+    mode: SOW_MODE.parcel,
+    label: 'Remplir la parcelle',
+    description: 'Toutes les cases libres et occupées de la parcelle.',
+  },
+  {
+    mode: SOW_MODE.row,
+    label: 'Remplir la ligne',
+    description: 'Toute la ligne de cette case.',
+  },
+  {
+    mode: SOW_MODE.column,
+    label: 'Remplir la colonne',
+    description: 'Toute la colonne de cette case.',
+  },
+];
+
+const DEFAULT_HARVEST_KG = 1;
+
+type SheetConfig = {
+  readonly title: string;
+  readonly description?: string;
+  readonly okText?: string;
+  readonly cancelText?: string;
+  readonly hideFooter?: boolean;
+  readonly content: TemplateRef<unknown>;
+  readonly onOk?: () => void;
+};
+
+const INVITE_ROLE_OPTIONS: readonly {
+  readonly value: ShareableRole;
+  readonly label: string;
+}[] = [
   { value: GARDEN_ROLE.viewer, label: ROLE_LABEL[GARDEN_ROLE.viewer] },
   { value: GARDEN_ROLE.coOwner, label: ROLE_LABEL[GARDEN_ROLE.coOwner] },
 ];
@@ -129,7 +185,7 @@ const INVITE_ROLE_OPTIONS: readonly { readonly value: ShareableRole; readonly la
     FabListComponent,
     InputDirective,
     InputGroupComponent,
-      GardenViewComponent,
+    GardenViewComponent,
     ...SelectImports,
   ],
   template: `
@@ -137,7 +193,7 @@ const INVITE_ROLE_OPTIONS: readonly { readonly value: ShareableRole; readonly la
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex flex-col">
           <p class="text-muted-foreground text-sm">
-            Posez vos bacs sur le champ, puis choisissez la variété de chaque case.
+            Touchez une case pour semer, un plant pour le récolter.
           </p>
         </div>
         <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
@@ -195,6 +251,16 @@ const INVITE_ROLE_OPTIONS: readonly { readonly value: ShareableRole; readonly la
             </button>
           }
           @if (canWrite()) {
+            <a
+              appButton
+              variant="outline"
+              size="sm"
+              class="hidden sm:inline-flex"
+              [routerLink]="setupLink"
+            >
+              <ng-icon name="phosphorRuler" class="size-4" />
+              Reconfigurer
+            </a>
             <a appButton size="sm" class="hidden sm:inline-flex" [routerLink]="addLink">
               <ng-icon name="phosphorPlus" class="size-4" />
               Ajouter
@@ -203,74 +269,80 @@ const INVITE_ROLE_OPTIONS: readonly { readonly value: ShareableRole; readonly la
         </div>
       </div>
 
-      <div class="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <app-garden-view
-          class="block xl:col-span-2"
-          [rows]="displayedRows()"
-          [(selectedId)]="selectedId"
-          (slotPicked)="onSlotPicked($event)"
-          (cellPicked)="onCellPicked($event)"
-        />
+      @if (!plan.isConfigured()) {
+        <app-card
+          title="Votre potager n’est pas encore dessiné"
+          description="Décrivez vos parcelles et disposez-les sur le terrain pour commencer à semer."
+        >
+          <div card-footer class="w-full flex-row justify-start">
+            <a appButton [routerLink]="setupLink">
+              <ng-icon name="phosphorRuler" class="size-4" />
+              Créer mon potager
+            </a>
+          </div>
+        </app-card>
+      } @else {
+        <div class="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          <app-garden-view
+            class="block xl:col-span-2"
+            [(selectedId)]="selectedId"
+            (cellPicked)="onCellPicked($event)"
+          />
 
-        <div class="flex flex-col gap-4">
-          @if (bedDetail(); as detail) {
-            <app-card [title]="detail.label" [description]="detail.fill">
-              @if (detail.contents.length === 0) {
+          <div class="flex flex-col gap-4">
+            @if (parcelDetail(); as detail) {
+              <app-card [title]="detail.label" [description]="detail.fill">
                 <p class="text-muted-foreground text-sm">
-                  Touchez une case du bac pour y implanter une variété.
+                  {{ detail.surface }}
                 </p>
-              } @else {
-                <div class="flex flex-col gap-1">
-                  @for (content of detail.contents; track content.varietyId) {
-                    <div class="flex items-center justify-between gap-3">
-                      <span class="text-foreground min-w-0 flex-1 truncate text-sm">
-                        {{ content.label }}
-                      </span>
+                @if (detail.contents.length === 0) {
+                  <p class="text-muted-foreground text-sm">
+                    Touchez une case de la parcelle pour y semer une variété.
+                  </p>
+                } @else {
+                  <div class="flex flex-col gap-1">
+                    @for (content of detail.contents; track content.varietyId) {
+                      <div class="flex items-center justify-between gap-3">
+                        <span class="text-foreground min-w-0 flex-1 truncate text-sm">
+                          {{ content.label }}
+                        </span>
+                        <span class="text-muted-foreground shrink-0 text-xs tabular-nums">
+                          {{ content.count }}
+                        </span>
+                      </div>
+                    }
+                  </div>
+                }
+              </app-card>
+            } @else {
+              <app-card title="Aucune parcelle sélectionnée" [description]="planSummary()">
+                <p class="text-muted-foreground text-sm">
+                  Touchez une parcelle pour voir ce qui y pousse, ou une case pour semer.
+                </p>
+              </app-card>
+            }
+
+            @if (hasRows()) {
+              <app-card title="Vos variétés" [description]="plotCountLabel()">
+                <div class="flex max-h-80 flex-col gap-2 overflow-y-auto">
+                  @for (plot of plotItems(); track plot.id) {
+                    <div class="flex items-center gap-2">
+                      <ng-icon [name]="plot.icon" class="text-muted-foreground size-4 shrink-0" />
+                      <span class="min-w-0 flex-1 truncate text-sm">{{ plot.label }}</span>
                       <span class="text-muted-foreground shrink-0 text-xs tabular-nums">
-                        {{ content.count }}
+                        {{ plot.plants }}
+                      </span>
+                      <span class="shrink-0 text-xs font-semibold tabular-nums">
+                        {{ plot.savings }}
                       </span>
                     </div>
                   }
                 </div>
-              }
-              @if (canWrite()) {
-                <div card-footer class="w-full flex-row justify-end">
-                  <button appButton variant="outline" size="sm" (click)="onRemoveBed()">
-                    <ng-icon name="phosphorTrash" class="size-4" />
-                    Retirer le bac
-                  </button>
-                </div>
-              }
-            </app-card>
-          } @else {
-            <app-card title="Aucun bac sélectionné">
-              <p class="text-muted-foreground text-sm">
-                Touchez un emplacement libre du champ pour poser un bac, ou un bac existant pour
-                voir son contenu.
-              </p>
-            </app-card>
-          }
-
-          @if (hasRows()) {
-            <app-card title="Vos variétés" [description]="plotCountLabel()">
-              <div class="flex max-h-80 flex-col gap-2 overflow-y-auto">
-                @for (plot of plotItems(); track plot.id) {
-                  <div class="flex items-center gap-2">
-                    <ng-icon [name]="plot.icon" class="text-muted-foreground size-4 shrink-0" />
-                    <span class="min-w-0 flex-1 truncate text-sm">{{ plot.label }}</span>
-                    <span class="text-muted-foreground shrink-0 text-xs tabular-nums">
-                      {{ plot.plants }}
-                    </span>
-                    <span class="shrink-0 text-xs font-semibold tabular-nums">
-                      {{ plot.savings }}
-                    </span>
-                  </div>
-                }
-              </div>
-            </app-card>
-          }
+              </app-card>
+            }
+          </div>
         </div>
-      </div>
+      }
     </div>
 
     @if (showMobileActions()) {
@@ -298,16 +370,14 @@ const INVITE_ROLE_OPTIONS: readonly { readonly value: ShareableRole; readonly la
             </button>
           }
           @if (canWrite()) {
-            <button
+            <a
               appFabButton
-              type="button"
-              variant="destructive"
-              [fabDisabled]="!selectedId()"
-              aria-label="Retirer le bac sélectionné"
-              (click)="onRemoveBed()"
+              variant="secondary"
+              [routerLink]="setupLink"
+              aria-label="Reconfigurer le potager"
             >
-              <ng-icon name="phosphorTrash" />
-            </button>
+              <ng-icon name="phosphorRuler" />
+            </a>
           }
           @if (canManage()) {
             <button
@@ -333,33 +403,25 @@ const INVITE_ROLE_OPTIONS: readonly { readonly value: ShareableRole; readonly la
       </app-fab>
     }
 
-    <ng-template #bedSizeSheet>
-      <div class="flex flex-col gap-4 p-4">
-        <p class="text-muted-foreground text-sm">
-          Choisissez les dimensions du bac à poser sur cet emplacement.
-        </p>
-        <div class="grid grid-cols-3 gap-2">
-          @for (option of bedSizeOptions(); track option.key) {
-            <button
-              appButton
-              type="button"
-              size="sm"
-              [variant]="option.key === bedSizeKey() ? 'default' : 'outline'"
-              (click)="bedSizeKey.set(option.key)"
-            >
-              {{ option.label }}
-            </button>
-          }
-        </div>
-        @if (bedSizeOptions().length === 0) {
-          <p class="text-destructive text-sm">
-            Aucun bac ne tient sur cet emplacement : il est trop proche du bord ou d'un bac voisin.
-          </p>
+    <ng-template #sowModeSheet>
+      <div class="flex flex-col gap-2 p-4">
+        @for (option of sowOptions; track option.mode) {
+          <button
+            appButton
+            type="button"
+            variant="outline"
+            full
+            class="h-auto flex-col items-start gap-0.5 py-3 text-left"
+            (click)="onSowModeChosen(option.mode)"
+          >
+            <span class="text-sm font-medium">{{ option.label }}</span>
+            <span class="text-muted-foreground text-xs font-normal">{{ option.description }}</span>
+          </button>
         }
       </div>
     </ng-template>
 
-    <ng-template #cellSheet>
+    <ng-template #varietySheet>
       <div class="flex flex-col gap-4 p-4">
         <app-select
           label="Variété"
@@ -367,21 +429,43 @@ const INVITE_ROLE_OPTIONS: readonly { readonly value: ShareableRole; readonly la
           [value]="cellVarietyId()"
           (valueChange)="onCellVarietyChange($event)"
         >
-          @for (option of varietyOptions(); track option.id) {
+          @for (option of varietyItems; track option.id) {
             <app-select-item [value]="option.id">{{ option.label }}</app-select-item>
           }
         </app-select>
-        @if (varietyOptions().length === 0) {
-          <p class="text-muted-foreground text-sm">
-            Aucune variété au catalogue. Ajoutez-en une depuis l'écran des prix.
-          </p>
-        }
-        @if (pendingCellPlanted()) {
-          <button appButton variant="outline" size="sm" class="self-start" (click)="onClearCell()">
-            <ng-icon name="phosphorTrash" class="size-4" />
-            Vider la case
-          </button>
-        }
+        <p class="text-muted-foreground text-sm">{{ sowSummary() }}</p>
+      </div>
+    </ng-template>
+
+    <ng-template #plantSheet>
+      <div class="flex flex-col gap-2 p-4">
+        <button appButton type="button" variant="outline" full (click)="onHarvestRequested()">
+          <ng-icon name="phosphorBasket" class="size-4" />
+          Récolter
+        </button>
+        <button appButton type="button" variant="outline" full (click)="onUproot()">
+          <ng-icon name="phosphorTrash" class="size-4" />
+          Enlever
+        </button>
+        <button appButton type="button" variant="outline" full (click)="onReplaceRequested()">
+          <ng-icon name="phosphorPencilSimple" class="size-4" />
+          Modifier la variété
+        </button>
+      </div>
+    </ng-template>
+
+    <ng-template #harvestSheet>
+      <div class="flex flex-col gap-4 p-4">
+        <app-input-group label="Quantité récoltée (kg)">
+          <input
+            app-input
+            type="number"
+            step="0.1"
+            min="0"
+            [value]="harvestQuantity()"
+            (valueChange)="onHarvestQuantityChange($event)"
+          />
+        </app-input-group>
       </div>
     </ng-template>
 
@@ -428,7 +512,11 @@ const INVITE_ROLE_OPTIONS: readonly { readonly value: ShareableRole; readonly la
               (input)="onInviteEmailInput($event)"
             />
           </app-input-group>
-          <app-select label="Rôle" [value]="inviteRole()" (valueChange)="onInviteRoleChange($event)">
+          <app-select
+            label="Rôle"
+            [value]="inviteRole()"
+            (valueChange)="onInviteRoleChange($event)"
+          >
             @for (option of inviteRoleOptions; track option.value) {
               <app-select-item [value]="option.value">{{ option.label }}</app-select-item>
             }
@@ -454,7 +542,9 @@ const INVITE_ROLE_OPTIONS: readonly { readonly value: ShareableRole; readonly la
           <p class="text-sm font-medium">Membres</p>
           @for (member of memberRows(); track member.id) {
             <div class="flex items-center justify-between gap-3 py-2">
-              <span class="text-foreground min-w-0 flex-1 truncate text-sm">{{ member.email }}</span>
+              <span class="text-foreground min-w-0 flex-1 truncate text-sm">{{
+                member.email
+              }}</span>
               <app-badge [type]="member.badgeType">{{ member.roleLabel }}</app-badge>
               @if (member.removable) {
                 <button
@@ -480,20 +570,25 @@ export class GardenComponent {
   protected readonly season = inject(SeasonStore);
   protected readonly sharing = inject(SharingStore);
   protected readonly plan = inject(GardenPlanStore);
-  readonly #catalog = inject(CatalogStore);
   readonly #access = inject(GardenAccessStore);
   readonly #harvests = inject(HarvestStore);
   readonly #sheet = inject(SheetService);
+  readonly #openSheetRef = signal<SheetRef<unknown> | null>(null);
 
   protected readonly canWrite = this.#access.canWriteActive;
 
-  private readonly bedSizeSheetTemplate = viewChild.required<TemplateRef<unknown>>('bedSizeSheet');
-  private readonly cellSheetTemplate = viewChild.required<TemplateRef<unknown>>('cellSheet');
+  private readonly sowModeSheetTemplate = viewChild.required<TemplateRef<unknown>>('sowModeSheet');
+  private readonly varietySheetTemplate = viewChild.required<TemplateRef<unknown>>('varietySheet');
+  private readonly plantSheetTemplate = viewChild.required<TemplateRef<unknown>>('plantSheet');
+  private readonly harvestSheetTemplate = viewChild.required<TemplateRef<unknown>>('harvestSheet');
   private readonly filterSheetTemplate = viewChild.required<TemplateRef<unknown>>('filterSheet');
   private readonly shareSheetTemplate = viewChild.required<TemplateRef<unknown>>('shareSheet');
   private readonly renameSheetTemplate = viewChild.required<TemplateRef<unknown>>('renameSheet');
 
   protected readonly addLink = GARDEN_ADD_LINK;
+  protected readonly setupLink = GARDEN_SETUP_LINK;
+  protected readonly sowOptions = SOW_OPTIONS;
+  protected readonly varietyItems = CATALOG_VARIETIES;
   protected readonly seasonItems = SEASON_FILTER_ITEMS;
   protected readonly cultureOptions = CULTURE_FILTER_OPTIONS;
   protected readonly inviteRoleOptions = INVITE_ROLE_OPTIONS;
@@ -504,26 +599,27 @@ export class GardenComponent {
   protected readonly inviteRole = signal<ShareableRole>(GARDEN_ROLE.viewer);
   protected readonly inviteError = signal<string | null>(null);
   protected readonly renameInput = signal<string>('');
-  protected readonly pendingSlot = signal<GardenSlot | null>(null);
   protected readonly pendingCell = signal<GardenCell | null>(null);
-  protected readonly bedSizeKey = signal<string | null>(null);
+  protected readonly pendingMode = signal<SowMode>(SOW_MODE.single);
   protected readonly cellVarietyId = signal<string | null>(null);
+  protected readonly harvestQuantity = signal<number>(DEFAULT_HARVEST_KG);
 
-  protected readonly varietyOptions = this.#catalog.varietyOptions;
-
-  protected readonly bedSizeOptions = computed<BedSizeOption[]>(() => {
-    const slot = this.pendingSlot();
-    if (slot === null) {
-      return [];
+  protected readonly sowSummary = computed(() => {
+    const cell = this.pendingCell();
+    const parcel = this.#parcelOf(cell?.parcelId ?? null);
+    if (!cell || !parcel) {
+      return '';
     }
-    return availableBedSizes(this.plan.beds(), slot.column, slot.row).map(size => ({
-      key: bedSizeLabel(size),
-      label: bedSizeLabel(size),
-      size,
-    }));
+    const option = SOW_OPTIONS.find(candidate => candidate.mode === this.pendingMode());
+    return option ? option.description : '';
   });
 
-  protected readonly pendingCellPlanted = computed(() => this.pendingCell()?.varietyId !== null);
+  protected readonly planSummary = computed(() => {
+    const parcels = this.plan.parcels().length;
+    const cells = this.plan.cellCount();
+    const plural = parcels > 1 ? 's' : '';
+    return `${parcels} parcelle${plural} · ${cells} cases · ${this.plan.plantedCount()} semées`;
+  });
 
   protected readonly memberRows = computed<MemberRow[]>(() =>
     this.sharing.members().map(member => ({
@@ -552,7 +648,9 @@ export class GardenComponent {
   );
 
   protected readonly showYearSelector = computed(() => this.#harvests.availableYears().length >= 2);
-  protected readonly yearOptions = computed(() => buildYearOptions(this.#harvests.availableYears()));
+  protected readonly yearOptions = computed(() =>
+    buildYearOptions(this.#harvests.availableYears()),
+  );
   protected readonly yearValue = computed(() => yearFilterToValue(this.#harvests.effectiveYear()));
 
   protected readonly plotItems = computed<PlotItem[]>(() =>
@@ -570,55 +668,95 @@ export class GardenComponent {
     return count > 1 ? `${count} variétés cultivées` : `${count} variété cultivée`;
   });
 
-  protected readonly bedDetail = computed<BedDetail | null>(() => {
-    const bedId = this.selectedId();
-    const bed = this.plan.beds().find(candidate => candidate.id === bedId);
-    if (!bed) {
+  protected readonly parcelDetail = computed<ParcelDetail | null>(() => {
+    const parcel = this.#parcelOf(this.selectedId());
+    if (!parcel) {
       return null;
     }
-    const cells = this.plan.cells().filter(cell => cell.bedId === bed.id);
-    const labels = this.#catalog.byId();
-    const counts = cells.reduce<Map<string, number>>((accumulator, cell) => {
-      accumulator.set(cell.varietyId, (accumulator.get(cell.varietyId) ?? 0) + 1);
+    const placement = this.plan.placements().find(candidate => candidate.parcelId === parcel.id);
+    const footprint = parcelFootprint(parcel, placement?.rotated ?? false);
+    const plantings = this.plan.plantings().filter(planting => planting.parcelId === parcel.id);
+    const counts = plantings.reduce<Map<string, number>>((accumulator, planting) => {
+      accumulator.set(planting.varietyId, (accumulator.get(planting.varietyId) ?? 0) + 1);
       return accumulator;
     }, new Map());
-    const total = bed.columns * bed.rows;
+    const total = footprint.columns * footprint.rows;
+    const plural = plantings.length > 1 ? 's' : '';
     return {
-      label: `Bac ${bed.columns} × ${bed.rows}`,
-      fill: `${cells.length} case${cells.length > 1 ? 's' : ''} plantée${cells.length > 1 ? 's' : ''} sur ${total}`,
+      label: parcel.name,
+      fill: `${plantings.length} case${plural} semée${plural} sur ${total}`,
+      surface: `${formatMetres(footprint.widthCm)} × ${formatMetres(footprint.depthCm)} · ${gridLabel(footprint)}`,
       contents: Array.from(counts.entries()).map(([varietyId, count]) => ({
         varietyId,
-        label: labels.get(varietyId)?.label ?? varietyId,
+        label: varietyLabel(varietyId),
         count: `${PLANT_COUNT_PREFIX}${NUMBER_FORMATTER.format(count)}`,
       })),
     };
   });
 
-  protected onSlotPicked(slot: GardenSlot): void {
-    this.pendingSlot.set(slot);
-    const [first] = availableBedSizes(this.plan.beds(), slot.column, slot.row);
-    this.bedSizeKey.set(first ? bedSizeLabel(first) : null);
-    this.#sheet.create({
-      title: 'Poser un bac',
-      side: 'bottom',
-      okText: 'Poser',
-      cancelText: 'Annuler',
-      content: this.bedSizeSheetTemplate(),
-      onOk: () => this.#placeBed(),
+  protected onCellPicked(cell: GardenCell): void {
+    if (!this.canWrite()) {
+      return;
+    }
+    this.pendingCell.set(cell);
+    this.selectedId.set(cell.parcelId);
+    if (cell.varietyId === null) {
+      this.#openSowModeSheet();
+      return;
+    }
+    this.cellVarietyId.set(cell.varietyId);
+    this.#openSheet({
+      title: cell.label,
+      description: 'Que voulez-vous faire de ce plant ?',
+      hideFooter: true,
+      content: this.plantSheetTemplate(),
     });
   }
 
-  protected onCellPicked(cell: GardenCell): void {
-    this.pendingCell.set(cell);
-    this.cellVarietyId.set(cell.varietyId);
-    this.#sheet.create({
-      title: cell.varietyId === null ? 'Planter une variété' : 'Changer de variété',
-      side: 'bottom',
-      okText: 'Valider',
+  protected onSowModeChosen(mode: SowMode): void {
+    this.pendingMode.set(mode);
+    this.cellVarietyId.set(null);
+    this.#closeSheet();
+    this.#openSheet({
+      title: 'Choisir une variété',
+      okText: 'Semer',
       cancelText: 'Annuler',
-      content: this.cellSheetTemplate(),
-      onOk: () => this.#assignCell(),
+      content: this.varietySheetTemplate(),
+      onOk: () => this.#sow(),
     });
+  }
+
+  protected onReplaceRequested(): void {
+    this.pendingMode.set(SOW_MODE.single);
+    this.#closeSheet();
+    this.#openSheet({
+      title: 'Changer de variété',
+      okText: 'Remplacer',
+      cancelText: 'Annuler',
+      content: this.varietySheetTemplate(),
+      onOk: () => this.#replaceVariety(),
+    });
+  }
+
+  protected onHarvestRequested(): void {
+    this.harvestQuantity.set(DEFAULT_HARVEST_KG);
+    this.#closeSheet();
+    this.#openSheet({
+      title: 'Récolter',
+      okText: 'Enregistrer',
+      cancelText: 'Annuler',
+      content: this.harvestSheetTemplate(),
+      onOk: () => this.#harvest(),
+    });
+  }
+
+  protected onUproot(): void {
+    const cell = this.pendingCell();
+    this.#closeSheet();
+    if (cell === null) {
+      return;
+    }
+    this.plan.uproot(cell.parcelId, { column: cell.column, row: cell.row });
   }
 
   protected onCellVarietyChange(value: string | string[] | null): void {
@@ -627,40 +765,66 @@ export class GardenComponent {
     }
   }
 
-  protected onClearCell(): void {
-    const cell = this.pendingCell();
-    if (cell === null) {
-      return;
-    }
-    this.plan.clearCell(cell.bedId, cell.column, cell.row);
-    this.cellVarietyId.set(null);
+  protected onHarvestQuantityChange(value: string | number | null | undefined): void {
+    const parsed = Number(value);
+    this.harvestQuantity.set(Number.isFinite(parsed) ? parsed : 0);
   }
 
-  protected onRemoveBed(): void {
-    const bedId = this.selectedId();
-    if (bedId === null) {
-      return;
-    }
-    this.plan.removeBed(bedId);
-    this.selectedId.set(null);
+  #openSowModeSheet(): void {
+    this.#openSheet({
+      title: 'Semer',
+      description: 'Sur quelle étendue voulez-vous semer ?',
+      hideFooter: true,
+      content: this.sowModeSheetTemplate(),
+    });
   }
 
-  #placeBed(): void {
-    const slot = this.pendingSlot();
-    const option = this.bedSizeOptions().find(candidate => candidate.key === this.bedSizeKey());
-    if (slot === null || !option) {
-      return;
-    }
-    this.plan.addBed(slot.column, slot.row, option.size);
-  }
-
-  #assignCell(): void {
+  #sow(): void {
     const cell = this.pendingCell();
     const varietyId = this.cellVarietyId();
     if (cell === null || varietyId === null) {
       return;
     }
-    this.plan.assignCell(cell.bedId, cell.column, cell.row, varietyId);
+    this.plan.sow(
+      cell.parcelId,
+      { column: cell.column, row: cell.row },
+      this.pendingMode(),
+      varietyId,
+    );
+  }
+
+  #replaceVariety(): void {
+    const cell = this.pendingCell();
+    const varietyId = this.cellVarietyId();
+    if (cell === null || varietyId === null) {
+      return;
+    }
+    this.plan.replaceVariety(cell.parcelId, { column: cell.column, row: cell.row }, varietyId);
+  }
+
+  #harvest(): void {
+    const cell = this.pendingCell();
+    const quantity = this.harvestQuantity();
+    if (cell === null || quantity <= 0) {
+      return;
+    }
+    this.plan.harvest(cell.parcelId, { column: cell.column, row: cell.row }, quantity);
+  }
+
+  #openSheet(config: SheetConfig): void {
+    this.#openSheetRef.set(this.#sheet.create({ side: 'bottom', ...config }));
+  }
+
+  #closeSheet(): void {
+    this.#openSheetRef()?.close();
+    this.#openSheetRef.set(null);
+  }
+
+  #parcelOf(parcelId: string | null): Parcel | null {
+    if (parcelId === null) {
+      return null;
+    }
+    return this.plan.parcels().find(parcel => parcel.id === parcelId) ?? null;
   }
 
   protected onSeasonChange(value: string | null): void {
@@ -758,5 +922,4 @@ export class GardenComponent {
       this.season.setYear(parsed);
     }
   }
-
 }

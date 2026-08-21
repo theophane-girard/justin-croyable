@@ -11,36 +11,33 @@ import {
 import { SceneThemeService } from '@justin-croyable/design-system';
 import { ScenePartComponent } from '@justin-croyable/design-system/components/scene';
 
-import { type GardenCell, type GardenField, type GardenSlot } from './garden-layout';
+import { type GardenCell, type GardenField, type GardenParcel } from './garden-layout';
 import { GARDEN_PALETTE } from './garden-palette';
-import { buildFieldParts } from './garden-structure-parts';
-import { GardenBedComponent } from './garden-bed.component';
-import { GardenSlotComponent } from './garden-slot.component';
+import { buildTerrainParts } from './garden-structure-parts';
+import {
+  GardenParcelComponent,
+  PARCEL_STATE,
+  type ParcelPointer,
+  type ParcelState,
+} from './garden-parcel.component';
 
 @Component({
   selector: 'app-garden-scene',
-  imports: [ScenePartComponent, GardenBedComponent, GardenSlotComponent],
+  imports: [ScenePartComponent, GardenParcelComponent],
   template: `
-    @for (part of fieldParts(); track part.id) {
+    @for (part of terrainParts(); track part.id) {
       <app-scene-part [part]="part" />
     }
 
-    @for (slot of field().slots; track slot.key) {
-      <app-garden-slot
-        [slot]="slot"
-        [hovered]="slot.key === hoveredSlotKey()"
-        (picked)="slotPicked.emit($event)"
-        (hoverChange)="slotHoverChange.emit($event)"
-      />
-    }
-
-    @for (bed of field().beds; track bed.id) {
-      <app-garden-bed
-        [bed]="bed"
-        [selected]="bed.id === selectedId()"
-        [hovered]="bed.id === hoveredId()"
+    @for (parcel of field().parcels; track parcel.id) {
+      <app-garden-parcel
+        [parcel]="parcel"
+        [state]="stateOf()(parcel)"
+        [interactiveCells]="interactiveCells()"
+        [showGrid]="showGrid()"
         [hoveredCellKey]="hoveredCellKey()"
         (picked)="picked.emit($event)"
+        (pressed)="pressed.emit($event)"
         (hoverChange)="hoverChange.emit($event)"
         (cellPicked)="cellPicked.emit($event)"
         (cellHoverChange)="cellHoverChange.emit($event)"
@@ -55,19 +52,36 @@ export class GardenSceneComponent {
   readonly field = input.required<GardenField>();
   readonly selectedId = input<string | null>(null);
   readonly hoveredId = input<string | null>(null);
+  readonly invalidIds = input<ReadonlySet<string>>(new Set<string>());
   readonly hoveredCellKey = input<string | null>(null);
-  readonly hoveredSlotKey = input<string | null>(null);
+  readonly interactiveCells = input(true);
+  readonly showGrid = input(true);
+  readonly tilledTerrain = input(true);
 
   readonly picked = output<string>();
+  readonly pressed = output<ParcelPointer>();
   readonly hoverChange = output<string | null>();
   readonly cellPicked = output<GardenCell>();
   readonly cellHoverChange = output<string | null>();
-  readonly slotPicked = output<GardenSlot>();
-  readonly slotHoverChange = output<string | null>();
 
   readonly #colors = inject(SceneThemeService).palette(GARDEN_PALETTE);
 
-  protected readonly fieldParts = computed(() =>
-    buildFieldParts(this.field().width, this.field().depth, this.#colors()),
+  protected readonly terrainParts = computed(() =>
+    buildTerrainParts(this.field().width, this.field().depth, this.#colors(), this.tilledTerrain()),
   );
+
+  protected readonly stateOf = computed(() => {
+    const selectedId = this.selectedId();
+    const hoveredId = this.hoveredId();
+    const invalidIds = this.invalidIds();
+    return (parcel: GardenParcel): ParcelState => {
+      if (invalidIds.has(parcel.id)) {
+        return PARCEL_STATE.invalid;
+      }
+      if (parcel.id === selectedId) {
+        return PARCEL_STATE.selected;
+      }
+      return parcel.id === hoveredId ? PARCEL_STATE.hovered : PARCEL_STATE.idle;
+    };
+  });
 }

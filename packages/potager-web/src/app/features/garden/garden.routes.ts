@@ -14,6 +14,13 @@ export const GARDEN_ROUTES: Route[] = [
     providers: [provideJustinCroyableDS(withThree())],
   },
   {
+    path: APP_PATHS.new,
+    loadComponent: () => import('./plan/garden-setup.component').then(m => m.GardenSetupComponent),
+    title: 'Créer votre potager — Potager',
+    data: { skeleton: SKELETON_KIND.form, breadcrumb: 'Créer votre potager' },
+    providers: [provideJustinCroyableDS(withThree())],
+  },
+  {
     path: APP_PATHS.add,
     loadComponent: () => import('./add-plant.component').then(m => m.AddPlantComponent),
     title: 'Ajouter un plant — Potager',

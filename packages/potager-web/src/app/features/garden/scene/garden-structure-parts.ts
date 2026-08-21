@@ -4,64 +4,73 @@ import {
   type ScenePart,
   type ScenePartDraft,
   sceneParts,
-  type SceneVector,
 } from '@justin-croyable/design-system/components/scene';
 
-import { type GardenColors } from './garden-palette';
-import { BED_HEIGHT, BED_PLANK, FIELD_THICKNESS } from './garden-layout';
-import { SLOT_SIZE } from './garden-plan.model';
+import { PARCEL_KIND, type ParcelKind } from '../plan/parcel.model';
 
-const FIELD_PREFIX = 'field';
-const BED_PREFIX = 'bed';
+import { type GardenColors } from './garden-palette';
+import {
+  GROUND_SOIL_HEIGHT,
+  RAISED_HEIGHT,
+  RAISED_PLANK,
+  TERRAIN_THICKNESS,
+} from './garden-layout';
+
+const TERRAIN_PREFIX = 'terrain';
+const PARCEL_PREFIX = 'parcel';
 const CELL_PREFIX = 'cell';
-const SLOT_PREFIX = 'slot';
-const MARKER_PREFIX = 'marker';
-const RING_PREFIX = 'ring';
+const OUTLINE_PREFIX = 'outline';
+const GRID_PREFIX = 'grid';
+
 const SOIL_ROUGHNESS = 1;
 const WOOD_ROUGHNESS = 0.95;
-const GRASS_BORDER = 0.7;
-const FURROW_SPACING = 0.36;
-const FURROW_WIDTH = 0.11;
-const FURROW_HEIGHT = 0.04;
-const HALF_TURN = Math.PI;
-const HALF = 2;
-const MARKER_HEIGHT = 0.62;
+const GRASS_BORDER = 0.9;
+const SOIL_INSET = GRASS_BORDER;
+const FURROW_SPACING = 0.62;
+const FURROW_WIDTH = 0.1;
+const FURROW_HEIGHT = 0.02;
 const PLANK_SEGMENTS = 6;
-const CELL_INSET = 0.1;
-const CELL_TILE_HEIGHT = 0.04;
-const CELL_FURROW_COUNT = 3;
-const SLOT_MARKER_HEIGHT = 0.022;
-const SLOT_MARKER_INSET = 0.18;
+const POST_RATIO = 1.3;
+const CELL_INSET_RATIO = 0.12;
+const CELL_TILE_HEIGHT = 0.012;
+const OUTLINE_THICKNESS = 0.05;
+const OUTLINE_LIFT = 0.02;
+const GRID_LINE = 0.008;
+const HALF = 2;
 
-export function buildFieldParts(
+export function buildTerrainParts(
   width: number,
   depth: number,
   colors: GardenColors,
+  tilled = true,
 ): ScenePart[] {
-  const furrowCount = Math.max(1, Math.floor(depth / FURROW_SPACING));
+  const soilWidth = Math.max(width - SOIL_INSET, width * 0.5);
+  const soilDepth = Math.max(depth - SOIL_INSET, depth * 0.5);
+  const furrowCount = tilled ? Math.max(1, Math.floor(soilDepth / FURROW_SPACING)) : 0;
   const furrows = Array.from({ length: furrowCount }, (_, index): ScenePartDraft => {
     const offset = (index - (furrowCount - 1) / HALF) * FURROW_SPACING;
     return {
       geometry: SCENE_GEOMETRY.box,
-      args: [width * sceneNoiseRange(index + 1, 0.94, 1), FURROW_HEIGHT, FURROW_WIDTH],
+      args: [soilWidth * sceneNoiseRange(index + 1, 0.94, 1), FURROW_HEIGHT, FURROW_WIDTH],
       position: [0, FURROW_HEIGHT / HALF, offset],
       color: colors.fieldFurrow,
       roughness: SOIL_ROUGHNESS,
       flatShading: true,
     };
   });
-  return sceneParts(FIELD_PREFIX, [
+
+  return sceneParts(TERRAIN_PREFIX, [
     {
       geometry: SCENE_GEOMETRY.box,
-      args: [width + GRASS_BORDER, FIELD_THICKNESS * 0.9, depth + GRASS_BORDER],
-      position: [0, -FIELD_THICKNESS * 0.62, 0],
+      args: [width, TERRAIN_THICKNESS * 0.9, depth],
+      position: [0, -TERRAIN_THICKNESS * 0.62, 0],
       color: colors.grass,
       roughness: SOIL_ROUGHNESS,
     },
     {
       geometry: SCENE_GEOMETRY.box,
-      args: [width, FIELD_THICKNESS, depth],
-      position: [0, -FIELD_THICKNESS / HALF, 0],
+      args: [soilWidth, TERRAIN_THICKNESS, soilDepth],
+      position: [0, -TERRAIN_THICKNESS / HALF, 0],
       color: colors.fieldSoil,
       roughness: SOIL_ROUGHNESS,
     },
@@ -69,30 +78,23 @@ export function buildFieldParts(
   ]);
 }
 
-export function buildBedParts(
-  columns: number,
-  rows: number,
+function raisedFrameParts(
+  width: number,
+  depth: number,
   colors: GardenColors,
   plankColor: string,
-): ScenePart[] {
-  const width = columns * SLOT_SIZE;
-  const depth = rows * SLOT_SIZE;
-  const plankHeight = BED_HEIGHT + 0.06;
-  const outerWidth = width + BED_PLANK * HALF;
-  const halfWidth = width / HALF + BED_PLANK / HALF;
-  const halfDepth = depth / HALF + BED_PLANK / HALF;
-  return sceneParts(BED_PREFIX, [
-    {
-      geometry: SCENE_GEOMETRY.box,
-      args: [width, BED_HEIGHT, depth],
-      position: [0, BED_HEIGHT / HALF, 0],
-      color: colors.bedSoil,
-      roughness: SOIL_ROUGHNESS,
-    },
+): readonly ScenePartDraft[] {
+  const plankHeight = RAISED_HEIGHT + 0.05;
+  const outerWidth = width + RAISED_PLANK * HALF;
+  const halfWidth = width / HALF + RAISED_PLANK / HALF;
+  const halfDepth = depth / HALF + RAISED_PLANK / HALF;
+  const postHeight = plankHeight * POST_RATIO;
+
+  return [
     ...([halfDepth, -halfDepth] as const).map(
       (z): ScenePartDraft => ({
         geometry: SCENE_GEOMETRY.box,
-        args: [outerWidth, plankHeight, BED_PLANK],
+        args: [outerWidth, plankHeight, RAISED_PLANK],
         position: [0, plankHeight / HALF, z],
         color: plankColor,
         roughness: WOOD_ROUGHNESS,
@@ -101,107 +103,234 @@ export function buildBedParts(
     ...([halfWidth, -halfWidth] as const).map(
       (x): ScenePartDraft => ({
         geometry: SCENE_GEOMETRY.box,
-        args: [BED_PLANK, plankHeight, depth],
+        args: [RAISED_PLANK, plankHeight, depth],
         position: [x, plankHeight / HALF, 0],
         color: plankColor,
         roughness: WOOD_ROUGHNESS,
       }),
     ),
-    ...([
-      [halfWidth, halfDepth],
-      [halfWidth, -halfDepth],
-      [-halfWidth, halfDepth],
-      [-halfWidth, -halfDepth],
-    ] as const).map(
+    ...(
+      [
+        [halfWidth, halfDepth],
+        [halfWidth, -halfDepth],
+        [-halfWidth, halfDepth],
+        [-halfWidth, -halfDepth],
+      ] as const
+    ).map(
       ([x, z]): ScenePartDraft => ({
         geometry: SCENE_GEOMETRY.cylinder,
-        args: [BED_PLANK * 0.8, BED_PLANK * 0.8, plankHeight * 1.35, PLANK_SEGMENTS],
-        position: [x, (plankHeight * 1.35) / HALF, z],
+        args: [RAISED_PLANK * 0.8, RAISED_PLANK * 0.8, postHeight, PLANK_SEGMENTS],
+        position: [x, postHeight / HALF, z],
         color: colors.woodDark,
         roughness: WOOD_ROUGHNESS,
         flatShading: true,
       }),
     ),
+  ];
+}
+
+function groundEdgeParts(
+  width: number,
+  depth: number,
+  colors: GardenColors,
+): readonly ScenePartDraft[] {
+  const ridge = GROUND_SOIL_HEIGHT * 0.55;
+  return [
+    ...([depth / HALF, -depth / HALF] as const).map(
+      (z): ScenePartDraft => ({
+        geometry: SCENE_GEOMETRY.box,
+        args: [width, ridge, GROUND_SOIL_HEIGHT],
+        position: [0, GROUND_SOIL_HEIGHT + ridge / HALF, z],
+        color: colors.fieldFurrow,
+        roughness: SOIL_ROUGHNESS,
+        flatShading: true,
+      }),
+    ),
+    ...([width / HALF, -width / HALF] as const).map(
+      (x): ScenePartDraft => ({
+        geometry: SCENE_GEOMETRY.box,
+        args: [GROUND_SOIL_HEIGHT, ridge, depth],
+        position: [x, GROUND_SOIL_HEIGHT + ridge / HALF, 0],
+        color: colors.fieldFurrow,
+        roughness: SOIL_ROUGHNESS,
+        flatShading: true,
+      }),
+    ),
+  ];
+}
+
+/**
+ * Un bac est un caisson de planches posé sur le terrain ; une parcelle en pleine
+ * terre est une planche de terre travaillée, à peine surélevée et bordée d'un
+ * bourrelet de terre.
+ */
+export function buildParcelParts(
+  width: number,
+  depth: number,
+  kind: ParcelKind,
+  colors: GardenColors,
+  plankColor: string,
+): ScenePart[] {
+  const raised = kind === PARCEL_KIND.raised;
+  const soilHeight = raised ? RAISED_HEIGHT : GROUND_SOIL_HEIGHT;
+  return sceneParts(PARCEL_PREFIX, [
+    {
+      geometry: SCENE_GEOMETRY.box,
+      args: [width, soilHeight, depth],
+      position: [0, soilHeight / HALF, 0],
+      color: raised ? colors.bedSoil : colors.fieldSoil,
+      roughness: SOIL_ROUGHNESS,
+    },
+    ...(raised
+      ? raisedFrameParts(width, depth, colors, plankColor)
+      : groundEdgeParts(width, depth, colors)),
   ]);
 }
 
-export function buildCellParts(colors: GardenColors, tileColor: string): ScenePart[] {
-  const tileSize = SLOT_SIZE - CELL_INSET;
-  const furrows = Array.from({ length: CELL_FURROW_COUNT }, (_, index): ScenePartDraft => {
-    const offset = (index - (CELL_FURROW_COUNT - 1) / HALF) * (tileSize / CELL_FURROW_COUNT);
-    return {
-      geometry: SCENE_GEOMETRY.box,
-      args: [tileSize * 0.86, CELL_TILE_HEIGHT * 0.55, FURROW_WIDTH * 0.55],
-      position: [0, BED_HEIGHT + CELL_TILE_HEIGHT * 1.6, offset],
-      color: colors.bedFurrow,
-      roughness: SOIL_ROUGHNESS,
-      flatShading: true,
-    };
-  });
+export function buildCellParts(
+  width: number,
+  depth: number,
+  top: number,
+  tileColor: string,
+): ScenePart[] {
+  const inset = Math.min(width, depth) * CELL_INSET_RATIO;
   return sceneParts(CELL_PREFIX, [
     {
       geometry: SCENE_GEOMETRY.box,
-      args: [tileSize, CELL_TILE_HEIGHT, tileSize],
-      position: [0, BED_HEIGHT + CELL_TILE_HEIGHT / HALF, 0],
+      args: [width - inset, CELL_TILE_HEIGHT, depth - inset],
+      position: [0, top + CELL_TILE_HEIGHT / HALF, 0],
       color: tileColor,
       roughness: SOIL_ROUGHNESS,
     },
-    ...furrows,
   ]);
 }
 
-export function buildSlotMarkerParts(color: string): ScenePart[] {
-  const side = SLOT_SIZE - SLOT_MARKER_INSET;
-  return sceneParts(SLOT_PREFIX, [
-    {
-      geometry: SCENE_GEOMETRY.box,
-      args: [side, SLOT_MARKER_HEIGHT, side],
-      position: [0, SLOT_MARKER_HEIGHT / HALF, 0],
-      color,
-      roughness: SOIL_ROUGHNESS,
-      flatShading: true,
-    },
-  ]);
-}
-
-export function buildMarkerParts(
+/**
+ * Trame des cases, dessinée d'un seul tenant sur la parcelle : c'est ce qui rend
+ * la grille lisible quand rien n'est encore semé.
+ */
+export function buildGridParts(
+  width: number,
+  depth: number,
   columns: number,
   rows: number,
-  colors: GardenColors,
+  top: number,
+  color: string,
 ): ScenePart[] {
-  const anchor: SceneVector = [
-    -(columns * SLOT_SIZE) / HALF + BED_PLANK,
-    BED_HEIGHT,
-    -(rows * SLOT_SIZE) / HALF + BED_PLANK,
-  ];
-  return sceneParts(MARKER_PREFIX, [
-    {
-      geometry: SCENE_GEOMETRY.cylinder,
-      args: [0.016, 0.016, MARKER_HEIGHT, PLANK_SEGMENTS],
-      position: [anchor[0], anchor[1] + MARKER_HEIGHT / HALF, anchor[2]],
-      color: colors.stone,
-      roughness: WOOD_ROUGHNESS,
-    },
-    {
-      geometry: SCENE_GEOMETRY.sphere,
-      args: [0.08, 12, 9],
-      position: [anchor[0], anchor[1] + MARKER_HEIGHT + 0.05, anchor[2]],
-      color: colors.marker,
-      roughness: 0.3,
-    },
+  const cellWidth = width / columns;
+  const cellDepth = depth / rows;
+  const verticals = Array.from(
+    { length: columns - 1 },
+    (_, index): ScenePartDraft => ({
+      geometry: SCENE_GEOMETRY.box,
+      args: [GRID_LINE, GRID_LINE, depth],
+      position: [(index + 1) * cellWidth - width / HALF, top + GRID_LINE, 0],
+      color,
+      roughness: SOIL_ROUGHNESS,
+    }),
+  );
+  const horizontals = Array.from(
+    { length: rows - 1 },
+    (_, index): ScenePartDraft => ({
+      geometry: SCENE_GEOMETRY.box,
+      args: [width, GRID_LINE, GRID_LINE],
+      position: [0, top + GRID_LINE, (index + 1) * cellDepth - depth / HALF],
+      color,
+      roughness: SOIL_ROUGHNESS,
+    }),
+  );
+  return sceneParts(GRID_PREFIX, [...verticals, ...horizontals]);
+}
+
+/** Cadre posé autour d'une parcelle : survol, sélection, chevauchement. */
+export function buildOutlineParts(
+  width: number,
+  depth: number,
+  top: number,
+  color: string,
+): ScenePart[] {
+  const halfWidth = width / HALF + OUTLINE_THICKNESS;
+  const halfDepth = depth / HALF + OUTLINE_THICKNESS;
+  const height = top + OUTLINE_LIFT;
+  return sceneParts(OUTLINE_PREFIX, [
+    ...([halfDepth, -halfDepth] as const).map(
+      (z): ScenePartDraft => ({
+        geometry: SCENE_GEOMETRY.box,
+        args: [width + OUTLINE_THICKNESS * HALF * HALF, OUTLINE_LIFT, OUTLINE_THICKNESS],
+        position: [0, height, z],
+        color,
+        roughness: 0.4,
+      }),
+    ),
+    ...([halfWidth, -halfWidth] as const).map(
+      (x): ScenePartDraft => ({
+        geometry: SCENE_GEOMETRY.box,
+        args: [OUTLINE_THICKNESS, OUTLINE_LIFT, depth + OUTLINE_THICKNESS * HALF * HALF],
+        position: [x, height, 0],
+        color,
+        roughness: 0.4,
+      }),
+    ),
   ]);
 }
 
-export function buildRingParts(columns: number, rows: number, color: string): ScenePart[] {
-  const width = columns * SLOT_SIZE;
-  const depth = rows * SLOT_SIZE;
-  return sceneParts(RING_PREFIX, [
+const PLATEAU_PREFIX = 'plateau';
+const HANDLE_PREFIX = 'handle';
+const PLATEAU_STEP = 0.5;
+const PLATEAU_LINE = 0.012;
+const PLATEAU_LIFT = 0.006;
+const HANDLE_RADIUS = 0.24;
+const HANDLE_TUBE = 0.035;
+const HANDLE_ARC_RATIO = 0.78;
+const HANDLE_ARROW = 0.09;
+const QUARTER_TURN = Math.PI / 2;
+
+/** Trame d'aide au placement, une ligne tous les cinquante centimètres. */
+export function buildPlateauGridParts(width: number, depth: number, color: string): ScenePart[] {
+  const columns = Math.floor(width / PLATEAU_STEP);
+  const rows = Math.floor(depth / PLATEAU_STEP);
+  const verticals = Array.from(
+    { length: columns + 1 },
+    (_, index): ScenePartDraft => ({
+      geometry: SCENE_GEOMETRY.box,
+      args: [PLATEAU_LINE, PLATEAU_LINE, depth],
+      position: [index * PLATEAU_STEP - (columns * PLATEAU_STEP) / HALF, PLATEAU_LIFT, 0],
+      color,
+      roughness: SOIL_ROUGHNESS,
+    }),
+  );
+  const horizontals = Array.from(
+    { length: rows + 1 },
+    (_, index): ScenePartDraft => ({
+      geometry: SCENE_GEOMETRY.box,
+      args: [width, PLATEAU_LINE, PLATEAU_LINE],
+      position: [0, PLATEAU_LIFT, index * PLATEAU_STEP - (rows * PLATEAU_STEP) / HALF],
+      color,
+      roughness: SOIL_ROUGHNESS,
+    }),
+  );
+  return sceneParts(PLATEAU_PREFIX, [...verticals, ...horizontals]);
+}
+
+/**
+ * Symbole de rotation flottant au-dessus d'une parcelle : un arc fléché qui
+ * signale qu'un quart de tour part au prochain appui.
+ */
+export function buildRotateHandleParts(color: string): ScenePart[] {
+  return sceneParts(HANDLE_PREFIX, [
     {
       geometry: SCENE_GEOMETRY.torus,
-      args: [width * 0.62, 0.03, 6, 40],
-      position: [0, 0.02, 0],
-      rotation: [HALF_TURN / HALF, 0, 0],
-      scale: [1, depth / width, 1],
+      args: [HANDLE_RADIUS, HANDLE_TUBE, 8, 28, Math.PI * 2 * HANDLE_ARC_RATIO],
+      position: [0, 0, 0],
+      rotation: [QUARTER_TURN, 0, 0],
+      color,
+      roughness: 0.35,
+    },
+    {
+      geometry: SCENE_GEOMETRY.cone,
+      args: [HANDLE_ARROW, HANDLE_ARROW * 2, 10],
+      position: [HANDLE_RADIUS, 0, 0],
+      rotation: [0, 0, -QUARTER_TURN],
       color,
       roughness: 0.35,
     },

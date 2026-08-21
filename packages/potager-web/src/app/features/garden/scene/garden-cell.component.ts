@@ -41,6 +41,7 @@ import { GardenPlantComponent } from './garden-plant.component';
 })
 export class GardenCellComponent {
   readonly cell = input.required<GardenCell>();
+  readonly soilTop = input.required<number>();
   readonly hovered = input(false);
 
   readonly picked = output<GardenCell>();
@@ -50,9 +51,10 @@ export class GardenCellComponent {
 
   protected readonly parts = computed(() => {
     const colors = this.#colors();
-    const empty = this.cell().varietyId === null;
+    const cell = this.cell();
+    const empty = cell.varietyId === null;
     const tile = this.hovered() ? colors.highlight : empty ? colors.bedFurrow : colors.bedSoil;
-    return buildCellParts(colors, tile);
+    return buildCellParts(cell.width, cell.depth, this.soilTop(), tile);
   });
 
   protected onPick(event: NgtThreeEvent<MouseEvent>): void {
