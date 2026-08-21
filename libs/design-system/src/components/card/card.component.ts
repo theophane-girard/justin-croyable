@@ -16,9 +16,11 @@ import { IdDirective, StringTemplateOutletDirective } from '../../core';
 import { mergeClasses } from '../../utils/merge-classes';
 
 import {
+  type CardBackdropVariants,
   cardBodyVariants,
   cardFooterVariants,
   cardHeaderVariants,
+  type CardShadowVariants,
   cardVariants,
 } from './card.variants';
 
@@ -73,6 +75,7 @@ import {
     </ng-container>
   `,
   styles: `
+    [data-slot='card-content']:empty,
     [data-slot='card-footer']:empty {
       display: none;
     }
@@ -91,6 +94,8 @@ export class CardComponent {
   private readonly generatedId = viewChild<IdDirective>('z');
 
   readonly class = input<ClassValue>('');
+  readonly shadow = input<CardShadowVariants>('sm');
+  readonly backdrop = input<CardBackdropVariants>('opaque');
   readonly footerBorder = input(false);
   readonly headerBorder = input(false);
   readonly action = input('');
@@ -109,7 +114,12 @@ export class CardComponent {
     return this.description() && baseId ? `${baseId}-description` : null;
   });
 
-  protected readonly classes = computed(() => mergeClasses(cardVariants(), this.class()));
+  protected readonly classes = computed(() =>
+    mergeClasses(
+      cardVariants({ shadow: this.shadow(), backdrop: this.backdrop() }),
+      this.class(),
+    ),
+  );
   protected readonly bodyClasses = computed(() => mergeClasses(cardBodyVariants()));
   protected readonly footerClasses = computed(() =>
     mergeClasses(cardFooterVariants(), this.footerBorder() ? 'border-t' : ''),

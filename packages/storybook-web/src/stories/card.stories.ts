@@ -1,5 +1,9 @@
 import { ButtonComponent } from '@justin-croyable/design-system/components/button';
-import { CardComponent } from '@justin-croyable/design-system/components/card';
+import {
+  type CardBackdropVariants,
+  CardComponent,
+  type CardShadowVariants,
+} from '@justin-croyable/design-system/components/card';
 import { moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
 
 type CardArgs = {
@@ -8,6 +12,8 @@ type CardArgs = {
   action: string;
   headerBorder: boolean;
   footerBorder: boolean;
+  shadow: CardShadowVariants;
+  backdrop: CardBackdropVariants;
 };
 
 const meta: Meta<CardArgs> = {
@@ -19,7 +25,7 @@ const meta: Meta<CardArgs> = {
     docs: {
       description: {
         component:
-          "Le contenu passe par projection : le corps est le contenu par défaut, le pied de carte est projeté via l'attribut `card-footer` (masqué automatiquement s'il est vide). `title` et `description` acceptent une chaîne ou un `TemplateRef`.",
+          "Le contenu passe par projection : le corps est le contenu par défaut, le pied de carte est projeté via l'attribut `card-footer` (corps comme pied sont masqués automatiquement s'ils sont vides). `title` et `description` acceptent une chaîne ou un `TemplateRef`. `shadow` règle l'élévation et `backdrop` rend le fond translucide et flouté, pour une carte posée au-dessus d'un contenu — image, graphique ou scène 3D.",
       },
     },
   },
@@ -29,6 +35,8 @@ const meta: Meta<CardArgs> = {
     action: { control: 'text', description: 'Libellé du bouton d’action de l’en-tête.' },
     headerBorder: { control: 'boolean' },
     footerBorder: { control: 'boolean' },
+    shadow: { control: 'inline-radio', options: ['none', 'sm', 'md', 'lg'] },
+    backdrop: { control: 'inline-radio', options: ['opaque', 'blur'] },
   },
   args: {
     title: 'Abonnement',
@@ -36,6 +44,8 @@ const meta: Meta<CardArgs> = {
     action: '',
     headerBorder: false,
     footerBorder: false,
+    shadow: 'sm',
+    backdrop: 'opaque',
   },
   render: args => ({
     props: args,
@@ -47,6 +57,8 @@ const meta: Meta<CardArgs> = {
         [action]="action"
         [headerBorder]="headerBorder"
         [footerBorder]="footerBorder"
+        [shadow]="shadow"
+        [backdrop]="backdrop"
       >
         <p class="text-sm text-muted-foreground">
           Formule Pro — renouvellement le 12 août. 3 sièges utilisés sur 5.
@@ -68,6 +80,25 @@ export const Default: Story = {};
 
 export const WithAction: Story = {
   args: { action: 'Modifier', headerBorder: true, footerBorder: true },
+};
+
+export const SurUnFond: Story = {
+  parameters: { controls: { disable: true } },
+  render: () => ({
+    template: `
+      <div
+        class="relative flex h-64 w-[28rem] items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-primary/40 via-accent to-primary/20"
+      >
+        <app-card
+          class="absolute top-4 left-4 w-56"
+          backdrop="blur"
+          shadow="md"
+          title="Tomate"
+          description="Légume · 3 plants · 4 kg"
+        />
+      </div>
+    `,
+  }),
 };
 
 export const ContentOnly: Story = {

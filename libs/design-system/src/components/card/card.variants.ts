@@ -1,8 +1,28 @@
-import { cva } from 'class-variance-authority';
+import { cva, type VariantProps } from 'class-variance-authority';
 
 import { mergeClasses } from '../../utils/merge-classes';
 
-export const cardVariants = cva('bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm');
+export const cardVariants = cva('bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6', {
+  variants: {
+    shadow: {
+      none: 'shadow-none',
+      sm: 'shadow-sm',
+      md: 'shadow-md',
+      lg: 'shadow-lg',
+    },
+    backdrop: {
+      opaque: '',
+      blur: 'bg-card/85 backdrop-blur-sm',
+    },
+  },
+  defaultVariants: {
+    shadow: 'sm',
+    backdrop: 'opaque',
+  },
+});
+
+export type CardShadowVariants = NonNullable<VariantProps<typeof cardVariants>['shadow']>;
+export type CardBackdropVariants = NonNullable<VariantProps<typeof cardVariants>['backdrop']>;
 
 export const cardHeaderVariants = cva(
   mergeClasses(
