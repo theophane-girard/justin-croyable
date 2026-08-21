@@ -6,7 +6,6 @@ import {
   ElementRef,
   inject,
   input,
-  linkedSignal,
   signal,
   viewChild,
 } from '@angular/core';
@@ -71,12 +70,17 @@ export class SelectItemComponent {
   readonly class = input<string>('');
   readonly searchKeywords = input<string>('');
   readonly hint = input<string>('');
+  readonly providedLabel = input<string>('', { alias: 'label' });
 
   private readonly select = signal<SelectHost | null>(null);
   private readonly labelText = viewChild<ElementRef<HTMLElement>>('labelText');
   noopFn = noopFn;
 
-  readonly label = linkedSignal<string>(() => {
+  readonly label = computed<string>(() => {
+    const provided = this.providedLabel().trim();
+    if (provided) {
+      return provided;
+    }
     const element = this.labelText()?.nativeElement ?? this.elementRef.nativeElement;
     return (element.textContent ?? element.innerText)?.trim() ?? '';
   });
