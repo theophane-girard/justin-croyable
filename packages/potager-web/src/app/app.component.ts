@@ -130,7 +130,7 @@ function initialsOf(label: string): string {
                       (valueChange)="onGardenChange($event)"
                     >
                       @for (option of gardenOptions(); track option.id) {
-                        <app-select-item [value]="option.id" [hint]="option.hint">{{ option.label }}</app-select-item>
+                        <app-select-item [value]="option.id" [label]="option.label" [hint]="option.hint">{{ option.label }}</app-select-item>
                       }
                     </app-select>
                     <div class="flex items-center justify-end gap-1">
