@@ -46,10 +46,12 @@
     "@ng-icons/phosphor-icons": "^33.0.0",
     "ag-grid-angular": "^36.0.0",
     "ag-grid-community": "^36.0.0",
+    "angular-three": "^4.2.0",
     "echarts": "^6.0.0",
     "ngx-echarts": "^21.0.0",
     "ngx-sonner": "^3.1.0",
-    "rxjs": "^7.8.0"
+    "rxjs": "^7.8.0",
+    "three": ">=0.157.0 <0.183.0"
   },
   "//": "Tailwind n'est PAS déclaré en peerDependency à dessein : aucun fichier TS de la lib ne l'importe, c'est une dépendance de build du CSS de l'app. Le déclarer casserait l'installation du monorepo, où le track NativeWind hoiste tailwindcss@3 pendant que le DS web tourne sur v4. Le consommateur doit fournir : tailwindcss >= 4 et tailwindcss-animate >= 1 (cf. src/theme/styles.css)."
 }

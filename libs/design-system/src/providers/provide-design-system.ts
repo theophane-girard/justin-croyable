@@ -12,7 +12,7 @@ import { provideDesignSystemI18n, type DesignSystemI18nOptions } from '../i18n';
 import { provideZard } from '../core';
 import { CHART_DEFAULTS, TABLE_DEFAULTS, type ChartDefaults, type TableDefaults } from './tokens';
 
-export type DesignSystemFeatureKind = 'icons' | 'tables' | 'charts' | 'translations';
+export type DesignSystemFeatureKind = 'icons' | 'tables' | 'charts' | 'translations' | 'three';
 
 export type DesignSystemFeature = {
   readonly kind: DesignSystemFeatureKind;

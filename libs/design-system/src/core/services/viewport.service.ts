@@ -1,11 +1,18 @@
 import { isPlatformBrowser } from '@angular/common';
-import { DestroyRef, inject, Injectable, PLATFORM_ID, signal } from '@angular/core';
+import { DestroyRef, inject, Injectable, PLATFORM_ID, signal, type Signal } from '@angular/core';
 
 /**
  * Requête média « mobile » alignée sur le breakpoint `sm` de Tailwind (640px) :
  * en dessous, les overlays (select, combobox…) s'affichent en bottom sheet.
  */
 export const MOBILE_MEDIA_QUERY = '(max-width: 639.98px)';
+
+/**
+ * Requête média « animations réduites ». Les composants animés du DS (compteur,
+ * scène 3D) s'y calent pour ne rien mettre en mouvement chez un utilisateur qui
+ * a demandé l'inverse au système.
+ */
+export const REDUCED_MOTION_MEDIA_QUERY = '(prefers-reduced-motion: reduce)';
 
 /**
  * Classes appliquées au contenu d'un overlay présenté en bottom sheet sur mobile.
@@ -53,22 +60,18 @@ export class ViewportService {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly destroyRef = inject(DestroyRef);
 
-  private readonly mediaQueryList = this.resolveMediaQueryList();
-  private readonly _isMobile = signal(this.mediaQueryList?.matches ?? false);
+  readonly isMobile = this.trackMediaQuery(MOBILE_MEDIA_QUERY);
+  readonly prefersReducedMotion = this.trackMediaQuery(REDUCED_MOTION_MEDIA_QUERY);
 
-  readonly isMobile = this._isMobile.asReadonly();
-
-  constructor() {
-    const mediaQueryList = this.mediaQueryList;
+  private trackMediaQuery(query: string): Signal<boolean> {
+    const mediaQueryList = isPlatformBrowser(this.platformId) ? matchMedia(query) : null;
+    const matches = signal(mediaQueryList?.matches ?? false);
     if (!mediaQueryList) {
-      return;
+      return matches.asReadonly();
     }
-    const listener = (event: MediaQueryListEvent) => this._isMobile.set(event.matches);
+    const listener = (event: MediaQueryListEvent) => matches.set(event.matches);
     mediaQueryList.addEventListener('change', listener);
     this.destroyRef.onDestroy(() => mediaQueryList.removeEventListener('change', listener));
-  }
-
-  private resolveMediaQueryList(): MediaQueryList | null {
-    return isPlatformBrowser(this.platformId) ? matchMedia(MOBILE_MEDIA_QUERY) : null;
+    return matches.asReadonly();
   }
 }

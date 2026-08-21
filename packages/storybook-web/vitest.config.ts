@@ -72,6 +72,8 @@ export default defineConfig({
       'echarts',
       'echarts/core',
       'ag-grid-community',
+      'three',
+      'three/examples/jsm/controls/OrbitControls.js',
     ],
   },
   test: {

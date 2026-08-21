@@ -19,6 +19,7 @@ export * from './core/services/breadcrumb.service';
 export * from './core/services/sidebar.service';
 export * from './core/services/theme.service';
 export * from './core/services/theme-palette.service';
+export * from './core/services/scene-theme.service';
 export * from './core/services/viewport.service';
 
 // Composants
