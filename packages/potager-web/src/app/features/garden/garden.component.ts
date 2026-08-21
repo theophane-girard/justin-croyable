@@ -12,6 +12,7 @@ import { RouterLink } from '@angular/router';
 import {
   BadgeComponent,
   ButtonComponent,
+  CardComponent,
   DividerComponent,
   EmptyComponent,
   FabButtonComponent,
@@ -25,11 +26,9 @@ import {
   SelectImports,
   SheetService,
   stringFilter,
-  TableComponent,
 } from '@justin-croyable/design-system';
 import { GARDEN_ROLE, type GardenRole, type ShareableRole } from '@justin-croyable/api-contract';
 import { NgIcon } from '@ng-icons/core';
-import type { ColDef, GridOptions, RowSelectedEvent, ValueFormatterParams } from 'ag-grid-community';
 
 import {
   cropUnit,
@@ -48,9 +47,9 @@ import { GardenStore } from '../../core/garden-store';
 import { HarvestStore } from '../../core/harvest-store';
 import { SeasonStore } from '../../core/season-store';
 import { SharingStore } from '../../core/sharing-store';
-import { TagCellComponent } from '../../shared/tag-cell.component';
-import { CATEGORY_TAG_COLOR } from '../../shared/table-badges';
 import { GARDEN_ADD_LINK } from '../../app.routes';
+
+import { GardenViewComponent } from './scene/garden-view.component';
 
 const NUMBER_FORMATTER = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
 const EUR_FORMATTER = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
@@ -59,80 +58,8 @@ const YIELD_FORMATTER = new Intl.NumberFormat('fr-FR', {
   maximumFractionDigits: 2,
 });
 
-function formatCountCell(params: ValueFormatterParams<PlantRow, number>): string {
-  return typeof params.value === 'number' ? NUMBER_FORMATTER.format(params.value) : '';
-}
-
-function formatHarvestedCell(params: ValueFormatterParams<PlantRow, number>): string {
-  return typeof params.value === 'number' && params.data
-    ? formatQuantity(params.value, cropUnit(params.data.cropId))
-    : '';
-}
-
-function formatEurCell(params: ValueFormatterParams<PlantRow, number>): string {
-  return typeof params.value === 'number' ? EUR_FORMATTER.format(params.value) : '';
-}
-
-function formatYieldCell(params: ValueFormatterParams<PlantRow, number>): string {
-  return typeof params.value === 'number' && params.data
-    ? `${YIELD_FORMATTER.format(params.value)} ${HARVEST_UNIT_META[cropUnit(params.data.cropId)].quantitySuffix}/plant`
-    : '';
-}
-
-const PLANT_COLUMNS: ColDef<PlantRow>[] = [
-  {
-    field: 'label',
-    headerName: 'Variété',
-    minWidth: 150,
-    flex: 1,
-    cellRenderer: TagCellComponent,
-    cellRendererParams: { color: 'primary' },
-  },
-  {
-    field: 'categoryLabel',
-    headerName: 'Catégorie',
-    minWidth: 110,
-    cellRenderer: TagCellComponent,
-    cellRendererParams: { color: CATEGORY_TAG_COLOR },
-  },
-  { field: 'quantity', headerName: 'Plants', type: 'numericColumn', valueFormatter: formatCountCell },
-  { field: 'harvestedKg', headerName: 'Récolté', type: 'numericColumn', valueFormatter: formatHarvestedCell },
-  {
-    field: 'yieldPerPlantKg',
-    headerName: 'Rendement / plant',
-    type: 'numericColumn',
-    minWidth: 160,
-    valueFormatter: formatYieldCell,
-  },
-  {
-    field: 'harvestValueEur',
-    headerName: 'Valeur récoltée',
-    type: 'numericColumn',
-    minWidth: 140,
-    valueFormatter: formatEurCell,
-  },
-  {
-    field: 'expenseEur',
-    headerName: 'Dépenses',
-    type: 'numericColumn',
-    minWidth: 120,
-    valueFormatter: formatEurCell,
-  },
-  {
-    field: 'netSavingsEur',
-    headerName: 'Économie',
-    type: 'numericColumn',
-    minWidth: 120,
-    valueFormatter: formatEurCell,
-  },
-];
-
-const PLANT_GRID_OPTIONS: GridOptions<PlantRow> = {
-  rowSelection: { mode: 'singleRow', checkboxes: false, enableClickSelection: true },
-  pagination: true,
-  paginationPageSize: 8,
-  paginationPageSizeSelector: [8, 16, 32],
-};
+const YIELD_SUFFIX = '/plant';
+const PLANT_COUNT_PREFIX = '×';
 
 const SEASON_FILTER_ITEMS: SegmentItem[] = [
   { value: SEASON_FILTER_ALL, label: 'Année entière' },
@@ -158,10 +85,45 @@ type MemberRow = {
   readonly removable: boolean;
 };
 
+type PlotMetric = {
+  readonly label: string;
+  readonly value: string;
+};
+
+type PlotDetail = {
+  readonly label: string;
+  readonly categoryLabel: string;
+  readonly metrics: readonly PlotMetric[];
+};
+
+type PlotItem = {
+  readonly id: string;
+  readonly label: string;
+  readonly icon: string;
+  readonly plants: string;
+  readonly savings: string;
+  readonly selected: boolean;
+};
+
 const INVITE_ROLE_OPTIONS: readonly { readonly value: ShareableRole; readonly label: string }[] = [
   { value: GARDEN_ROLE.viewer, label: ROLE_LABEL[GARDEN_ROLE.viewer] },
   { value: GARDEN_ROLE.coOwner, label: ROLE_LABEL[GARDEN_ROLE.coOwner] },
 ];
+
+function plotMetrics(row: PlantRow): PlotMetric[] {
+  const unit = cropUnit(row.cropId);
+  return [
+    { label: 'Plants', value: NUMBER_FORMATTER.format(row.quantity) },
+    { label: 'Récolté', value: formatQuantity(row.harvestedKg, unit) },
+    {
+      label: 'Rendement',
+      value: `${YIELD_FORMATTER.format(row.yieldPerPlantKg)} ${HARVEST_UNIT_META[unit].quantitySuffix}${YIELD_SUFFIX}`,
+    },
+    { label: 'Valeur récoltée', value: EUR_FORMATTER.format(row.harvestValueEur) },
+    { label: 'Dépenses', value: EUR_FORMATTER.format(row.expenseEur) },
+    { label: 'Économie', value: EUR_FORMATTER.format(row.netSavingsEur) },
+  ];
+}
 
 @Component({
   selector: 'app-garden',
@@ -170,6 +132,7 @@ const INVITE_ROLE_OPTIONS: readonly { readonly value: ShareableRole; readonly la
     NgIcon,
     BadgeComponent,
     ButtonComponent,
+    CardComponent,
     DividerComponent,
     SegmentComponent,
     FabButtonComponent,
@@ -177,8 +140,8 @@ const INVITE_ROLE_OPTIONS: readonly { readonly value: ShareableRole; readonly la
     FabListComponent,
     InputDirective,
     InputGroupComponent,
-    TableComponent,
     EmptyComponent,
+    GardenViewComponent,
     ...SelectImports,
   ],
   template: `
@@ -186,7 +149,7 @@ const INVITE_ROLE_OPTIONS: readonly { readonly value: ShareableRole; readonly la
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex flex-col">
           <p class="text-muted-foreground text-sm">
-            Plants cultivés, rendement et économie nette par plant.
+            Votre potager en 3D : une planche par variété, la terre travaillée autour.
           </p>
         </div>
         <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
@@ -269,7 +232,7 @@ const INVITE_ROLE_OPTIONS: readonly { readonly value: ShareableRole; readonly la
         <app-empty
           icon="phosphorPottedPlant"
           title="Aucun plant"
-          description="Ajoutez vos plants pour suivre le rendement de votre potager."
+          description="Ajoutez vos plants pour voir votre jardin pousser en 3D."
         >
           @if (canWrite()) {
             <a appButton [routerLink]="addLink">
@@ -279,13 +242,60 @@ const INVITE_ROLE_OPTIONS: readonly { readonly value: ShareableRole; readonly la
           }
         </app-empty>
       } @else {
-        <app-table
-          [rowData]="displayedRows()"
-          [columnDefs]="columns"
-          [gridOptions]="gridOptions"
-          (rowSelected)="onRowSelected($event)"
-          height="30rem"
-        />
+        <div class="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          <app-garden-view
+            class="block xl:col-span-2"
+            [rows]="displayedRows()"
+            [(selectedId)]="selectedId"
+          />
+
+          <div class="flex flex-col gap-4">
+            @if (plotDetail(); as detail) {
+              <app-card [title]="detail.label" [description]="detail.categoryLabel">
+                <div class="grid grid-cols-2 gap-3">
+                  @for (metric of detail.metrics; track metric.label) {
+                    <div class="flex flex-col">
+                      <span class="text-muted-foreground text-xs">{{ metric.label }}</span>
+                      <span class="text-foreground text-sm font-semibold tabular-nums">
+                        {{ metric.value }}
+                      </span>
+                    </div>
+                  }
+                </div>
+              </app-card>
+            } @else {
+              <app-card title="Aucune planche sélectionnée">
+                <p class="text-muted-foreground text-sm">
+                  Touchez une planche dans le jardin pour voir son rendement et son économie.
+                </p>
+              </app-card>
+            }
+
+            <app-card title="Les planches" [description]="plotCountLabel()">
+              <div class="flex max-h-80 flex-col gap-1 overflow-y-auto">
+                @for (plot of plotItems(); track plot.id) {
+                  <button
+                    appButton
+                    type="button"
+                    size="sm"
+                    class="w-full justify-start"
+                    [variant]="plot.selected ? 'secondary' : 'ghost'"
+                    (click)="onSelectPlot(plot.id)"
+                  >
+                    <ng-icon [name]="plot.icon" class="size-4 shrink-0" />
+                    <span class="min-w-0 flex-1 truncate text-left">{{ plot.label }}</span>
+                    <span class="text-muted-foreground shrink-0 text-xs tabular-nums">
+                      {{ plot.plants }}
+                    </span>
+                    <span class="shrink-0 text-xs font-semibold tabular-nums">
+                      {{ plot.savings }}
+                    </span>
+                  </button>
+                }
+              </div>
+            </app-card>
+          </div>
+        </div>
       }
     </div>
 
@@ -303,7 +313,13 @@ const INVITE_ROLE_OPTIONS: readonly { readonly value: ShareableRole; readonly la
             </a>
           }
           @if (hasRows()) {
-            <button appFabButton type="button" variant="secondary" (click)="openFilter()" aria-label="Filtrer">
+            <button
+              appFabButton
+              type="button"
+              variant="secondary"
+              (click)="openFilter()"
+              aria-label="Filtrer"
+            >
               <ng-icon name="phosphorFunnel" />
             </button>
             @if (canWrite()) {
@@ -320,10 +336,22 @@ const INVITE_ROLE_OPTIONS: readonly { readonly value: ShareableRole; readonly la
             }
           }
           @if (canManage()) {
-            <button appFabButton type="button" variant="secondary" (click)="openRename()" aria-label="Renommer">
+            <button
+              appFabButton
+              type="button"
+              variant="secondary"
+              (click)="openRename()"
+              aria-label="Renommer"
+            >
               <ng-icon name="phosphorPencilSimple" />
             </button>
-            <button appFabButton type="button" variant="secondary" (click)="openShare()" aria-label="Partager">
+            <button
+              appFabButton
+              type="button"
+              variant="secondary"
+              (click)="openShare()"
+              aria-label="Partager"
+            >
               <ng-icon name="phosphorUsersThree" />
             </button>
           }
@@ -374,11 +402,7 @@ const INVITE_ROLE_OPTIONS: readonly { readonly value: ShareableRole; readonly la
               (input)="onInviteEmailInput($event)"
             />
           </app-input-group>
-          <app-select
-            label="Rôle"
-            [value]="inviteRole()"
-            (valueChange)="onInviteRoleChange($event)"
-          >
+          <app-select label="Rôle" [value]="inviteRole()" (valueChange)="onInviteRoleChange($event)">
             @for (option of inviteRoleOptions; track option.value) {
               <app-select-item [value]="option.value">{{ option.label }}</app-select-item>
             }
@@ -439,8 +463,6 @@ export class GardenComponent {
   private readonly shareSheetTemplate = viewChild.required<TemplateRef<unknown>>('shareSheet');
   private readonly renameSheetTemplate = viewChild.required<TemplateRef<unknown>>('renameSheet');
 
-  protected readonly columns = PLANT_COLUMNS;
-  protected readonly gridOptions = PLANT_GRID_OPTIONS;
   protected readonly addLink = GARDEN_ADD_LINK;
   protected readonly seasonItems = SEASON_FILTER_ITEMS;
   protected readonly cultureOptions = CULTURE_FILTER_OPTIONS;
@@ -480,6 +502,40 @@ export class GardenComponent {
   protected readonly showYearSelector = computed(() => this.#harvests.availableYears().length >= 2);
   protected readonly yearOptions = computed(() => buildYearOptions(this.#harvests.availableYears()));
   protected readonly yearValue = computed(() => yearFilterToValue(this.#harvests.effectiveYear()));
+
+  protected readonly plotItems = computed<PlotItem[]>(() => {
+    const selected = this.selectedId();
+    return this.displayedRows().map(row => ({
+      id: row.id,
+      label: row.label,
+      icon: row.cropIcon,
+      plants: `${PLANT_COUNT_PREFIX}${NUMBER_FORMATTER.format(row.quantity)}`,
+      savings: EUR_FORMATTER.format(row.netSavingsEur),
+      selected: row.id === selected,
+    }));
+  });
+
+  protected readonly plotCountLabel = computed(() => {
+    const count = this.displayedRows().length;
+    return count > 1 ? `${count} planches cultivées` : `${count} planche cultivée`;
+  });
+
+  protected readonly plotDetail = computed<PlotDetail | null>(() => {
+    const selected = this.selectedId();
+    const row = this.displayedRows().find(candidate => candidate.id === selected);
+    if (!row) {
+      return null;
+    }
+    return {
+      label: row.label,
+      categoryLabel: row.categoryLabel,
+      metrics: plotMetrics(row),
+    };
+  });
+
+  protected onSelectPlot(id: string): void {
+    this.selectedId.set(this.selectedId() === id ? null : id);
+  }
 
   protected onSeasonChange(value: string | null): void {
     if (value !== null && isSeasonFilter(value)) {
@@ -574,20 +630,6 @@ export class GardenComponent {
     const parsed = parseYearValue(value);
     if (parsed !== null) {
       this.season.setYear(parsed);
-    }
-  }
-
-  protected onRowSelected(event: RowSelectedEvent<PlantRow>): void {
-    const row = event.data;
-    if (!row) {
-      return;
-    }
-    if (event.node.isSelected()) {
-      this.selectedId.set(row.id);
-      return;
-    }
-    if (this.selectedId() === row.id) {
-      this.selectedId.set(null);
     }
   }
 

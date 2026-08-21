@@ -75,22 +75,8 @@ export const APP_ROUTES: Route[] = [
   {
     path: APP_PATHS.garden,
     data: { breadcrumb: 'Mon jardin' },
-    children: [
-      {
-        path: '',
-        loadComponent: () =>
-          import('./features/garden/garden.component').then(m => m.GardenComponent),
-        title: 'Mon jardin — Potager',
-        data: { skeleton: SKELETON_KIND.list },
-      },
-      {
-        path: APP_PATHS.add,
-        loadComponent: () =>
-          import('./features/garden/add-plant.component').then(m => m.AddPlantComponent),
-        title: 'Ajouter un plant — Potager',
-        data: { skeleton: SKELETON_KIND.form, breadcrumb: 'Ajouter un plant' },
-      },
-    ],
+    loadChildren: () =>
+      import('./features/garden/garden.routes').then(m => m.GARDEN_ROUTES),
   },
   {
     path: APP_PATHS.prices,

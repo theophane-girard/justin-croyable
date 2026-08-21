@@ -1,0 +1,36 @@
+import { extend } from 'angular-three';
+import {
+  AmbientLight,
+  BoxGeometry,
+  CapsuleGeometry,
+  CircleGeometry,
+  ConeGeometry,
+  CylinderGeometry,
+  DirectionalLight,
+  Fog,
+  Group,
+  HemisphereLight,
+  IcosahedronGeometry,
+  Mesh,
+  MeshStandardMaterial,
+  SphereGeometry,
+  TorusGeometry,
+} from 'three';
+
+extend({
+  AmbientLight,
+  BoxGeometry,
+  CapsuleGeometry,
+  CircleGeometry,
+  ConeGeometry,
+  CylinderGeometry,
+  DirectionalLight,
+  Fog,
+  Group,
+  HemisphereLight,
+  IcosahedronGeometry,
+  Mesh,
+  MeshStandardMaterial,
+  SphereGeometry,
+  TorusGeometry,
+});
