@@ -1,4 +1,15 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  CUSTOM_ELEMENTS_SCHEMA,
+  type ElementRef,
+  inject,
+  input,
+  output,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { provideJustinCroyableDS, SceneThemeService } from '@justin-croyable/design-system';
 import {
   SCENE_GEOMETRY,
@@ -6,12 +17,14 @@ import {
   SceneImports,
   type SceneLighting,
   type ScenePart,
+  ScenePartComponent,
   type ScenePartDraft,
   sceneParts,
   withThree,
 } from '@justin-croyable/design-system/components/scene';
 import { applicationConfig, moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
-import type { NgtFrameloop } from 'angular-three';
+import { beforeRender, type NgtFrameloop } from 'angular-three';
+import type { Group } from 'three';
 import { expect, waitFor } from 'storybook/test';
 
 const GROUND_SIZE = 4.6;
@@ -23,6 +36,7 @@ const SHOWCASE_SPACING = 1.35;
 const SHAPE_HEIGHT = 0.72;
 const FLAT_ROTATION: [number, number, number] = [-Math.PI / 2, 0, 0];
 const ORIGIN_ROTATION: [number, number, number] = [0, 0, 0];
+const ORIGIN_POSITION: [number, number, number] = [0, 0, 0];
 
 type ShowcaseShape = {
   readonly geometry: (typeof SCENE_GEOMETRY)[keyof typeof SCENE_GEOMETRY];
@@ -44,9 +58,51 @@ const SHOWCASE_SHAPES: readonly ShowcaseShape[] = [
 
 const SHOWCASE_BOUNDS: SceneBounds = { width: GROUND_SIZE, depth: GROUND_SIZE, height: 1.6 };
 
+const SPIN_SPEED = 0.35;
+
+@Component({
+  selector: 'app-scene-spinner',
+  imports: [ScenePartComponent],
+  template: `
+    <ngt-group #spinner [position]="part().position">
+      <app-scene-part [part]="centeredPart()" />
+    </ngt-group>
+  `,
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+class SceneSpinnerComponent {
+  readonly part = input.required<ScenePart>();
+  readonly mounted = output<void>();
+
+  private readonly spinner = viewChild<ElementRef<Group>>('spinner');
+
+  protected readonly centeredPart = computed<ScenePart>(() => ({
+    ...this.part(),
+    position: ORIGIN_POSITION,
+  }));
+
+  #rendered = false;
+
+  constructor() {
+    beforeRender(({ clock }) => {
+      const group = this.spinner()?.nativeElement;
+      if (!group) {
+        return;
+      }
+      group.rotation.y = clock.elapsedTime * SPIN_SPEED;
+      if (this.#rendered) {
+        return;
+      }
+      this.#rendered = true;
+      this.mounted.emit();
+    });
+  }
+}
+
 @Component({
   selector: 'app-scene-showcase',
-  imports: [...SceneImports],
+  imports: [...SceneImports, SceneSpinnerComponent],
   template: `
     <app-scene-canvas
       [height]="height()"
@@ -60,8 +116,11 @@ const SHOWCASE_BOUNDS: SceneBounds = { width: GROUND_SIZE, depth: GROUND_SIZE, h
       [frameloop]="frameloop()"
     >
       <ng-template sceneContent>
-        @for (part of parts(); track part.id) {
+        @for (part of groundParts(); track part.id) {
           <app-scene-part [part]="part" />
+        }
+        @for (part of shapeParts(); track part.id) {
+          <app-scene-spinner [part]="part" (mounted)="onSpinnerMounted()" />
         }
       </ng-template>
 
@@ -69,7 +128,8 @@ const SHOWCASE_BOUNDS: SceneBounds = { width: GROUND_SIZE, depth: GROUND_SIZE, h
         sceneOverlay
         class="bg-card/85 border-border text-muted-foreground absolute top-3 left-3 rounded-lg border px-3 py-2 text-xs backdrop-blur"
       >
-        9 géométries · couleurs issues de <span class="font-mono">SceneThemeService</span>
+        <span data-testid="scene-mounted-count">{{ mountedCount() }}</span> géométries animées ·
+        couleurs issues de <span class="font-mono">SceneThemeService</span>
       </div>
     </app-scene-canvas>
   `,
@@ -89,7 +149,9 @@ class SceneShowcaseComponent {
 
   protected readonly bounds = SHOWCASE_BOUNDS;
 
-  protected readonly parts = computed<ScenePart[]>(() => {
+  protected readonly mountedCount = signal(0);
+
+  readonly #layout = computed(() => {
     const colors = this.#sceneTheme.roles();
     const series = [
       colors.series1,
@@ -103,6 +165,21 @@ class SceneShowcaseComponent {
       colors.info,
     ];
     const rows = Math.ceil(SHOWCASE_SHAPES.length / SHOWCASE_COLUMNS);
+    const placements = SHOWCASE_SHAPES.map((shape, index) => {
+      const column = index % SHOWCASE_COLUMNS;
+      const row = Math.floor(index / SHOWCASE_COLUMNS);
+      return {
+        shape,
+        color: series[index],
+        x: (column - (SHOWCASE_COLUMNS - 1) / 2) * SHOWCASE_SPACING,
+        z: (row - (rows - 1) / 2) * SHOWCASE_SPACING,
+      };
+    });
+    return { colors, placements };
+  });
+
+  protected readonly groundParts = computed<ScenePart[]>(() => {
+    const { colors, placements } = this.#layout();
     const ground: ScenePartDraft = {
       geometry: SCENE_GEOMETRY.box,
       args: [GROUND_SIZE, GROUND_THICKNESS, GROUND_SIZE],
@@ -110,32 +187,38 @@ class SceneShowcaseComponent {
       color: colors.ground,
       roughness: 1,
     };
-    const shapes = SHOWCASE_SHAPES.flatMap((shape, index): ScenePartDraft[] => {
-      const column = index % SHOWCASE_COLUMNS;
-      const row = Math.floor(index / SHOWCASE_COLUMNS);
-      const x = (column - (SHOWCASE_COLUMNS - 1) / 2) * SHOWCASE_SPACING;
-      const z = (row - (rows - 1) / 2) * SHOWCASE_SPACING;
-      return [
-        {
-          geometry: SCENE_GEOMETRY.cylinder,
-          args: [PEDESTAL_RADIUS, PEDESTAL_RADIUS, PEDESTAL_HEIGHT, 20],
-          position: [x, PEDESTAL_HEIGHT / 2, z],
-          color: colors.groundAlt,
-          roughness: 1,
-        },
-        {
+    const pedestals = placements.map(
+      ({ x, z }): ScenePartDraft => ({
+        geometry: SCENE_GEOMETRY.cylinder,
+        args: [PEDESTAL_RADIUS, PEDESTAL_RADIUS, PEDESTAL_HEIGHT, 20],
+        position: [x, PEDESTAL_HEIGHT / 2, z],
+        color: colors.groundAlt,
+        roughness: 1,
+      }),
+    );
+    return sceneParts('ground', [ground, ...pedestals]);
+  });
+
+  protected onSpinnerMounted(): void {
+    this.mountedCount.update(count => count + 1);
+  }
+
+  protected readonly shapeParts = computed<ScenePart[]>(() =>
+    sceneParts(
+      'shape',
+      this.#layout().placements.map(
+        ({ shape, color, x, z }): ScenePartDraft => ({
           geometry: shape.geometry,
           args: shape.args,
           position: [x, PEDESTAL_HEIGHT + SHAPE_HEIGHT / 2, z],
           rotation: shape.flat ? FLAT_ROTATION : ORIGIN_ROTATION,
-          color: series[index],
+          color,
           roughness: 0.55,
           flatShading: shape.geometry === SCENE_GEOMETRY.icosahedron,
-        },
-      ];
-    });
-    return sceneParts('showcase', [ground, ...shapes]);
-  });
+        }),
+      ),
+    ),
+  );
 }
 
 type SceneArgs = {
@@ -223,5 +306,13 @@ export const Vitrine: Story = {
     const shell = canvasElement.querySelector('[data-slot="scene-canvas"]');
     expect(shell?.getAttribute('role')).toBe('img');
     expect(shell?.getAttribute('aria-label')).toBe('Vitrine des géométries du socle 3D');
+
+    await waitFor(
+      () => {
+        const mounted = canvasElement.querySelector('[data-testid="scene-mounted-count"]');
+        expect(mounted?.textContent?.trim()).toBe(String(SHOWCASE_SHAPES.length));
+      },
+      { timeout: 15_000 },
+    );
   },
 };
