@@ -8,7 +8,7 @@ import {
   signal,
 } from '@angular/core';
 import { NgtCanvas } from 'angular-three/dom';
-import { ViewportService } from '@justin-croyable/design-system';
+import { CardComponent, ViewportService } from '@justin-croyable/design-system';
 import { NgIcon } from '@ng-icons/core';
 
 import {
@@ -37,7 +37,7 @@ const DETAIL_SEPARATOR = ' · ';
 
 @Component({
   selector: 'app-garden-view',
-  imports: [NgtCanvas, GardenSceneComponent, NgIcon],
+  imports: [NgtCanvas, CardComponent, GardenSceneComponent, NgIcon],
   template: `
     <div
       class="border-border from-muted to-background relative h-[22rem] w-full overflow-hidden rounded-xl border bg-gradient-to-b sm:h-[28rem] lg:h-[34rem]"
@@ -60,12 +60,12 @@ const DETAIL_SEPARATOR = ' · ';
       </ngt-canvas>
 
       @if (focus(); as info) {
-        <div
-          class="bg-card/85 border-border absolute top-3 left-3 max-w-[70%] rounded-lg border px-3 py-2 shadow-sm backdrop-blur"
-        >
-          <p class="text-foreground truncate text-sm font-medium">{{ info.label }}</p>
-          <p class="text-muted-foreground text-xs">{{ info.detail }}</p>
-        </div>
+        <app-card
+          class="absolute top-3 left-3 w-64 max-w-[70%]"
+          backdrop="blur"
+          [title]="info.label"
+          [description]="info.detail"
+        />
       }
 
       <div
