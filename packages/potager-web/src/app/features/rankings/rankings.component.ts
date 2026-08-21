@@ -162,6 +162,10 @@ export class RankingsComponent {
   protected readonly ranking = inject(RankingStore);
   readonly #catalog = inject(CatalogStore);
 
+  constructor() {
+    void this.ranking.reload();
+  }
+
   protected readonly seasonItems = SEASON_ITEMS;
 
   readonly #today = new Date();
