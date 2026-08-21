@@ -25,7 +25,7 @@ on:
 # inclut l'environnement : une migration de staging n'a aucune raison d'attendre
 # celle de la production.
 concurrency:
-  group: migrate-db-${{ inputs.environnement || 'production' }}
+  group: migrate-db-${{ github.event_name == 'push' && 'production' || inputs.environnement || 'staging' }}
   cancel-in-progress: false
 
 jobs:
@@ -37,11 +37,17 @@ jobs:
       # Résolu avant toute lecture de secret : cette étape ne fait que traduire
       # l'événement en nom de secret GitHub, consommé par index (`secrets[...]`)
       # dans les étapes suivantes. Aucun repli d'un environnement sur l'autre.
+      #
+      # Seul un push sur master vise la production. Un déclenchement manuel sans
+      # valeur explicite retombe sur `staging`, jamais sur la production : le
+      # champ n'apparaît dans l'interface que si la branche sélectionnée le
+      # déclare, et un formulaire muet ne doit pas pouvoir migrer la prod.
       - name: Environnement ciblé
         id: target
         env:
-          TARGET_ENVIRONMENT: ${{ inputs.environnement || 'production' }}
+          TARGET_ENVIRONMENT: ${{ github.event_name == 'push' && 'production' || inputs.environnement || 'staging' }}
         run: |
+          echo "Environnement ciblé : $TARGET_ENVIRONMENT"
           echo "environment=$TARGET_ENVIRONMENT" >> "$GITHUB_OUTPUT"
           if [ "$TARGET_ENVIRONMENT" = 'production' ]; then
             echo 'db_url_secret=GARDEN_HARVEST_DATABASE_URL' >> "$GITHUB_OUTPUT"
