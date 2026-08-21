@@ -1,6 +1,6 @@
 import { type CropId } from '../../../core/potager.model';
 
-import { type GardenSceneColors } from './garden-scene-theme';
+import { type GardenColors } from './garden-palette';
 import {
   FRUIT_SHAPE,
   type FruitShape,
@@ -12,13 +12,13 @@ import {
   type RootShape,
 } from './plant-models';
 import {
-  hashRange,
-  PART_GEOMETRY,
+  SCENE_GEOMETRY,
+  sceneNoiseRange,
   type ScenePart,
   type ScenePartDraft,
   sceneParts,
   type SceneVector,
-} from './scene-part';
+} from '@justin-croyable/design-system/components/scene';
 
 const FULL_TURN = Math.PI * 2;
 const HALF_TURN = Math.PI;
@@ -53,14 +53,14 @@ type FruitBuilder = (position: SceneVector, radius: number, color: string) => Sc
 
 const FRUIT_BUILDERS: Readonly<Record<FruitShape, FruitBuilder>> = {
   [FRUIT_SHAPE.berry]: (position, radius, color) => ({
-    geometry: PART_GEOMETRY.sphere,
+    geometry: SCENE_GEOMETRY.sphere,
     args: sphereArgs(radius),
     position,
     color,
     roughness: FRUIT_ROUGHNESS,
   }),
   [FRUIT_SHAPE.pod]: (position, radius, color) => ({
-    geometry: PART_GEOMETRY.capsule,
+    geometry: SCENE_GEOMETRY.capsule,
     args: [radius, radius * 3.4, CAPSULE_CAP_SEGMENTS, CAPSULE_RADIAL_SEGMENTS],
     position,
     rotation: [0, 0, HALF_TURN / 14],
@@ -68,7 +68,7 @@ const FRUIT_BUILDERS: Readonly<Record<FruitShape, FruitBuilder>> = {
     roughness: FRUIT_ROUGHNESS,
   }),
   [FRUIT_SHAPE.marrow]: (position, radius, color) => ({
-    geometry: PART_GEOMETRY.capsule,
+    geometry: SCENE_GEOMETRY.capsule,
     args: [radius, radius * 3.8, CAPSULE_CAP_SEGMENTS, CAPSULE_RADIAL_SEGMENTS],
     position,
     rotation: [HALF_TURN / 2, 0, 0],
@@ -76,7 +76,7 @@ const FRUIT_BUILDERS: Readonly<Record<FruitShape, FruitBuilder>> = {
     roughness: FRUIT_ROUGHNESS,
   }),
   [FRUIT_SHAPE.bunch]: (position, radius, color) => ({
-    geometry: PART_GEOMETRY.cone,
+    geometry: SCENE_GEOMETRY.cone,
     args: [radius * 1.4, radius * 4.2, CONE_SEGMENTS],
     position,
     rotation: [HALF_TURN, 0, 0],
@@ -85,7 +85,7 @@ const FRUIT_BUILDERS: Readonly<Record<FruitShape, FruitBuilder>> = {
     flatShading: true,
   }),
   [FRUIT_SHAPE.gourd]: (position, radius, color) => ({
-    geometry: PART_GEOMETRY.sphere,
+    geometry: SCENE_GEOMETRY.sphere,
     args: sphereArgs(radius),
     position,
     scale: [1, 0.76, 1],
@@ -97,7 +97,7 @@ const FRUIT_BUILDERS: Readonly<Record<FruitShape, FruitBuilder>> = {
 
 function fruits(
   model: PlantModel,
-  colors: GardenSceneColors,
+  colors: GardenColors,
   radius: number,
   lowest: number,
   highest: number,
@@ -108,7 +108,7 @@ function fruits(
   return ringPositions(model.fruitCount, radius, 0, seed).map(([x, , z], index) => {
     const spanRatio = model.fruitCount > 1 ? index / (model.fruitCount - 1) : 0;
     const height = lowest + (highest - lowest) * spanRatio;
-    const wobble = hashRange(seed + index * 3.7, 0.72, 1.12);
+    const wobble = sceneNoiseRange(seed + index * 3.7, 0.72, 1.12);
     return build([x * wobble, height, z * wobble], model.fruitRadius, color);
   });
 }
@@ -125,9 +125,9 @@ function foliageClumps(
   return Array.from({ length: count }, (_, index) => {
     const angle = seed + (index / count) * FULL_TURN;
     const ratio = count > 1 ? index / (count - 1) : 0;
-    const clumpRadius = radius * hashRange(seed + index, 0.78, 1.18);
+    const clumpRadius = radius * sceneNoiseRange(seed + index, 0.78, 1.18);
     return {
-      geometry: PART_GEOMETRY.icosahedron,
+      geometry: SCENE_GEOMETRY.icosahedron,
       args: [clumpRadius, ICOSAHEDRON_DETAIL],
       position: [
         Math.cos(angle) * spread,
@@ -150,10 +150,10 @@ function flatLeaves(
   seed: number,
 ): ScenePartDraft[] {
   return ringPositions(count, spread, height, seed).map((position, index) => ({
-    geometry: PART_GEOMETRY.sphere,
-    args: sphereArgs(radius * hashRange(seed + index * 2.3, 0.82, 1.15)),
+    geometry: SCENE_GEOMETRY.sphere,
+    args: sphereArgs(radius * sceneNoiseRange(seed + index * 2.3, 0.82, 1.15)),
     position,
-    rotation: [hashRange(seed + index, -0.16, 0.16), 0, hashRange(seed + index * 1.7, -0.2, 0.2)],
+    rotation: [sceneNoiseRange(seed + index, -0.16, 0.16), 0, sceneNoiseRange(seed + index * 1.7, -0.2, 0.2)],
     scale: [1, 0.2, 1],
     color,
     roughness: FOLIAGE_ROUGHNESS,
@@ -171,13 +171,13 @@ function leafBlades(
   seed: number,
 ): ScenePartDraft[] {
   return ringPositions(count, spread, baseHeight + bladeHeight / 2, seed).map((position, index) => ({
-    geometry: PART_GEOMETRY.cone,
-    args: [radius, bladeHeight * hashRange(seed + index * 1.3, 0.78, 1.2), CONE_SEGMENTS],
+    geometry: SCENE_GEOMETRY.cone,
+    args: [radius, bladeHeight * sceneNoiseRange(seed + index * 1.3, 0.78, 1.2), CONE_SEGMENTS],
     position,
     rotation: [
-      hashRange(seed + index * 2.1, -0.34, 0.34),
+      sceneNoiseRange(seed + index * 2.1, -0.34, 0.34),
       0,
-      hashRange(seed + index * 3.1, -0.34, 0.34),
+      sceneNoiseRange(seed + index * 3.1, -0.34, 0.34),
     ],
     color,
     roughness: FOLIAGE_ROUGHNESS,
@@ -187,13 +187,13 @@ function leafBlades(
 
 function stakedVine(
   model: PlantModel,
-  colors: GardenSceneColors,
+  colors: GardenColors,
   seed: number,
 ): ScenePartDraft[] {
   const { height, spread } = model;
   return [
     {
-      geometry: PART_GEOMETRY.cylinder,
+      geometry: SCENE_GEOMETRY.cylinder,
       args: [0.012, 0.016, height * 1.08, 5],
       position: [spread * 0.5, height * 0.54, 0],
       color: colors.bark,
@@ -201,7 +201,7 @@ function stakedVine(
       flatShading: true,
     },
     {
-      geometry: PART_GEOMETRY.cylinder,
+      geometry: SCENE_GEOMETRY.cylinder,
       args: [0.022, 0.036, height * 0.94, CYLINDER_SEGMENTS],
       position: [0, height * 0.47, 0],
       color: colors[model.stem],
@@ -220,11 +220,11 @@ function stakedVine(
   ];
 }
 
-function bush(model: PlantModel, colors: GardenSceneColors, seed: number): ScenePartDraft[] {
+function bush(model: PlantModel, colors: GardenColors, seed: number): ScenePartDraft[] {
   const { height, spread } = model;
   return [
     {
-      geometry: PART_GEOMETRY.cylinder,
+      geometry: SCENE_GEOMETRY.cylinder,
       args: [0.018, 0.03, height * 0.5, CYLINDER_SEGMENTS],
       position: [0, height * 0.25, 0],
       color: colors[model.stem],
@@ -244,11 +244,11 @@ function bush(model: PlantModel, colors: GardenSceneColors, seed: number): Scene
   ];
 }
 
-function sprawler(model: PlantModel, colors: GardenSceneColors, seed: number): ScenePartDraft[] {
+function sprawler(model: PlantModel, colors: GardenColors, seed: number): ScenePartDraft[] {
   const { height, spread } = model;
   return [
     {
-      geometry: PART_GEOMETRY.cylinder,
+      geometry: SCENE_GEOMETRY.cylinder,
       args: [0.05, 0.07, height * 0.4, CYLINDER_SEGMENTS],
       position: [0, height * 0.2, 0],
       color: colors[model.stem],
@@ -274,7 +274,7 @@ function sprawler(model: PlantModel, colors: GardenSceneColors, seed: number): S
   ];
 }
 
-function rosette(model: PlantModel, colors: GardenSceneColors, seed: number): ScenePartDraft[] {
+function rosette(model: PlantModel, colors: GardenColors, seed: number): ScenePartDraft[] {
   const { height, spread } = model;
   return [
     ...flatLeaves(7, spread * 0.52, spread * 0.62, height * 0.16, colors[model.foliage], seed),
@@ -295,7 +295,7 @@ function rosette(model: PlantModel, colors: GardenSceneColors, seed: number): Sc
       seed + 3.1,
     ),
     {
-      geometry: PART_GEOMETRY.sphere,
+      geometry: SCENE_GEOMETRY.sphere,
       args: sphereArgs(spread * 0.3),
       position: [0, height * 0.82, 0],
       scale: [1, 0.62, 1],
@@ -308,14 +308,14 @@ function rosette(model: PlantModel, colors: GardenSceneColors, seed: number): Sc
 
 type RootBuilder = (
   model: PlantModel,
-  colors: GardenSceneColors,
+  colors: GardenColors,
   seed: number,
 ) => ScenePartDraft[];
 
 const ROOT_BUILDERS: Readonly<Record<RootShape, RootBuilder>> = {
   [ROOT_SHAPE.taproot]: (model, colors) => [
     {
-      geometry: PART_GEOMETRY.cone,
+      geometry: SCENE_GEOMETRY.cone,
       args: [model.fruitRadius, model.fruitRadius * 4.4, CONE_SEGMENTS],
       position: [0, -model.fruitRadius * 0.9, 0],
       rotation: [HALF_TURN, 0, 0],
@@ -326,7 +326,7 @@ const ROOT_BUILDERS: Readonly<Record<RootShape, RootBuilder>> = {
   ],
   [ROOT_SHAPE.bulb]: (model, colors) => [
     {
-      geometry: PART_GEOMETRY.sphere,
+      geometry: SCENE_GEOMETRY.sphere,
       args: sphereArgs(model.fruitRadius),
       position: [0, model.fruitRadius * 0.35, 0],
       scale: [1, 0.9, 1],
@@ -337,8 +337,8 @@ const ROOT_BUILDERS: Readonly<Record<RootShape, RootBuilder>> = {
   [ROOT_SHAPE.tuber]: (model, colors, seed) =>
     ringPositions(model.fruitCount, model.spread * 0.34, model.fruitRadius * 0.5, seed).map(
       (position, index) => ({
-        geometry: PART_GEOMETRY.sphere,
-        args: sphereArgs(model.fruitRadius * hashRange(seed + index, 0.8, 1.15)),
+        geometry: SCENE_GEOMETRY.sphere,
+        args: sphereArgs(model.fruitRadius * sceneNoiseRange(seed + index, 0.8, 1.15)),
         position,
         scale: [1.2, 0.8, 1],
         color: colors[model.fruit],
@@ -348,7 +348,7 @@ const ROOT_BUILDERS: Readonly<Record<RootShape, RootBuilder>> = {
     ),
   [ROOT_SHAPE.shaft]: (model, colors) => [
     {
-      geometry: PART_GEOMETRY.cylinder,
+      geometry: SCENE_GEOMETRY.cylinder,
       args: [model.fruitRadius, model.fruitRadius * 1.15, model.height * 0.5, CYLINDER_SEGMENTS],
       position: [0, model.height * 0.25, 0],
       color: colors[model.fruit],
@@ -357,7 +357,7 @@ const ROOT_BUILDERS: Readonly<Record<RootShape, RootBuilder>> = {
   ],
 };
 
-function root(model: PlantModel, colors: GardenSceneColors, seed: number): ScenePartDraft[] {
+function root(model: PlantModel, colors: GardenColors, seed: number): ScenePartDraft[] {
   const { height, spread } = model;
   const isShaft = model.rootShape === ROOT_SHAPE.shaft;
   const tuftBase = isShaft ? height * 0.42 : height * 0.1;
@@ -376,10 +376,10 @@ function root(model: PlantModel, colors: GardenSceneColors, seed: number): Scene
   ];
 }
 
-function trellis(model: PlantModel, colors: GardenSceneColors, seed: number): ScenePartDraft[] {
+function trellis(model: PlantModel, colors: GardenColors, seed: number): ScenePartDraft[] {
   const { height, spread } = model;
   const post = (offset: number, index: number): ScenePartDraft => ({
-    geometry: PART_GEOMETRY.cylinder,
+    geometry: SCENE_GEOMETRY.cylinder,
     args: [0.018, 0.022, height, 5],
     position: [offset, height / 2, 0],
     color: colors.bark,
@@ -388,7 +388,7 @@ function trellis(model: PlantModel, colors: GardenSceneColors, seed: number): Sc
     rotation: [0, 0, index === 0 ? 0.05 : -0.05],
   });
   const rail = (ratio: number): ScenePartDraft => ({
-    geometry: PART_GEOMETRY.cylinder,
+    geometry: SCENE_GEOMETRY.cylinder,
     args: [0.01, 0.01, spread * 2.1, 5],
     position: [0, height * ratio, 0],
     rotation: [0, 0, HALF_TURN / 2],
@@ -403,10 +403,10 @@ function trellis(model: PlantModel, colors: GardenSceneColors, seed: number): Sc
     ...Array.from({ length: 4 }, (_, index): ScenePartDraft => {
       const offset = (index / 3 - 0.5) * spread * 1.5;
       return {
-        geometry: PART_GEOMETRY.cylinder,
+        geometry: SCENE_GEOMETRY.cylinder,
         args: [0.008, 0.012, height * 0.94, 5],
         position: [offset, height * 0.47, 0],
-        rotation: [0, 0, hashRange(seed + index * 2.9, -0.12, 0.12)],
+        rotation: [0, 0, sceneNoiseRange(seed + index * 2.9, -0.12, 0.12)],
         color: colors[model.stem],
         roughness: FOLIAGE_ROUGHNESS,
       };
@@ -424,11 +424,11 @@ function trellis(model: PlantModel, colors: GardenSceneColors, seed: number): Sc
   ];
 }
 
-function tree(model: PlantModel, colors: GardenSceneColors, seed: number): ScenePartDraft[] {
+function tree(model: PlantModel, colors: GardenColors, seed: number): ScenePartDraft[] {
   const { height, spread } = model;
   return [
     {
-      geometry: PART_GEOMETRY.cylinder,
+      geometry: SCENE_GEOMETRY.cylinder,
       args: [0.075, 0.125, height * 0.46, CYLINDER_SEGMENTS],
       position: [0, height * 0.23, 0],
       color: colors.bark,
@@ -436,7 +436,7 @@ function tree(model: PlantModel, colors: GardenSceneColors, seed: number): Scene
       flatShading: true,
     },
     {
-      geometry: PART_GEOMETRY.cylinder,
+      geometry: SCENE_GEOMETRY.cylinder,
       args: [0.04, 0.075, height * 0.24, CYLINDER_SEGMENTS],
       position: [0, height * 0.57, 0],
       color: colors.bark,
@@ -465,19 +465,19 @@ function tree(model: PlantModel, colors: GardenSceneColors, seed: number): Scene
   ];
 }
 
-function stalk(model: PlantModel, colors: GardenSceneColors, seed: number): ScenePartDraft[] {
+function stalk(model: PlantModel, colors: GardenColors, seed: number): ScenePartDraft[] {
   const { height, spread } = model;
   const stalkCount = model.fruitCount;
   return [
     ...ringPositions(stalkCount, spread * 0.26, height * 0.32, seed).map(
       (position, index): ScenePartDraft => ({
-        geometry: PART_GEOMETRY.cylinder,
+        geometry: SCENE_GEOMETRY.cylinder,
         args: [model.fruitRadius * 0.7, model.fruitRadius, height * 0.66, CYLINDER_SEGMENTS],
         position,
         rotation: [
-          hashRange(seed + index * 1.9, -0.22, 0.22),
+          sceneNoiseRange(seed + index * 1.9, -0.22, 0.22),
           0,
-          hashRange(seed + index * 2.7, -0.22, 0.22),
+          sceneNoiseRange(seed + index * 2.7, -0.22, 0.22),
         ],
         color: colors[model.fruit],
         roughness: FRUIT_ROUGHNESS,
@@ -504,7 +504,7 @@ function stalk(model: PlantModel, colors: GardenSceneColors, seed: number): Scen
 
 type PlantBuilder = (
   model: PlantModel,
-  colors: GardenSceneColors,
+  colors: GardenColors,
   seed: number,
 ) => ScenePartDraft[];
 
@@ -521,7 +521,7 @@ const PLANT_BUILDERS: Readonly<Record<PlantArchetype, PlantBuilder>> = {
 
 export function buildPlantParts(
   cropId: CropId,
-  colors: GardenSceneColors,
+  colors: GardenColors,
   seed: number,
 ): ScenePart[] {
   const model = PLANT_MODEL_BY_CROP[cropId];

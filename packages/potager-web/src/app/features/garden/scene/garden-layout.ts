@@ -1,7 +1,7 @@
 import { type CropId, type PlantRow } from '../../../core/potager.model';
 
 import { PLANT_MODEL_BY_CROP } from './plant-models';
-import { hashRange, type SceneVector } from './scene-part';
+import { sceneNoiseRange, type SceneVector } from '@justin-croyable/design-system/components/scene';
 
 export const BED_WIDTH = 1.6;
 export const BED_DEPTH = 1.1;
@@ -51,13 +51,13 @@ function spotPositions(count: number, seed: number): PlantSpot[] {
     const spotSeed = seed + index * 4.13;
     return {
       position: [
-        (column - (columns - 1) / 2) * stepX + hashRange(spotSeed, -0.06, 0.06),
+        (column - (columns - 1) / 2) * stepX + sceneNoiseRange(spotSeed, -0.06, 0.06),
         BED_HEIGHT,
-        (row - (rows - 1) / 2) * stepZ + hashRange(spotSeed + 1.7, -0.06, 0.06),
+        (row - (rows - 1) / 2) * stepZ + sceneNoiseRange(spotSeed + 1.7, -0.06, 0.06),
       ] as SceneVector,
-      rotation: [0, hashRange(spotSeed + 2.9, 0, FULL_TURN), 0] as SceneVector,
+      rotation: [0, sceneNoiseRange(spotSeed + 2.9, 0, FULL_TURN), 0] as SceneVector,
       seed: spotSeed,
-      phase: hashRange(spotSeed + 5.1, 0, FULL_TURN),
+      phase: sceneNoiseRange(spotSeed + 5.1, 0, FULL_TURN),
     };
   });
 }

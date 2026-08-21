@@ -1,7 +1,7 @@
 import { type Route } from '@angular/router';
-import { provideNgtRenderer } from 'angular-three/dom';
 
-import { SKELETON_KIND } from '@justin-croyable/design-system';
+import { provideJustinCroyableDS, SKELETON_KIND } from '@justin-croyable/design-system';
+import { withThree } from '@justin-croyable/design-system/components/scene';
 
 import { APP_PATHS } from '../../app.routes';
 
@@ -11,7 +11,7 @@ export const GARDEN_ROUTES: Route[] = [
     loadComponent: () => import('./garden.component').then(m => m.GardenComponent),
     title: 'Mon jardin — Potager',
     data: { skeleton: SKELETON_KIND.map },
-    providers: [provideNgtRenderer()],
+    providers: [provideJustinCroyableDS(withThree())],
   },
   {
     path: APP_PATHS.add,

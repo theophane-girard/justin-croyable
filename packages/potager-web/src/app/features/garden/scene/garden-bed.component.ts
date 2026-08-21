@@ -9,11 +9,13 @@ import {
 } from '@angular/core';
 import { type NgtThreeEvent } from 'angular-three';
 
+import { SceneThemeService } from '@justin-croyable/design-system';
+import { ScenePartComponent } from '@justin-croyable/design-system/components/scene';
+
 import { type GardenBed } from './garden-layout';
-import { GardenSceneThemeService } from './garden-scene-theme';
+import { GARDEN_PALETTE } from './garden-palette';
 import { buildBedParts, buildMarkerParts, buildRingParts } from './garden-structure-parts';
 import { GardenPlantComponent } from './garden-plant.component';
-import { ScenePartComponent } from './scene-part.component';
 
 @Component({
   selector: 'app-garden-bed',
@@ -54,23 +56,23 @@ export class GardenBedComponent {
   readonly picked = output<string>();
   readonly hoverChange = output<string | null>();
 
-  readonly #theme = inject(GardenSceneThemeService);
+  readonly #colors = inject(SceneThemeService).palette(GARDEN_PALETTE);
 
   readonly #plankColor = computed(() => {
-    const colors = this.#theme.colors();
+    const colors = this.#colors();
     return this.selected() ? colors.marker : colors.wood;
   });
 
   protected readonly parts = computed(() =>
-    buildBedParts(this.#theme.colors(), this.#plankColor()),
+    buildBedParts(this.#colors(), this.#plankColor()),
   );
 
-  protected readonly markerParts = computed(() => buildMarkerParts(this.#theme.colors()));
+  protected readonly markerParts = computed(() => buildMarkerParts(this.#colors()));
 
   protected readonly ringVisible = computed(() => this.selected() || this.hovered());
 
   protected readonly ringParts = computed(() => {
-    const colors = this.#theme.colors();
+    const colors = this.#colors();
     return buildRingParts(this.selected() ? colors.highlight : colors.leafBright);
   });
 

@@ -1,21 +1,14 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  inject,
-  input,
-  model,
-  signal,
-} from '@angular/core';
-import { NgtCanvas } from 'angular-three/dom';
+import { ChangeDetectionStrategy, Component, computed, inject, input, model, signal } from '@angular/core';
 import { CardComponent, ViewportService } from '@justin-croyable/design-system';
+import {
+  type SceneBounds,
+  SceneCanvasComponent,
+  SceneContentDirective,
+} from '@justin-croyable/design-system/components/scene';
+import type { NgtFrameloop } from 'angular-three';
 import { NgIcon } from '@ng-icons/core';
 
-import {
-  cropUnit,
-  formatQuantity,
-  type PlantRow,
-} from '../../../core/potager.model';
+import { cropUnit, formatQuantity, type PlantRow } from '../../../core/potager.model';
 
 import { buildGardenField } from './garden-layout';
 import { GardenSceneComponent } from './garden-scene.component';
@@ -27,55 +20,56 @@ type FocusInfo = {
 
 const MOBILE_PLANT_BUDGET = 3;
 const DESKTOP_PLANT_BUDGET = 6;
-const MOBILE_DPR: [number, number] = [1, 1.5];
-const DESKTOP_DPR: [number, number] = [1, 2];
-const CAMERA_OPTIONS = { fov: 42, near: 0.1, far: 240 } as const;
-const GL_OPTIONS = { antialias: true, alpha: true } as const;
+const MOBILE_HEIGHT = '22rem';
+const DESKTOP_HEIGHT = '32rem';
+const SCENE_HEIGHT = 2.4;
+const SCENE_LABEL = 'Votre potager en trois dimensions, une planche par variété cultivée';
+const ANIMATED_FRAMELOOP: NgtFrameloop = 'always';
+const STILL_FRAMELOOP: NgtFrameloop = 'demand';
 const PLANT_SUFFIX = 'plant';
 const PLANT_SUFFIX_PLURAL = 'plants';
 const DETAIL_SEPARATOR = ' · ';
 
 @Component({
   selector: 'app-garden-view',
-  imports: [NgtCanvas, CardComponent, GardenSceneComponent, NgIcon],
+  imports: [SceneCanvasComponent, SceneContentDirective, CardComponent, GardenSceneComponent, NgIcon],
   template: `
-    <div
-      class="border-border from-muted to-background relative h-[22rem] w-full overflow-hidden rounded-xl border bg-gradient-to-b sm:h-[28rem] lg:h-[34rem]"
+    <app-scene-canvas
       [class.cursor-pointer]="hoveredId() !== null"
+      [height]="height()"
+      [label]="sceneLabel"
+      [bounds]="bounds()"
+      [frameloop]="frameloop()"
     >
-      <ngt-canvas
-        class="block size-full"
-        [gl]="glOptions"
-        [camera]="cameraOptions"
-        [dpr]="dpr()"
-      >
+      <ng-template sceneContent>
         <app-garden-scene
-          *canvasContent
           [field]="field()"
           [selectedId]="selectedId()"
           [hoveredId]="hoveredId()"
           (picked)="onPicked($event)"
           (hoverChange)="hoveredId.set($event)"
         />
-      </ngt-canvas>
+      </ng-template>
 
-      @if (focus(); as info) {
-        <app-card
-          class="absolute top-3 left-3 w-64 max-w-[70%]"
-          backdrop="blur"
-          [title]="info.label"
-          [description]="info.detail"
-        />
-      }
+      <div sceneOverlay>
+        @if (focus(); as info) {
+          <app-card
+            class="absolute top-3 left-3 w-64 max-w-[70%]"
+            backdrop="blur"
+            [title]="info.label"
+            [description]="info.detail"
+          />
+        }
 
-      <div
-        class="text-muted-foreground pointer-events-none absolute right-3 bottom-3 flex items-center gap-1.5 text-xs"
-      >
-        <ng-icon name="phosphorArrowClockwise" class="size-3.5" />
-        <span class="hidden sm:inline">Glisser pour tourner · molette pour zoomer</span>
-        <span class="sm:hidden">Glisser · pincer</span>
+        <div
+          class="text-muted-foreground pointer-events-none absolute right-3 bottom-3 flex items-center gap-1.5 text-xs"
+        >
+          <ng-icon name="phosphorArrowClockwise" class="size-3.5" />
+          <span class="hidden sm:inline">Glisser pour tourner · molette pour zoomer</span>
+          <span class="sm:hidden">Glisser · pincer</span>
+        </div>
       </div>
-    </div>
+    </app-scene-canvas>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -86,10 +80,15 @@ export class GardenViewComponent {
   readonly #viewport = inject(ViewportService);
 
   protected readonly hoveredId = signal<string | null>(null);
-  protected readonly cameraOptions = CAMERA_OPTIONS;
-  protected readonly glOptions = GL_OPTIONS;
+  protected readonly sceneLabel = SCENE_LABEL;
 
-  protected readonly dpr = computed(() => (this.#viewport.isMobile() ? MOBILE_DPR : DESKTOP_DPR));
+  protected readonly height = computed(() =>
+    this.#viewport.isMobile() ? MOBILE_HEIGHT : DESKTOP_HEIGHT,
+  );
+
+  protected readonly frameloop = computed(() =>
+    this.#viewport.prefersReducedMotion() ? STILL_FRAMELOOP : ANIMATED_FRAMELOOP,
+  );
 
   protected readonly field = computed(() =>
     buildGardenField(
@@ -97,6 +96,12 @@ export class GardenViewComponent {
       this.#viewport.isMobile() ? MOBILE_PLANT_BUDGET : DESKTOP_PLANT_BUDGET,
     ),
   );
+
+  protected readonly bounds = computed<SceneBounds>(() => ({
+    width: this.field().width,
+    depth: this.field().depth,
+    height: SCENE_HEIGHT,
+  }));
 
   protected readonly focus = computed<FocusInfo | null>(() => {
     const focusedId = this.hoveredId() ?? this.selectedId();
