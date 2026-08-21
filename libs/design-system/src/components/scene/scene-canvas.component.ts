@@ -1,5 +1,6 @@
 import { NgTemplateOutlet } from '@angular/common';
 import {
+  booleanAttribute,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -23,10 +24,23 @@ import { sceneCanvasVariants } from './scene-canvas.variants';
 
 import { SceneEnvironmentComponent, type SceneLighting, SCENE_LIGHTING } from './scene-environment.component';
 import { SceneOrbitControlsComponent } from './scene-orbit-controls.component';
-import type { SceneBounds } from './scene-part';
+import type { SceneBounds, SceneVector } from './scene-part';
+
+/**
+ * Réglages de caméra transmis à `ngt-canvas`. `zoom` ne vaut que pour une caméra
+ * orthographique — c'est le nombre de pixels par unité monde — et `fov` que pour
+ * une perspective.
+ */
+export type SceneCameraOptions = {
+  readonly position?: SceneVector;
+  readonly zoom?: number;
+  readonly fov?: number;
+  readonly near?: number;
+  readonly far?: number;
+};
 
 const DEFAULT_BOUNDS: SceneBounds = { width: 4, depth: 4, height: 2 };
-const CAMERA_OPTIONS = { fov: 42, near: 0.1, far: 400 } as const;
+const CAMERA_OPTIONS: SceneCameraOptions = { fov: 42, near: 0.1, far: 400 };
 const GL_OPTIONS = { antialias: true, alpha: true } as const;
 const DEMAND_FRAMELOOP: NgtFrameloop = 'demand';
 
@@ -84,7 +98,8 @@ export class SceneContentHostDirective {
     <ngt-canvas
       class="block size-full"
       [gl]="glOptions"
-      [camera]="cameraOptions"
+      [camera]="cameraOptions()"
+      [orthographic]="orthographic()"
       [dpr]="dpr()"
       [frameloop]="frameloop()"
     >
@@ -138,6 +153,8 @@ export class SceneCanvasComponent {
   readonly frameloop = input<NgtFrameloop>(DEMAND_FRAMELOOP);
   readonly fog = input(true);
   readonly orbit = input(true);
+  readonly orthographic = input(false, { transform: booleanAttribute });
+  readonly camera = input<SceneCameraOptions>({});
   readonly autoRotate = input(false);
   readonly loading = input(false);
   readonly label = input.required<string>();
@@ -146,8 +163,12 @@ export class SceneCanvasComponent {
 
   private readonly sceneContent = contentChild(SceneContentDirective, { read: TemplateRef });
 
-  protected readonly cameraOptions = CAMERA_OPTIONS;
   protected readonly glOptions = GL_OPTIONS;
+
+  protected readonly cameraOptions = computed<SceneCameraOptions>(() => ({
+    ...CAMERA_OPTIONS,
+    ...this.camera(),
+  }));
 
   protected readonly contentTemplate = computed(() => this.sceneContent() ?? null);
 

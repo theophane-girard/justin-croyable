@@ -2,6 +2,7 @@ import { SceneCanvasComponent, SceneContentDirective } from './scene-canvas.comp
 import { SceneEnvironmentComponent } from './scene-environment.component';
 import { SceneOrbitControlsComponent } from './scene-orbit-controls.component';
 import { ScenePartComponent } from './scene-part.component';
+import { SceneTopControlsComponent } from './scene-top-controls.component';
 
 export const SceneImports = [
   SceneCanvasComponent,
@@ -9,4 +10,5 @@ export const SceneImports = [
   SceneEnvironmentComponent,
   SceneOrbitControlsComponent,
   ScenePartComponent,
+  SceneTopControlsComponent,
 ] as const;
