@@ -38,6 +38,71 @@ const OUTLINE_LIFT = 0.02;
 const GRID_LINE = 0.008;
 const HALF = 2;
 
+/**
+ * Rayon des coins du terrain. Le rayon du système de design vaut environ quatre
+ * pour cent de la largeur d'une carte : on transpose ce rapport aux dalles de
+ * terrain, avec un plancher et un plafond pour rester lisible d'un potager de
+ * poche à un terrain de trente mètres.
+ */
+const CORNER_RADIUS_RATIO = 0.04;
+const MIN_CORNER_RADIUS = 0.08;
+const MAX_CORNER_RADIUS = 0.6;
+const CORNER_SEGMENTS = 14;
+
+function cornerRadius(width: number, depth: number): number {
+  const shortest = Math.min(width, depth);
+  return Math.min(MAX_CORNER_RADIUS, Math.max(MIN_CORNER_RADIUS, shortest * CORNER_RADIUS_RATIO));
+}
+
+/**
+ * Dalle à coins arrondis : deux pavés croisés et quatre cylindres aux angles.
+ * Les moitiés cachées des cylindres tombent dans les pavés, rien ne dépasse.
+ */
+function roundedSlab(
+  width: number,
+  depth: number,
+  height: number,
+  y: number,
+  color: string,
+  radius: number,
+): readonly ScenePartDraft[] {
+  const inset = Math.min(radius, Math.min(width, depth) / HALF);
+  const halfWidth = width / HALF - inset;
+  const halfDepth = depth / HALF - inset;
+  const corners = [
+    [halfWidth, halfDepth],
+    [halfWidth, -halfDepth],
+    [-halfWidth, halfDepth],
+    [-halfWidth, -halfDepth],
+  ] as const;
+
+  return [
+    {
+      geometry: SCENE_GEOMETRY.box,
+      args: [width - inset * HALF, height, depth],
+      position: [0, y, 0],
+      color,
+      roughness: SOIL_ROUGHNESS,
+    },
+    {
+      geometry: SCENE_GEOMETRY.box,
+      args: [width, height, depth - inset * HALF],
+      position: [0, y, 0],
+      color,
+      roughness: SOIL_ROUGHNESS,
+    },
+    ...corners.map(
+      ([x, z]): ScenePartDraft => ({
+        geometry: SCENE_GEOMETRY.cylinder,
+        args: [inset, inset, height, CORNER_SEGMENTS],
+        position: [x, y, z],
+        color,
+        roughness: SOIL_ROUGHNESS,
+      }),
+    ),
+  ];
+}
+
 export function buildTerrainParts(
   width: number,
   depth: number,
@@ -46,12 +111,15 @@ export function buildTerrainParts(
 ): ScenePart[] {
   const soilWidth = Math.max(width - SOIL_INSET, width * 0.5);
   const soilDepth = Math.max(depth - SOIL_INSET, depth * 0.5);
+  const grassRadius = cornerRadius(width, depth);
+  const soilRadius = cornerRadius(soilWidth, soilDepth);
+  const furrowSpan = Math.max(soilWidth - soilRadius * HALF, soilWidth * 0.5);
   const furrowCount = tilled ? Math.max(1, Math.floor(soilDepth / FURROW_SPACING)) : 0;
   const furrows = Array.from({ length: furrowCount }, (_, index): ScenePartDraft => {
     const offset = (index - (furrowCount - 1) / HALF) * FURROW_SPACING;
     return {
       geometry: SCENE_GEOMETRY.box,
-      args: [soilWidth * sceneNoiseRange(index + 1, 0.94, 1), FURROW_HEIGHT, FURROW_WIDTH],
+      args: [furrowSpan * sceneNoiseRange(index + 1, 0.94, 1), FURROW_HEIGHT, FURROW_WIDTH],
       position: [0, FURROW_HEIGHT / HALF, offset],
       color: colors.fieldFurrow,
       roughness: SOIL_ROUGHNESS,
@@ -60,20 +128,22 @@ export function buildTerrainParts(
   });
 
   return sceneParts(TERRAIN_PREFIX, [
-    {
-      geometry: SCENE_GEOMETRY.box,
-      args: [width, TERRAIN_THICKNESS * 0.9, depth],
-      position: [0, -TERRAIN_THICKNESS * 0.62, 0],
-      color: colors.grass,
-      roughness: SOIL_ROUGHNESS,
-    },
-    {
-      geometry: SCENE_GEOMETRY.box,
-      args: [soilWidth, TERRAIN_THICKNESS, soilDepth],
-      position: [0, -TERRAIN_THICKNESS / HALF, 0],
-      color: colors.fieldSoil,
-      roughness: SOIL_ROUGHNESS,
-    },
+    ...roundedSlab(
+      width,
+      depth,
+      TERRAIN_THICKNESS * 0.9,
+      -TERRAIN_THICKNESS * 0.62,
+      colors.grass,
+      grassRadius,
+    ),
+    ...roundedSlab(
+      soilWidth,
+      soilDepth,
+      TERRAIN_THICKNESS,
+      -TERRAIN_THICKNESS / HALF,
+      colors.fieldSoil,
+      soilRadius,
+    ),
     ...furrows,
   ]);
 }
