@@ -199,27 +199,36 @@ function raisedFrameParts(
   ];
 }
 
+/**
+ * Bourrelet de terre autour d'une planche en pleine terre. Il est posé en
+ * dehors de l'emprise cultivable : centré sur le bord, il mordait sur la
+ * première et la dernière rangée de cases.
+ */
 function groundEdgeParts(
   width: number,
   depth: number,
   colors: GardenColors,
 ): readonly ScenePartDraft[] {
   const ridge = GROUND_SOIL_HEIGHT * 0.55;
+  const thickness = GROUND_SOIL_HEIGHT;
+  const outerWidth = width + thickness * HALF;
+  const halfWidth = width / HALF + thickness / HALF;
+  const halfDepth = depth / HALF + thickness / HALF;
   return [
-    ...([depth / HALF, -depth / HALF] as const).map(
+    ...([halfDepth, -halfDepth] as const).map(
       (z): ScenePartDraft => ({
         geometry: SCENE_GEOMETRY.box,
-        args: [width, ridge, GROUND_SOIL_HEIGHT],
+        args: [outerWidth, ridge, thickness],
         position: [0, GROUND_SOIL_HEIGHT + ridge / HALF, z],
         color: colors.fieldFurrow,
         roughness: SOIL_ROUGHNESS,
         flatShading: true,
       }),
     ),
-    ...([width / HALF, -width / HALF] as const).map(
+    ...([halfWidth, -halfWidth] as const).map(
       (x): ScenePartDraft => ({
         geometry: SCENE_GEOMETRY.box,
-        args: [GROUND_SOIL_HEIGHT, ridge, depth],
+        args: [thickness, ridge, depth],
         position: [x, GROUND_SOIL_HEIGHT + ridge / HALF, 0],
         color: colors.fieldFurrow,
         roughness: SOIL_ROUGHNESS,

@@ -29,7 +29,7 @@ export const PLACEMENT_GAP_CM = 50;
 export const EDITOR_TERRAIN_CM = 6000;
 export const EDITOR_GRID_CM = 2400;
 export const EDITOR_VIEW_CM = 1100;
-export const ALIGN_TOLERANCE_CM = 20;
+export const ALIGN_TOLERANCE_CM = 8;
 
 const CENTIMETRES_PER_METRE = 100;
 const HALF = 2;
@@ -258,36 +258,58 @@ type AxisSnap = {
   readonly guide: number | null;
 };
 
+const ANCHOR_KIND = { edge: 'edge', middle: 'middle' } as const;
+
+type AnchorKind = (typeof ANCHOR_KIND)[keyof typeof ANCHOR_KIND];
+
+type Anchor = {
+  readonly value: number;
+  readonly kind: AnchorKind;
+};
+
+function anchorsOf(start: number, size: number): readonly Anchor[] {
+  return [
+    { value: start, kind: ANCHOR_KIND.edge },
+    { value: start + size / HALF, kind: ANCHOR_KIND.middle },
+    { value: start + size, kind: ANCHOR_KIND.edge },
+  ];
+}
+
 /**
- * Aimante un bord, le centre ou l'autre bord de la parcelle déplacée sur ceux
- * des parcelles voisines. À défaut d'un voisin assez proche, la position
- * retombe sur le quadrillage du plateau.
+ * Aimante la parcelle déplacée sur ses voisines. Seuls les repères de même
+ * nature s'attirent — un bord sur un bord, un milieu sur un milieu : apparier
+ * un bord avec un milieu produisait des alignements que personne ne cherche, et
+ * comme il y en a neuf par voisine, quelque chose accrochait toujours. À défaut
+ * de voisine assez proche, la position retombe sur le quadrillage du plateau.
  */
-function snapAxis(start: number, size: number, targets: readonly number[]): AxisSnap {
-  const anchors = [start, start + size / HALF, start + size];
-  const candidates = anchors.flatMap(anchor =>
-    targets.map(target => ({ delta: target - anchor, target })),
-  );
-  const closest = candidates.reduce<{ delta: number; target: number } | null>(
-    (best, candidate) =>
-      Math.abs(candidate.delta) <= ALIGN_TOLERANCE_CM &&
-      (best === null || Math.abs(candidate.delta) < Math.abs(best.delta))
-        ? candidate
-        : best,
-    null,
-  );
+function snapAxis(start: number, size: number, targets: readonly Anchor[]): AxisSnap {
+  const closest = anchorsOf(start, size)
+    .flatMap(anchor =>
+      targets
+        .filter(target => target.kind === anchor.kind)
+        .map(target => ({ delta: target.value - anchor.value, target: target.value })),
+    )
+    .reduce<{ delta: number; target: number } | null>(
+      (best, candidate) =>
+        Math.abs(candidate.delta) <= ALIGN_TOLERANCE_CM &&
+        (best === null || Math.abs(candidate.delta) < Math.abs(best.delta))
+          ? candidate
+          : best,
+      null,
+    );
   if (closest === null) {
     return { value: snapToStep(start), guide: null };
   }
   return { value: start + closest.delta, guide: closest.target };
 }
 
-function axisTargets(rects: readonly PlacedRect[], axis: AlignAxis): readonly number[] {
-  return rects.flatMap(rect => {
-    const start = axis === ALIGN_AXIS.x ? rect.xCm : rect.zCm;
-    const size = axis === ALIGN_AXIS.x ? rect.widthCm : rect.depthCm;
-    return [start, start + size / HALF, start + size];
-  });
+function axisTargets(rects: readonly PlacedRect[], axis: AlignAxis): readonly Anchor[] {
+  return rects.flatMap(rect =>
+    anchorsOf(
+      axis === ALIGN_AXIS.x ? rect.xCm : rect.zCm,
+      axis === ALIGN_AXIS.x ? rect.widthCm : rect.depthCm,
+    ),
+  );
 }
 
 export function snapPlacement(

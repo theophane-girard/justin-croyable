@@ -9,12 +9,7 @@ import {
   output,
   signal,
 } from '@angular/core';
-import {
-  ButtonComponent,
-  CardComponent,
-  SceneThemeService,
-  ViewportService,
-} from '@justin-croyable/design-system';
+import { CardComponent, SceneThemeService, ViewportService } from '@justin-croyable/design-system';
 import {
   type SceneBounds,
   type SceneCameraOptions,
@@ -102,7 +97,6 @@ function writeRotateHintSeen(): void {
     ScenePartComponent,
     GardenSceneComponent,
     CardComponent,
-    ButtonComponent,
     NgtArgs,
     NgIcon,
   ],
@@ -167,20 +161,10 @@ function writeRotateHintSeen(): void {
               class="absolute top-3 left-3 w-64 max-w-[75%]"
               backdrop="blur"
               title="Mode rotation"
+              action="Terminer"
               [description]="rotateHint()"
-            >
-              <div card-footer class="w-full flex-row justify-end">
-                <button
-                  appButton
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  (click)="exitRotate(); markHintSeen()"
-                >
-                  Terminer
-                </button>
-              </div>
-            </app-card>
+              (actionClick)="exitRotate(); markHintSeen()"
+            />
           } @else if (overlapping().size > 0) {
             <app-card
               class="absolute top-3 left-3 w-64 max-w-[75%]"
