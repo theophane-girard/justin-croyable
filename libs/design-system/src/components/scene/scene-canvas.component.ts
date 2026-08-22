@@ -10,6 +10,7 @@ import {
   Injector,
   input,
   TemplateRef,
+  viewChild,
   ViewEncapsulation,
 } from '@angular/core';
 import { NgtCanvas } from 'angular-three/dom';
@@ -22,7 +23,11 @@ import { mergeClasses } from '../../utils/merge-classes';
 
 import { sceneCanvasVariants } from './scene-canvas.variants';
 
-import { SceneEnvironmentComponent, type SceneLighting, SCENE_LIGHTING } from './scene-environment.component';
+import {
+  SceneEnvironmentComponent,
+  type SceneLighting,
+  SCENE_LIGHTING,
+} from './scene-environment.component';
 import { SceneOrbitControlsComponent } from './scene-orbit-controls.component';
 import type { SceneBounds, SceneVector } from './scene-part';
 
@@ -106,7 +111,11 @@ export class SceneContentHostDirective {
       <ng-container *canvasContent>
         <app-scene-environment [bounds]="bounds()" [lighting]="lighting()" [fog]="fog()" />
         @if (orbit()) {
-          <app-scene-orbit-controls [bounds]="bounds()" [autoRotate]="autoRotate()" />
+          <app-scene-orbit-controls
+            [bounds]="bounds()"
+            [autoRotate]="autoRotate()"
+            [pan]="orbitPan()"
+          />
         }
         <ng-container sceneContentHost #contentHost="sceneContentHost" />
         <ng-container
@@ -123,8 +132,17 @@ export class SceneContentHostDirective {
         aria-busy="true"
         class="bg-background absolute inset-0 flex items-center justify-center"
       >
-        <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" class="text-accent h-2/5 animate-skeleton">
-          <path d="M50 12 L86 32 L86 68 L50 88 L14 68 L14 32 Z" stroke-width="6" stroke-linejoin="round" />
+        <svg
+          viewBox="0 0 100 100"
+          fill="none"
+          stroke="currentColor"
+          class="text-accent h-2/5 animate-skeleton"
+        >
+          <path
+            d="M50 12 L86 32 L86 68 L50 88 L14 68 L14 32 Z"
+            stroke-width="6"
+            stroke-linejoin="round"
+          />
           <path d="M50 12 L50 50 M50 50 L86 32 M50 50 L14 32" stroke-width="4" />
         </svg>
       </div>
@@ -153,6 +171,7 @@ export class SceneCanvasComponent {
   readonly frameloop = input<NgtFrameloop>(DEMAND_FRAMELOOP);
   readonly fog = input(true);
   readonly orbit = input(true);
+  readonly orbitPan = input(false);
   readonly orthographic = input(false, { transform: booleanAttribute });
   readonly camera = input<SceneCameraOptions>({});
   readonly autoRotate = input(false);
@@ -162,6 +181,7 @@ export class SceneCanvasComponent {
   readonly class = input<ClassValue>('');
 
   private readonly sceneContent = contentChild(SceneContentDirective, { read: TemplateRef });
+  private readonly orbitControls = viewChild(SceneOrbitControlsComponent);
 
   protected readonly glOptions = GL_OPTIONS;
 
@@ -177,4 +197,9 @@ export class SceneCanvasComponent {
   );
 
   protected readonly classes = computed(() => mergeClasses(sceneCanvasVariants(), this.class()));
+
+  /** Ramène la caméra sur son cadrage d'origine. Sans effet hors mode orbite. */
+  recenter(): void {
+    this.orbitControls()?.recenter();
+  }
 }

@@ -17,7 +17,7 @@ import type { SceneBounds } from './scene-part';
 const DAMPING_FACTOR = 0.075;
 const MIN_POLAR_ANGLE = Math.PI / 8;
 const MAX_POLAR_ANGLE = Math.PI / 2.25;
-const MIN_DISTANCE_RATIO = 0.3;
+const MIN_DISTANCE_RATIO = 0.08;
 const MAX_DISTANCE_RATIO = 1.9;
 const ROTATE_SPEED = 0.65;
 const ZOOM_SPEED = 0.7;
@@ -67,19 +67,21 @@ export class SceneOrbitControlsComponent {
   readonly bounds = input.required<SceneBounds>();
   readonly autoRotate = input(false);
   readonly enabled = input(true);
+  readonly pan = input(false);
 
   readonly #store = injectStore();
   readonly #viewport = inject(ViewportService);
 
   #framedWidth = 0;
   #framedDepth = 0;
+  #recenter: () => void = () => void 0;
 
   constructor() {
     const camera = this.#store.camera();
     const controls = new OrbitControls(camera, this.#store.gl().domElement);
     controls.enableDamping = true;
     controls.dampingFactor = DAMPING_FACTOR;
-    controls.enablePan = false;
+    controls.screenSpacePanning = false;
     controls.rotateSpeed = ROTATE_SPEED;
     controls.zoomSpeed = ZOOM_SPEED;
     controls.autoRotateSpeed = AUTO_ROTATE_SPEED;
@@ -112,6 +114,26 @@ export class SceneOrbitControlsComponent {
 
     beforeRender(() => controls.update());
 
+    this.#recenter = () => {
+      const bounds = this.bounds();
+      const size = this.#store.size();
+      const aspect =
+        size.height > 0 ? size.width / size.height : FALLBACK_ASPECT;
+      const fov =
+        camera instanceof PerspectiveCamera ? camera.fov : FALLBACK_FOV;
+      controls.target.set(0, bounds.height * TARGET_HEIGHT_RATIO, 0);
+      camera.position
+        .copy(controls.target)
+        .addScaledVector(VIEW_DIRECTION, fitDistance(fov, aspect, bounds));
+      controls.update();
+      this.#store.snapshot.invalidate();
+    };
+
     inject(DestroyRef).onDestroy(() => controls.dispose());
+  }
+
+  /** Ramène la caméra sur son cadrage d'origine, après déplacement ou zoom. */
+  recenter(): void {
+    this.#recenter();
   }
 }

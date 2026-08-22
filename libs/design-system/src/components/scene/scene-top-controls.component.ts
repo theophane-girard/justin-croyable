@@ -59,6 +59,9 @@ export class SceneTopControlsComponent {
 
   readonly #store = injectStore();
 
+  #framedWidth = 0;
+  #framedDepth = 0;
+
   constructor() {
     const camera = this.#store.camera();
     const controls = new OrbitControls(camera, this.#store.gl().domElement);
@@ -88,10 +91,21 @@ export class SceneTopControlsComponent {
       const pixelWidth = size.width > 0 ? size.width : FALLBACK_PIXELS;
       const pixelHeight = size.height > 0 ? size.height : FALLBACK_PIXELS;
 
+      const zoom = fitZoom(pixelWidth, pixelHeight, bounds);
       if (camera instanceof OrthographicCamera) {
-        const zoom = fitZoom(pixelWidth, pixelHeight, bounds);
         controls.minZoom = zoom * MIN_ZOOM_RATIO;
         controls.maxZoom = zoom * MAX_ZOOM_RATIO;
+      }
+
+      if (this.#framedWidth === bounds.width && this.#framedDepth === bounds.depth) {
+        controls.update();
+        this.#store.snapshot.invalidate();
+        return;
+      }
+      this.#framedWidth = bounds.width;
+      this.#framedDepth = bounds.depth;
+
+      if (camera instanceof OrthographicCamera) {
         camera.zoom = zoom;
         camera.position.set(
           0,
