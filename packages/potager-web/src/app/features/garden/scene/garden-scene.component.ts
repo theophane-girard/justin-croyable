@@ -18,7 +18,7 @@ import {
   type GardenParcel,
 } from './garden-layout';
 import { GARDEN_PALETTE } from './garden-palette';
-import { buildTerrainParts } from './garden-structure-parts';
+import { buildHorizonParts, buildTerrainParts } from './garden-structure-parts';
 import {
   GardenParcelComponent,
   PARCEL_STATE,
@@ -36,6 +36,10 @@ function ownerParcelId(key: string | null): string | null {
   selector: 'app-garden-scene',
   imports: [ScenePartComponent, GardenParcelComponent],
   template: `
+    @for (part of horizonParts(); track part.id) {
+      <app-scene-part [part]="part" />
+    }
+
     @for (part of terrainParts(); track part.id) {
       <app-scene-part [part]="part" />
     }
@@ -72,6 +76,7 @@ export class GardenSceneComponent {
   readonly interactiveCells = input(true);
   readonly showGrid = input(true);
   readonly tilledTerrain = input(true);
+  readonly horizon = input(false);
 
   readonly picked = output<string>();
   readonly pressed = output<ParcelPointer>();
@@ -82,6 +87,10 @@ export class GardenSceneComponent {
   readonly edgeHoverChange = output<GardenEdge | null>();
 
   readonly #colors = inject(SceneThemeService).palette(GARDEN_PALETTE);
+
+  protected readonly horizonParts = computed(() =>
+    this.horizon() ? buildHorizonParts(this.field().extent, this.#colors()) : [],
+  );
 
   protected readonly terrainParts = computed(() =>
     buildTerrainParts(this.field().width, this.field().depth, this.#colors(), this.tilledTerrain()),
