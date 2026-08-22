@@ -8,7 +8,13 @@ import {
   viewChild,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { Router, RouterLink, RouterOutlet, RoutesRecognized } from '@angular/router';
+import {
+  type ActivatedRouteSnapshot,
+  Router,
+  RouterLink,
+  RouterOutlet,
+  RoutesRecognized,
+} from '@angular/router';
 import { filter, map } from 'rxjs';
 
 import {
@@ -37,20 +43,56 @@ import { GardenAccessStore } from './core/garden-access-store';
 import { LoginComponent } from './features/auth/login.component';
 import { APP_PATHS } from './app.routes';
 
-type NavItem = { readonly path: string; readonly link: string; readonly label: string; readonly icon: string };
+type NavItem = {
+  readonly path: string;
+  readonly link: string;
+  readonly label: string;
+  readonly icon: string;
+};
 
 type HeaderCrumb = { readonly url: string; readonly label: string; readonly link: string[] };
 
 const NAV_ITEMS: readonly NavItem[] = [
   { path: APP_PATHS.dashboard, link: '/', label: 'Tableau de bord', icon: 'phosphorSquaresFour' },
-  { path: APP_PATHS.harvests, link: `/${APP_PATHS.harvests}`, label: 'Récoltes', icon: 'phosphorListBullets' },
-  { path: APP_PATHS.expenses, link: `/${APP_PATHS.expenses}`, label: 'Dépenses', icon: 'phosphorReceipt' },
-  { path: APP_PATHS.garden, link: `/${APP_PATHS.garden}`, label: 'Mon jardin', icon: 'phosphorPottedPlant' },
+  {
+    path: APP_PATHS.harvests,
+    link: `/${APP_PATHS.harvests}`,
+    label: 'Récoltes',
+    icon: 'phosphorListBullets',
+  },
+  {
+    path: APP_PATHS.expenses,
+    link: `/${APP_PATHS.expenses}`,
+    label: 'Dépenses',
+    icon: 'phosphorReceipt',
+  },
+  {
+    path: APP_PATHS.garden,
+    link: `/${APP_PATHS.garden}`,
+    label: 'Mon jardin',
+    icon: 'phosphorPottedPlant',
+  },
   { path: APP_PATHS.prices, link: `/${APP_PATHS.prices}`, label: 'Prix', icon: 'phosphorCoins' },
-  { path: APP_PATHS.rankings, link: `/${APP_PATHS.rankings}`, label: 'Classement', icon: 'phosphorTrophy' },
+  {
+    path: APP_PATHS.rankings,
+    link: `/${APP_PATHS.rankings}`,
+    label: 'Classement',
+    icon: 'phosphorTrophy',
+  },
 ];
 
 const APP_NAME = 'Mon Potager';
+
+const FULL_HEIGHT_DATA = 'fullHeight';
+
+function isFullHeight(route: ActivatedRouteSnapshot): boolean {
+  const deepest = deepestRoute(route);
+  return deepest.data[FULL_HEIGHT_DATA] === true;
+}
+
+function deepestRoute(route: ActivatedRouteSnapshot): ActivatedRouteSnapshot {
+  return route.firstChild === null ? route : deepestRoute(route.firstChild);
+}
 
 const PAGE_TITLES: Readonly<Record<string, string>> = {
   [APP_PATHS.dashboard]: 'Tableau de bord',
@@ -116,9 +158,14 @@ function initialsOf(label: string): string {
           >
             <div class="flex h-full flex-col">
               <app-sidebar-group class="px-1 py-3">
-                <div class="mb-2 flex items-center gap-2 px-2" [class.justify-center]="sidebarCollapsed()">
+                <div
+                  class="mb-2 flex items-center gap-2 px-2"
+                  [class.justify-center]="sidebarCollapsed()"
+                >
                   <ng-icon name="phosphorPlant" class="text-primary size-6 shrink-0" />
-                  <span class="text-base font-semibold" [class.hidden]="sidebarCollapsed()">{{ appName }}</span>
+                  <span class="text-base font-semibold" [class.hidden]="sidebarCollapsed()">{{
+                    appName
+                  }}</span>
                 </div>
 
                 @if (!sidebarCollapsed() && access.hasMultiple()) {
@@ -130,7 +177,12 @@ function initialsOf(label: string): string {
                       (valueChange)="onGardenChange($event)"
                     >
                       @for (option of gardenOptions(); track option.id) {
-                        <app-select-item [value]="option.id" [label]="option.label" [hint]="option.hint">{{ option.label }}</app-select-item>
+                        <app-select-item
+                          [value]="option.id"
+                          [label]="option.label"
+                          [hint]="option.hint"
+                          >{{ option.label }}</app-select-item
+                        >
                       }
                     </app-select>
                     <div class="flex items-center justify-end gap-1">
@@ -157,7 +209,9 @@ function initialsOf(label: string): string {
                   </div>
                 }
 
-                <app-sidebar-group-label [class.hidden]="sidebarCollapsed()">Navigation</app-sidebar-group-label>
+                <app-sidebar-group-label [class.hidden]="sidebarCollapsed()"
+                  >Navigation</app-sidebar-group-label
+                >
                 @for (item of navLinks(); track item.path) {
                   <a
                     appSidebarItem
@@ -177,10 +231,20 @@ function initialsOf(label: string): string {
                   [class.justify-center]="sidebarCollapsed()"
                   (click)="openUserMenu()"
                 >
-                  <app-avatar size="sm" [src]="avatarSrc()" [alt]="displayName()" [fallback]="initials()" />
+                  <app-avatar
+                    size="sm"
+                    [src]="avatarSrc()"
+                    [alt]="displayName()"
+                    [fallback]="initials()"
+                  />
                   @if (!sidebarCollapsed()) {
-                    <span class="min-w-0 flex-1 truncate text-sm font-medium">{{ displayName() }}</span>
-                    <ng-icon name="phosphorArrowSquareOut" class="text-muted-foreground size-4 shrink-0" />
+                    <span class="min-w-0 flex-1 truncate text-sm font-medium">{{
+                      displayName()
+                    }}</span>
+                    <ng-icon
+                      name="phosphorArrowSquareOut"
+                      class="text-muted-foreground size-4 shrink-0"
+                    />
                   }
                 </button>
               </app-sidebar-group>
@@ -193,7 +257,9 @@ function initialsOf(label: string): string {
                 @if (showBreadcrumb()) {
                   <app-breadcrumb wrap="nowrap">
                     @for (crumb of breadcrumbItems(); track crumb.url) {
-                      <app-breadcrumb-item [link]="crumb.link">{{ crumb.label }}</app-breadcrumb-item>
+                      <app-breadcrumb-item [link]="crumb.link">{{
+                        crumb.label
+                      }}</app-breadcrumb-item>
                     }
                   </app-breadcrumb>
                 } @else {
@@ -202,7 +268,7 @@ function initialsOf(label: string): string {
               </div>
             </app-header>
 
-            <app-content class="min-h-0 overflow-auto p-4">
+            <app-content class="min-h-0 overflow-auto p-4" [spacer]="!fullHeightRoute()">
               <app-skeleton-outlet class="flex-1">
                 <router-outlet />
               </app-skeleton-outlet>
@@ -255,7 +321,8 @@ export class AppComponent {
   protected readonly appName = APP_NAME;
 
   private readonly userSheetTemplate = viewChild.required<TemplateRef<unknown>>('userSheet');
-  private readonly deleteGardenSheetTemplate = viewChild.required<TemplateRef<unknown>>('deleteGardenSheet');
+  private readonly deleteGardenSheetTemplate =
+    viewChild.required<TemplateRef<unknown>>('deleteGardenSheet');
 
   protected readonly sidebarCollapsed = signal(false);
 
@@ -276,6 +343,15 @@ export class AppComponent {
   );
 
   protected readonly pageTitle = computed(() => PAGE_TITLES[this.#titlePath()] ?? APP_NAME);
+
+  /** Les pages pleine hauteur se passent de la cale de fin de zone défilante. */
+  protected readonly fullHeightRoute = toSignal(
+    this.#router.events.pipe(
+      filter((event): event is RoutesRecognized => event instanceof RoutesRecognized),
+      map(event => isFullHeight(event.state.root)),
+    ),
+    { initialValue: false },
+  );
 
   protected readonly breadcrumbItems = computed<HeaderCrumb[]>(() =>
     this.#breadcrumbs.breadcrumbs().map(crumb => ({
@@ -311,7 +387,9 @@ export class AppComponent {
     })),
   );
 
-  protected readonly activeIsOwner = computed(() => this.access.active()?.role === GARDEN_ROLE.owner);
+  protected readonly activeIsOwner = computed(
+    () => this.access.active()?.role === GARDEN_ROLE.owner,
+  );
   protected readonly deleteLabel = computed(() => (this.activeIsOwner() ? 'Supprimer' : 'Quitter'));
   protected readonly deleteIcon = computed(() =>
     this.activeIsOwner() ? 'phosphorTrash' : 'phosphorSignOut',

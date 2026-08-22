@@ -134,6 +134,7 @@ export class SceneContentHostDirective {
             [autoRotate]="autoRotate()"
             [elevation]="orbitElevation()"
             [azimuth]="orbitAzimuth()"
+            [targetLift]="orbitTargetLift()"
             [navigation]="orbitNavigation()"
           />
         }
@@ -193,6 +194,7 @@ export class SceneCanvasComponent {
   readonly orbit = input(true);
   readonly orbitNavigation = input<SceneNavigation>(SCENE_NAVIGATION.orbit);
   readonly orbitAzimuth = input(DEFAULT_AZIMUTH_DEGREES);
+  readonly orbitTargetLift = input(0);
   readonly orbitElevation = input(DEFAULT_ELEVATION_DEGREES);
   readonly sky = input<SceneCanvasSkyVariants>('none');
   readonly orthographic = input(false, { transform: booleanAttribute });

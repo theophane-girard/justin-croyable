@@ -28,7 +28,7 @@ import { type SheetRef } from '@justin-croyable/design-system/components/sheet';
 import { GARDEN_ROLE, type GardenRole, type ShareableRole } from '@justin-croyable/api-contract';
 import { NgIcon } from '@ng-icons/core';
 
-import { isSeasonFilter, SEASON, SEASON_FILTER_ALL, SEASON_META } from '../../core/potager.model';
+import { CATEGORY_META } from '../../core/potager.model';
 import { CULTURE_FILTER_OPTIONS } from '../../core/catalog-filter';
 import { buildYearOptions, parseYearValue, yearFilterToValue } from '../../core/period-selector';
 import { GardenAccessStore } from '../../core/garden-access-store';
@@ -54,6 +54,8 @@ import {
 } from './plan/parcel.model';
 import {
   cellKey,
+  CROP_FILTER,
+  type CropFilter,
   EDGE_AXIS,
   type GardenCell,
   type GardenEdge,
@@ -67,19 +69,23 @@ const NUMBER_FORMATTER = new Intl.NumberFormat('fr-FR', {
 });
 const PLANT_COUNT_PREFIX = '×';
 
-const SEASON_FILTER_ITEMS: SegmentItem[] = [
-  { value: SEASON_FILTER_ALL, label: 'Année entière' },
+const CROP_FILTER_ITEMS: SegmentItem[] = [
+  { value: CROP_FILTER.all, label: 'Tout' },
   {
-    value: SEASON.summer,
-    label: SEASON_META.summer.label,
-    icon: SEASON_META.summer.icon,
+    value: CROP_FILTER.legume,
+    label: CATEGORY_META.legume.label,
+    icon: CATEGORY_META.legume.icon,
   },
   {
-    value: SEASON.winter,
-    label: SEASON_META.winter.label,
-    icon: SEASON_META.winter.icon,
+    value: CROP_FILTER.fruit,
+    label: CATEGORY_META.fruit.label,
+    icon: CATEGORY_META.fruit.icon,
   },
 ];
+
+function isCropFilter(value: string | null): value is CropFilter {
+  return value === CROP_FILTER.all || value === CROP_FILTER.legume || value === CROP_FILTER.fruit;
+}
 
 const ROLE_LABEL: Readonly<Record<GardenRole, string>> = {
   [GARDEN_ROLE.owner]: 'Propriétaire',
@@ -257,13 +263,6 @@ const INVITE_ROLE_OPTIONS: readonly {
               }
             </app-select>
           }
-          <app-segment
-            class="order-last w-full sm:order-none sm:w-auto"
-            variant="default"
-            [items]="seasonItems"
-            [value]="season.season()"
-            (valueChange)="onSeasonChange($event)"
-          />
           @if (canManage()) {
             <button
               appButton
@@ -318,17 +317,31 @@ const INVITE_ROLE_OPTIONS: readonly {
           </div>
         </app-card>
       } @else {
-        <app-garden-view
-          #view
-          class="block min-h-0 flex-3"
-          [(selectedId)]="selectedId"
-          [selectedCellKeys]="selectionKeys()"
-          (cellPicked)="onCellPicked($event)"
-          (cellLongPressed)="onCellLongPressed($event)"
-          (edgePicked)="onEdgePicked($event)"
-          (groundPicked)="onGroundPicked($event)"
-          (treePicked)="onTreePicked($event)"
-        />
+        <div class="relative min-h-0 flex-3">
+          <div class="pointer-events-none absolute inset-x-0 top-3 z-10 flex justify-center">
+            <app-segment
+              class="pointer-events-auto"
+              size="sm"
+              variant="default"
+              [items]="cropFilterItems"
+              [value]="cropFilter()"
+              (valueChange)="onCropFilterChange($event)"
+            />
+          </div>
+
+          <app-garden-view
+            #view
+            class="block h-full"
+            [(selectedId)]="selectedId"
+            [cropFilter]="cropFilter()"
+            [selectedCellKeys]="selectionKeys()"
+            (cellPicked)="onCellPicked($event)"
+            (cellLongPressed)="onCellLongPressed($event)"
+            (edgePicked)="onEdgePicked($event)"
+            (groundPicked)="onGroundPicked($event)"
+            (treePicked)="onTreePicked($event)"
+          />
+        </div>
 
         @if (selectionCount() > 0) {
           <app-card
@@ -425,11 +438,6 @@ const INVITE_ROLE_OPTIONS: readonly {
           triggerLabel="Actions sur le jardin"
         >
           <app-fab-list>
-            @if (canWrite()) {
-              <a appFabButton [routerLink]="addLink" aria-label="Ajouter un plant">
-                <ng-icon name="phosphorPlus" />
-              </a>
-            }
             @if (canWrite()) {
               <a
                 appFabButton
@@ -698,12 +706,13 @@ export class GardenComponent {
   protected readonly setupLink = GARDEN_SETUP_LINK;
   protected readonly varietyItems = CATALOG_VARIETIES;
   protected readonly treeVarietyItems = CATALOG_TREE_VARIETIES;
-  protected readonly seasonItems = SEASON_FILTER_ITEMS;
+  protected readonly cropFilterItems = CROP_FILTER_ITEMS;
   protected readonly cultureOptions = CULTURE_FILTER_OPTIONS;
   protected readonly inviteRoleOptions = INVITE_ROLE_OPTIONS;
   protected readonly canManage = this.sharing.canManage;
 
   protected readonly selectedId = signal<string | null>(null);
+  protected readonly cropFilter = signal<CropFilter>(CROP_FILTER.all);
   protected readonly inviteEmail = signal<string>('');
   protected readonly inviteRole = signal<ShareableRole>(GARDEN_ROLE.viewer);
   protected readonly inviteError = signal<string | null>(null);
@@ -1122,9 +1131,9 @@ export class GardenComponent {
     return this.plan.parcels().find(parcel => parcel.id === parcelId) ?? null;
   }
 
-  protected onSeasonChange(value: string | null): void {
-    if (value !== null && isSeasonFilter(value)) {
-      this.season.setSeason(value);
+  protected onCropFilterChange(value: string | null): void {
+    if (isCropFilter(value)) {
+      this.cropFilter.set(value);
     }
   }
 

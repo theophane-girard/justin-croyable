@@ -81,7 +81,9 @@ s'y dissolve sans couture.
 l'on retourne. `map` la fait défiler comme un plan — glisser (ou un doigt)
 déplace, le clic droit (ou deux doigts) pivote et abaisse la caméra, la molette
 (ou le pincement) zoome. `orbitAzimuth` et `orbitElevation` donnent en degrés
-l'angle de la vue au premier cadrage et au recentrage.
+l'angle de la vue au premier cadrage et au recentrage, et `orbitTargetLift`
+relève le point visé — la scène descend dans le cadre et le ciel entre par le
+haut, sans coucher la caméra.
 
 ### `fog`
 

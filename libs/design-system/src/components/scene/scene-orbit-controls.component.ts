@@ -7,8 +7,10 @@ import {
   input,
 } from '@angular/core';
 import { beforeRender, injectStore } from 'angular-three';
-import { MathUtils, MOUSE, PerspectiveCamera, TOUCH, Vector3 } from 'three';
+import { type Camera, MathUtils, MOUSE, PerspectiveCamera, TOUCH, Vector3 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+
+import { bindMapGestures } from './scene-map-gestures';
 
 import { ViewportService } from '../../core/services/viewport.service';
 
@@ -27,6 +29,8 @@ const FALLBACK_ASPECT = 1.6;
 const FALLBACK_FOV = 42;
 const HALVING = 2;
 const TARGET_HEIGHT_RATIO = 0.28;
+const NO_LIFT = 0;
+const LIFT_PADDING_RATIO = 0.5;
 
 export const DEFAULT_AZIMUTH_DEGREES = 38.5;
 export const DEFAULT_ELEVATION_DEGREES = 28.5;
@@ -48,7 +52,9 @@ export type SceneNavigation = (typeof SCENE_NAVIGATION)[keyof typeof SCENE_NAVIG
 const ORBIT_MOUSE = { LEFT: MOUSE.ROTATE, MIDDLE: MOUSE.DOLLY, RIGHT: MOUSE.PAN } as const;
 const MAP_MOUSE = { LEFT: MOUSE.PAN, MIDDLE: MOUSE.DOLLY, RIGHT: MOUSE.ROTATE } as const;
 const ORBIT_TOUCH = { ONE: TOUCH.ROTATE, TWO: TOUCH.DOLLY_PAN } as const;
-const MAP_TOUCH = { ONE: TOUCH.PAN, TWO: TOUCH.DOLLY_ROTATE } as const;
+
+/** À deux doigts, `bindMapGestures` prend la main : zoom ou rotation, jamais les deux. */
+const MAP_TOUCH = { ONE: TOUCH.PAN, TWO: null } as const;
 
 function viewDirection(elevationDegrees: number, azimuthDegrees: number): Vector3 {
   const elevation = elevationDegrees * MathUtils.DEG2RAD;
@@ -86,6 +92,24 @@ function fitDistance(fov: number, aspect: number, bounds: SceneBounds, direction
   );
 }
 
+/**
+ * Place la caméra face au sujet, puis relève le seul point visé : la caméra
+ * pivote vers le haut sans se coucher, le sujet descend dans le cadre et le
+ * ciel entre par le haut.
+ */
+function frame(
+  camera: Camera,
+  controls: OrbitControls,
+  bounds: SceneBounds,
+  direction: Vector3,
+  distance: number,
+  lift: number,
+): void {
+  const focus = new Vector3(0, bounds.height * TARGET_HEIGHT_RATIO, 0);
+  camera.position.copy(focus).addScaledVector(direction, distance);
+  controls.target.set(focus.x, focus.y + distance * lift, focus.z);
+}
+
 @Component({
   selector: 'app-scene-orbit-controls',
   template: '',
@@ -97,6 +121,14 @@ export class SceneOrbitControlsComponent {
   readonly autoRotate = input(false);
   readonly elevation = input(DEFAULT_ELEVATION_DEGREES);
   readonly azimuth = input(DEFAULT_AZIMUTH_DEGREES);
+
+  /**
+   * Fraction de la distance caméra dont on relève le point visé. La scène
+   * descend d'autant dans le cadre et le ciel apparaît au-dessus, sans coucher
+   * la caméra : c'est ce qui donne un horizon visible tout en gardant une vue
+   * plongeante sur le sujet.
+   */
+  readonly targetLift = input(NO_LIFT);
   readonly enabled = input(true);
   readonly navigation = input<SceneNavigation>(SCENE_NAVIGATION.orbit);
 
@@ -125,10 +157,18 @@ export class SceneOrbitControlsComponent {
       controls.autoRotate = this.autoRotate() && !this.#viewport.prefersReducedMotion();
     });
 
+    let releaseGestures: (() => void) | null = null;
+
     effect(() => {
       const map = this.navigation() === SCENE_NAVIGATION.map;
       controls.mouseButtons = { ...(map ? MAP_MOUSE : ORBIT_MOUSE) };
       controls.touches = { ...(map ? MAP_TOUCH : ORBIT_TOUCH) };
+      releaseGestures?.();
+      releaseGestures = map
+        ? bindMapGestures(this.#store.gl().domElement, camera, controls, () =>
+            this.#store.snapshot.invalidate(),
+          )
+        : null;
     });
 
     effect(() => {
@@ -136,8 +176,10 @@ export class SceneOrbitControlsComponent {
       const bounds = this.bounds();
       const aspect = size.height > 0 ? size.width / size.height : FALLBACK_ASPECT;
       const fov = camera instanceof PerspectiveCamera ? camera.fov : FALLBACK_FOV;
+      const lift = this.targetLift();
       const direction = viewDirection(this.elevation(), this.azimuth());
-      const distance = fitDistance(fov, aspect, bounds, direction);
+      const distance =
+        fitDistance(fov, aspect, bounds, direction) * (1 + lift * LIFT_PADDING_RATIO);
       controls.minDistance = distance * MIN_DISTANCE_RATIO;
       controls.maxDistance = distance * MAX_DISTANCE_RATIO;
       if (this.#framedWidth === bounds.width && this.#framedDepth === bounds.depth) {
@@ -145,8 +187,7 @@ export class SceneOrbitControlsComponent {
       }
       this.#framedWidth = bounds.width;
       this.#framedDepth = bounds.depth;
-      controls.target.set(0, bounds.height * TARGET_HEIGHT_RATIO, 0);
-      camera.position.copy(controls.target).addScaledVector(direction, distance);
+      frame(camera, controls, bounds, direction, distance, lift);
       controls.update();
     });
 
@@ -157,16 +198,19 @@ export class SceneOrbitControlsComponent {
       const size = this.#store.size();
       const aspect = size.height > 0 ? size.width / size.height : FALLBACK_ASPECT;
       const fov = camera instanceof PerspectiveCamera ? camera.fov : FALLBACK_FOV;
+      const lift = this.targetLift();
       const direction = viewDirection(this.elevation(), this.azimuth());
-      controls.target.set(0, bounds.height * TARGET_HEIGHT_RATIO, 0);
-      camera.position
-        .copy(controls.target)
-        .addScaledVector(direction, fitDistance(fov, aspect, bounds, direction));
+      const distance =
+        fitDistance(fov, aspect, bounds, direction) * (1 + lift * LIFT_PADDING_RATIO);
+      frame(camera, controls, bounds, direction, distance, lift);
       controls.update();
       this.#store.snapshot.invalidate();
     };
 
-    inject(DestroyRef).onDestroy(() => controls.dispose());
+    inject(DestroyRef).onDestroy(() => {
+      releaseGestures?.();
+      controls.dispose();
+    });
   }
 
   /** Ramène la caméra sur son cadrage d'origine, après déplacement ou zoom. */

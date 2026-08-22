@@ -1,6 +1,11 @@
 import { sceneNoiseRange, type SceneVector } from '@justin-croyable/design-system/components/scene';
 
-import { type CropId, type VarietyId } from '../../../core/potager.model';
+import {
+  type CategoryId,
+  CROP_BY_ID,
+  type CropId,
+  type VarietyId,
+} from '../../../core/potager.model';
 import { varietyLabel } from '../plan/garden-catalog';
 import {
   cellCentreX,
@@ -111,6 +116,30 @@ export type GardenField = {
   readonly height: number;
   readonly extent: number;
 };
+
+export const CROP_FILTER = {
+  all: 'all',
+  legume: 'legume',
+  fruit: 'fruit',
+} as const;
+
+export type CropFilter = (typeof CROP_FILTER)[keyof typeof CROP_FILTER];
+
+function matches(cropId: CropId, category: CategoryId): boolean {
+  return CROP_BY_ID[cropId].category === category;
+}
+
+/** Ne garde à l'écran que les cultures d'une catégorie ; les cases restent semables. */
+export function filterPlan(plan: GardenPlan, filter: CropFilter): GardenPlan {
+  if (filter === CROP_FILTER.all) {
+    return plan;
+  }
+  return {
+    ...plan,
+    plantings: plan.plantings.filter(planting => matches(planting.cropId, filter)),
+    trees: plan.trees.filter(tree => matches(tree.cropId, filter)),
+  };
+}
 
 export function cellKey(parcelId: string, column: number, row: number): string {
   return `${parcelId}${KEY_SEPARATOR}${column}${KEY_SEPARATOR}${row}`;

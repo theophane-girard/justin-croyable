@@ -10,7 +10,7 @@ export const GARDEN_ROUTES: Route[] = [
     path: '',
     loadComponent: () => import('./garden.component').then(m => m.GardenComponent),
     title: 'Mon jardin — Potager',
-    data: { skeleton: SKELETON_KIND.map },
+    data: { skeleton: SKELETON_KIND.map, fullHeight: true },
     providers: [provideJustinCroyableDS(withThree())],
   },
   {

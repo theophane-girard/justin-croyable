@@ -25,6 +25,9 @@ import { GardenPlanStore } from '../plan/garden-plan-store';
 
 import {
   buildGardenField,
+  CROP_FILTER,
+  type CropFilter,
+  filterPlan,
   type GardenCell,
   type GardenEdge,
   type GardenTree,
@@ -35,9 +38,10 @@ const FILL_HEIGHT = '100%';
 const SCENE_LABEL = 'Votre potager en trois dimensions, une grille de culture par parcelle';
 const HORIZON_HAZE_START_RATIO = 3;
 const HORIZON_HAZE_END_RATIO = 26;
-const GARDEN_CAMERA: SceneCameraOptions = { fov: 50 };
-const GARDEN_ELEVATION_DEGREES = 19;
+const GARDEN_CAMERA: SceneCameraOptions = { fov: 55 };
+const GARDEN_ELEVATION_DEGREES = 30;
 const GARDEN_AZIMUTH_DEGREES = 0;
+const GARDEN_TARGET_LIFT = 0.14;
 const ANIMATED_FRAMELOOP: NgtFrameloop = 'always';
 const STILL_FRAMELOOP: NgtFrameloop = 'demand';
 
@@ -51,6 +55,7 @@ const STILL_FRAMELOOP: NgtFrameloop = 'demand';
       [camera]="camera"
       [orbitElevation]="elevationDegrees"
       [orbitAzimuth]="azimuthDegrees"
+      [orbitTargetLift]="targetLift"
       [fog]="horizonFog()"
       [class.cursor-pointer]="pointerActive()"
       [height]="fillHeight"
@@ -99,6 +104,7 @@ export class GardenViewComponent {
   readonly selectedId = model<string | null>(null);
 
   readonly selectedCellKeys = input<ReadonlySet<string>>(new Set<string>());
+  readonly cropFilter = input<CropFilter>(CROP_FILTER.all);
 
   readonly cellPicked = output<GardenCell>();
   readonly cellLongPressed = output<GardenCell>();
@@ -125,6 +131,7 @@ export class GardenViewComponent {
   protected readonly camera = GARDEN_CAMERA;
   protected readonly elevationDegrees = GARDEN_ELEVATION_DEGREES;
   protected readonly azimuthDegrees = GARDEN_AZIMUTH_DEGREES;
+  protected readonly targetLift = GARDEN_TARGET_LIFT;
   protected readonly fillHeight = FILL_HEIGHT;
 
   protected readonly pointerActive = computed(
@@ -139,7 +146,9 @@ export class GardenViewComponent {
     this.#viewport.prefersReducedMotion() ? STILL_FRAMELOOP : ANIMATED_FRAMELOOP,
   );
 
-  protected readonly field = computed(() => buildGardenField(this.#plan.plan()));
+  protected readonly field = computed(() =>
+    buildGardenField(filterPlan(this.#plan.plan(), this.cropFilter())),
+  );
 
   protected readonly horizonFog = computed<SceneFog>(() => {
     const extent = this.field().extent;
