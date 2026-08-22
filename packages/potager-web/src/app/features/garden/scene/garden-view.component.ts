@@ -37,6 +37,7 @@ const HORIZON_HAZE_START_RATIO = 3;
 const HORIZON_HAZE_END_RATIO = 26;
 const GARDEN_CAMERA: SceneCameraOptions = { fov: 50 };
 const GARDEN_ELEVATION_DEGREES = 19;
+const GARDEN_AZIMUTH_DEGREES = 0;
 const ANIMATED_FRAMELOOP: NgtFrameloop = 'always';
 const STILL_FRAMELOOP: NgtFrameloop = 'demand';
 
@@ -45,10 +46,11 @@ const STILL_FRAMELOOP: NgtFrameloop = 'demand';
   imports: [SceneCanvasComponent, SceneContentDirective, GardenSceneComponent, NgIcon],
   template: `
     <app-scene-canvas
-      orbitPan
+      orbitNavigation="map"
       sky="open"
       [camera]="camera"
       [orbitElevation]="elevationDegrees"
+      [orbitAzimuth]="azimuthDegrees"
       [fog]="horizonFog()"
       [class.cursor-pointer]="pointerActive()"
       [height]="fillHeight"
@@ -82,11 +84,11 @@ const STILL_FRAMELOOP: NgtFrameloop = 'demand';
         <div
           class="text-muted-foreground pointer-events-none absolute right-3 bottom-3 flex items-center gap-1.5 text-xs"
         >
-          <ng-icon name="phosphorArrowClockwise" class="size-3.5" />
+          <ng-icon name="phosphorArrowsOutCardinal" class="size-3.5" />
           <span class="hidden sm:inline">
-            Glisser pour tourner · clic droit pour déplacer · molette pour zoomer
+            Glisser pour déplacer · clic droit pour pivoter · molette pour zoomer
           </span>
-          <span class="sm:hidden">Glisser · deux doigts pour déplacer</span>
+          <span class="sm:hidden">Un doigt pour déplacer · deux pour pivoter et zoomer</span>
         </div>
       </div>
     </app-scene-canvas>
@@ -122,6 +124,7 @@ export class GardenViewComponent {
   protected readonly sceneLabel = SCENE_LABEL;
   protected readonly camera = GARDEN_CAMERA;
   protected readonly elevationDegrees = GARDEN_ELEVATION_DEGREES;
+  protected readonly azimuthDegrees = GARDEN_AZIMUTH_DEGREES;
   protected readonly fillHeight = FILL_HEIGHT;
 
   protected readonly pointerActive = computed(

@@ -34,7 +34,10 @@ import {
   SCENE_LIGHTING,
 } from './scene-environment.component';
 import {
+  DEFAULT_AZIMUTH_DEGREES,
   DEFAULT_ELEVATION_DEGREES,
+  type SceneNavigation,
+  SCENE_NAVIGATION,
   SceneOrbitControlsComponent,
 } from './scene-orbit-controls.component';
 import { SceneSkyComponent } from './scene-sky.component';
@@ -130,7 +133,8 @@ export class SceneContentHostDirective {
             [bounds]="bounds()"
             [autoRotate]="autoRotate()"
             [elevation]="orbitElevation()"
-            [pan]="orbitPan()"
+            [azimuth]="orbitAzimuth()"
+            [navigation]="orbitNavigation()"
           />
         }
         <ng-container sceneContentHost #contentHost="sceneContentHost" />
@@ -187,7 +191,8 @@ export class SceneCanvasComponent {
   readonly frameloop = input<NgtFrameloop>(DEMAND_FRAMELOOP);
   readonly fog = input<boolean | SceneFog>(true);
   readonly orbit = input(true);
-  readonly orbitPan = input(false);
+  readonly orbitNavigation = input<SceneNavigation>(SCENE_NAVIGATION.orbit);
+  readonly orbitAzimuth = input(DEFAULT_AZIMUTH_DEGREES);
   readonly orbitElevation = input(DEFAULT_ELEVATION_DEGREES);
   readonly sky = input<SceneCanvasSkyVariants>('none');
   readonly orthographic = input(false, { transform: booleanAttribute });

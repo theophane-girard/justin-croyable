@@ -7,7 +7,7 @@ import {
   input,
 } from '@angular/core';
 import { beforeRender, injectStore } from 'angular-three';
-import { MathUtils, PerspectiveCamera, Vector3 } from 'three';
+import { MathUtils, MOUSE, PerspectiveCamera, TOUCH, Vector3 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 import { ViewportService } from '../../core/services/viewport.service';
@@ -28,13 +28,31 @@ const FALLBACK_FOV = 42;
 const HALVING = 2;
 const TARGET_HEIGHT_RATIO = 0.28;
 
-const VIEW_AZIMUTH_DEGREES = 38.5;
+export const DEFAULT_AZIMUTH_DEGREES = 38.5;
 export const DEFAULT_ELEVATION_DEGREES = 28.5;
 const WORLD_UP = new Vector3(0, 1, 0);
 
-function viewDirection(elevationDegrees: number): Vector3 {
+/**
+ * Deux façons de naviguer : `orbit` fait tourner la scène au glissement, comme
+ * une maquette que l'on retourne ; `map` la fait défiler, comme un plan que
+ * l'on pousse du doigt — un doigt déplace, deux doigts zooment, pivotent et
+ * abaissent la caméra.
+ */
+export const SCENE_NAVIGATION = {
+  orbit: 'orbit',
+  map: 'map',
+} as const;
+
+export type SceneNavigation = (typeof SCENE_NAVIGATION)[keyof typeof SCENE_NAVIGATION];
+
+const ORBIT_MOUSE = { LEFT: MOUSE.ROTATE, MIDDLE: MOUSE.DOLLY, RIGHT: MOUSE.PAN } as const;
+const MAP_MOUSE = { LEFT: MOUSE.PAN, MIDDLE: MOUSE.DOLLY, RIGHT: MOUSE.ROTATE } as const;
+const ORBIT_TOUCH = { ONE: TOUCH.ROTATE, TWO: TOUCH.DOLLY_PAN } as const;
+const MAP_TOUCH = { ONE: TOUCH.PAN, TWO: TOUCH.DOLLY_ROTATE } as const;
+
+function viewDirection(elevationDegrees: number, azimuthDegrees: number): Vector3 {
   const elevation = elevationDegrees * MathUtils.DEG2RAD;
-  const azimuth = VIEW_AZIMUTH_DEGREES * MathUtils.DEG2RAD;
+  const azimuth = azimuthDegrees * MathUtils.DEG2RAD;
   return new Vector3(
     Math.sin(azimuth) * Math.cos(elevation),
     Math.sin(elevation),
@@ -78,8 +96,9 @@ export class SceneOrbitControlsComponent {
   readonly bounds = input.required<SceneBounds>();
   readonly autoRotate = input(false);
   readonly elevation = input(DEFAULT_ELEVATION_DEGREES);
+  readonly azimuth = input(DEFAULT_AZIMUTH_DEGREES);
   readonly enabled = input(true);
-  readonly pan = input(false);
+  readonly navigation = input<SceneNavigation>(SCENE_NAVIGATION.orbit);
 
   readonly #store = injectStore();
   readonly #viewport = inject(ViewportService);
@@ -107,11 +126,17 @@ export class SceneOrbitControlsComponent {
     });
 
     effect(() => {
+      const map = this.navigation() === SCENE_NAVIGATION.map;
+      controls.mouseButtons = { ...(map ? MAP_MOUSE : ORBIT_MOUSE) };
+      controls.touches = { ...(map ? MAP_TOUCH : ORBIT_TOUCH) };
+    });
+
+    effect(() => {
       const size = this.#store.size();
       const bounds = this.bounds();
       const aspect = size.height > 0 ? size.width / size.height : FALLBACK_ASPECT;
       const fov = camera instanceof PerspectiveCamera ? camera.fov : FALLBACK_FOV;
-      const direction = viewDirection(this.elevation());
+      const direction = viewDirection(this.elevation(), this.azimuth());
       const distance = fitDistance(fov, aspect, bounds, direction);
       controls.minDistance = distance * MIN_DISTANCE_RATIO;
       controls.maxDistance = distance * MAX_DISTANCE_RATIO;
@@ -132,7 +157,7 @@ export class SceneOrbitControlsComponent {
       const size = this.#store.size();
       const aspect = size.height > 0 ? size.width / size.height : FALLBACK_ASPECT;
       const fov = camera instanceof PerspectiveCamera ? camera.fov : FALLBACK_FOV;
-      const direction = viewDirection(this.elevation());
+      const direction = viewDirection(this.elevation(), this.azimuth());
       controls.target.set(0, bounds.height * TARGET_HEIGHT_RATIO, 0);
       camera.position
         .copy(controls.target)

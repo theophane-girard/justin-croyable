@@ -242,7 +242,7 @@ const INVITE_ROLE_OPTIONS: readonly {
     ...SelectImports,
   ],
   template: `
-    <div class="flex h-[calc(100dvh-9.5rem)] flex-col gap-4">
+    <div class="flex h-full min-h-0 flex-col gap-4">
       <div class="flex shrink-0 flex-wrap items-center justify-end gap-3">
         <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
           @if (showYearSelector()) {
@@ -666,6 +666,9 @@ const INVITE_ROLE_OPTIONS: readonly {
     </ng-template>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    class: 'block h-full',
+  },
 })
 export class GardenComponent {
   protected readonly store = inject(GardenStore);

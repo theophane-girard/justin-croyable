@@ -75,6 +75,14 @@ de brume qui ferment le bas de ce ciel sont exportées via `OPEN_SKY_HAZE` : une
 scène qui veut un horizon donne cette couleur à son brouillard pour que le sol
 s'y dissolve sans couture.
 
+### `orbitNavigation`
+
+`orbit` par défaut : le glissement fait tourner la scène, comme une maquette que
+l'on retourne. `map` la fait défiler comme un plan — glisser (ou un doigt)
+déplace, le clic droit (ou deux doigts) pivote et abaisse la caméra, la molette
+(ou le pincement) zoome. `orbitAzimuth` et `orbitElevation` donnent en degrés
+l'angle de la vue au premier cadrage et au recentrage.
+
 ### `fog`
 
 `true` par défaut : brouillard déduit des `bounds`. `false` le supprime.
