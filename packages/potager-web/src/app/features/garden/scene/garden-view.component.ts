@@ -37,10 +37,10 @@ const FILL_HEIGHT = '100%';
 const SCENE_LABEL = 'Votre potager en trois dimensions, une grille de culture par parcelle';
 const HORIZON_HAZE_START_RATIO = 3;
 const HORIZON_HAZE_END_RATIO = 26;
-const GARDEN_CAMERA: SceneCameraOptions = { fov: 55 };
-const GARDEN_ELEVATION_DEGREES = 30;
+const GARDEN_CAMERA: SceneCameraOptions = { fov: 50 };
+const GARDEN_ELEVATION_DEGREES = 45;
 const GARDEN_AZIMUTH_DEGREES = 0;
-const GARDEN_TARGET_LIFT = 0.14;
+const GARDEN_TARGET_LIFT = 0;
 const ANIMATED_FRAMELOOP: NgtFrameloop = 'always';
 const STILL_FRAMELOOP: NgtFrameloop = 'demand';
 

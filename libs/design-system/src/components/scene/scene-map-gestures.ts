@@ -3,7 +3,14 @@ import { type OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js
 
 const FULL_TURN = Math.PI * 2;
 const TWO_FINGERS = 2;
-const LOCK_THRESHOLD_PX = 10;
+const LOCK_THRESHOLD_PX = 12;
+
+/**
+ * Deux doigts qui glissent ensemble ne gardent jamais un écart parfaitement
+ * constant : c'est le mouvement dominant qui décide, et le pincement doit
+ * nettement l'emporter pour être lu comme un zoom plutôt qu'une rotation.
+ */
+const ZOOM_DOMINANCE = 1.5;
 const ROTATE_SPEED = 0.9;
 const TOUCH_POINTER = 'touch';
 
@@ -94,14 +101,13 @@ export function bindMapGestures(
   }
 
   function decide(points: readonly Point[]): void {
-    if (Math.abs(span(points) - startSpan) > LOCK_THRESHOLD_PX) {
-      gesture = GESTURE.zoom;
+    const pinched = Math.abs(span(points) - startSpan);
+    const moved = centre(points);
+    const slid = Math.hypot(moved.x - startCentre.x, moved.y - startCentre.y);
+    if (Math.max(pinched, slid) < LOCK_THRESHOLD_PX) {
       return;
     }
-    const moved = centre(points);
-    if (Math.hypot(moved.x - startCentre.x, moved.y - startCentre.y) > LOCK_THRESHOLD_PX) {
-      gesture = GESTURE.rotate;
-    }
+    gesture = pinched > slid * ZOOM_DOMINANCE ? GESTURE.zoom : GESTURE.rotate;
   }
 
   function onMove(event: PointerEvent): void {

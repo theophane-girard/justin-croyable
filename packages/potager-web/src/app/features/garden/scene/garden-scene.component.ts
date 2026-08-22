@@ -40,6 +40,7 @@ const KEY_SEPARATOR = ':';
  * ne doit rien sélectionner, même si le doigt s'arrête au-dessus d'une case.
  */
 const DRAG_TOLERANCE_PX = 8;
+const SINGLE_POINTER = 1;
 
 export type GroundPoint = {
   readonly x: number;
@@ -86,7 +87,7 @@ function ownerParcelId(key: string | null): string | null {
         (pressed)="pressed.emit($event)"
         (hoverChange)="hoverChange.emit($event)"
         (cellPicked)="onCellPick($event)"
-        (cellLongPressed)="cellLongPressed.emit($event)"
+        (cellLongPressed)="onCellLongPress($event)"
         (cellHoverChange)="cellHoverChange.emit($event)"
         (edgePicked)="onEdgePick($event)"
         (edgeHoverChange)="edgeHoverChange.emit($event)"
@@ -128,11 +129,17 @@ export class GardenSceneComponent {
 
   #pressX = 0;
   #pressY = 0;
+  #pointers = 0;
   #dragged = false;
 
   constructor() {
     const element = this.#store.gl().domElement;
     const onPress = (event: PointerEvent): void => {
+      this.#pointers += 1;
+      if (this.#pointers > SINGLE_POINTER) {
+        this.#dragged = true;
+        return;
+      }
       this.#pressX = event.clientX;
       this.#pressY = event.clientY;
       this.#dragged = false;
@@ -142,11 +149,18 @@ export class GardenSceneComponent {
         this.#dragged ||
         Math.hypot(event.clientX - this.#pressX, event.clientY - this.#pressY) > DRAG_TOLERANCE_PX;
     };
+    const onRelease = (): void => {
+      this.#pointers = Math.max(0, this.#pointers - 1);
+    };
     element.addEventListener('pointerdown', onPress);
     element.addEventListener('pointermove', onDrag);
+    element.addEventListener('pointerup', onRelease);
+    element.addEventListener('pointercancel', onRelease);
     inject(DestroyRef).onDestroy(() => {
       element.removeEventListener('pointerdown', onPress);
       element.removeEventListener('pointermove', onDrag);
+      element.removeEventListener('pointerup', onRelease);
+      element.removeEventListener('pointercancel', onRelease);
     });
   }
 
@@ -156,6 +170,12 @@ export class GardenSceneComponent {
       return;
     }
     this.groundPicked.emit({ x: event.point.x, z: event.point.z });
+  }
+
+  protected onCellLongPress(cell: GardenCell): void {
+    if (!this.#dragged) {
+      this.cellLongPressed.emit(cell);
+    }
   }
 
   protected onCellPick(cell: GardenCell): void {
