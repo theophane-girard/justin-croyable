@@ -33,7 +33,7 @@ function slug(value: string): string {
  * culture apporte sa variété générique, complétée de quelques variétés nommées
  * pour les cultures les plus courantes.
  */
-export const CATALOG_VARIETIES: readonly CatalogVariety[] = CROPS.flatMap(crop => {
+const VARIETIES: readonly CatalogVariety[] = CROPS.flatMap(crop => {
   const generic: CatalogVariety = {
     id: crop.id,
     cropId: crop.id,
@@ -50,6 +50,10 @@ export const CATALOG_VARIETIES: readonly CatalogVariety[] = CROPS.flatMap(crop =
   );
   return [generic, ...extras];
 });
+
+export const CATALOG_VARIETIES: readonly CatalogVariety[] = [...VARIETIES].sort((left, right) =>
+  left.label.localeCompare(right.label, 'fr'),
+);
 
 export const VARIETY_BY_ID: ReadonlyMap<VarietyId, CatalogVariety> = new Map(
   CATALOG_VARIETIES.map(variety => [variety.id, variety] as const),

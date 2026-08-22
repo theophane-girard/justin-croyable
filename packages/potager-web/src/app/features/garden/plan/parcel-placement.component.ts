@@ -28,17 +28,27 @@ import { NgIcon } from '@ng-icons/core';
 
 import { GARDEN_PALETTE } from '../scene/garden-palette';
 import { buildGardenField, type GardenParcel } from '../scene/garden-layout';
-import { buildPlateauGridParts, buildRotateHandleParts } from '../scene/garden-structure-parts';
+import {
+  buildGuideParts,
+  buildPlateauGridParts,
+  buildRotateHandleParts,
+} from '../scene/garden-structure-parts';
 import { GardenSceneComponent } from '../scene/garden-scene.component';
 import { type ParcelPointer } from '../scene/garden-parcel.component';
 
 import {
-  editorExtent,
+  type AlignmentGuide,
+  EDITOR_EXTENT,
+  EDITOR_GRID_CM,
+  EDITOR_VIEW_EXTENT,
   EMPTY_GARDEN_PLAN,
+  metres,
+  neighbourRects,
   overlappingParcelIds,
   type Parcel,
   type ParcelPlacement,
   parcelFootprint,
+  snapPlacement,
   snapToStep,
 } from './parcel.model';
 
@@ -51,6 +61,9 @@ type DragSession = {
   readonly moved: boolean;
 };
 
+const ROTATE_HINT_KEY = 'potager.rotate-hint-seen';
+const ROTATE_HINT_TEXT = 'Touchez la parcelle pour la faire pivoter d’un quart de tour.';
+
 const MOBILE_HEIGHT = '24rem';
 const DESKTOP_HEIGHT = '34rem';
 const SCENE_LABEL = 'Plan du potager vu de dessus, glissez les parcelles pour les disposer';
@@ -60,12 +73,25 @@ const CATCHER_RATIO = 3;
 const CATCHER_THICKNESS = 0.01;
 const CATCHER_DEPTH = -0.05;
 const HANDLE_LIFT = 0.7;
-const PLATEAU_INSET = 0.9;
 const TOP_CAMERA: SceneCameraOptions = {
   position: [0, 24, 0],
   near: 0.1,
   far: 120,
 };
+
+function readRotateHintSeen(): boolean {
+  if (typeof localStorage === 'undefined') {
+    return false;
+  }
+  return localStorage.getItem(ROTATE_HINT_KEY) === 'true';
+}
+
+function writeRotateHintSeen(): void {
+  if (typeof localStorage === 'undefined') {
+    return;
+  }
+  localStorage.setItem(ROTATE_HINT_KEY, 'true');
+}
 
 @Component({
   selector: 'app-parcel-placement',
@@ -95,12 +121,12 @@ const TOP_CAMERA: SceneCameraOptions = {
         [camera]="topCamera"
         [height]="height()"
         [label]="sceneLabel"
-        [bounds]="bounds()"
+        [bounds]="bounds"
         [class.cursor-grab]="hoveredId() !== null && !dragging()"
         [class.cursor-grabbing]="dragging()"
       >
         <ng-template sceneContent>
-          <app-scene-top-controls [bounds]="bounds()" [pan]="!dragging()" />
+          <app-scene-top-controls [bounds]="bounds" [pan]="!dragging()" />
 
           <ngt-mesh [position]="catcherPosition" (pointermove)="onGroundMove($event)">
             <ngt-box-geometry *args="catcherArgs()" />
@@ -108,6 +134,10 @@ const TOP_CAMERA: SceneCameraOptions = {
           </ngt-mesh>
 
           @for (part of plateauParts(); track part.id) {
+            <app-scene-part [part]="part" />
+          }
+
+          @for (part of guideParts(); track part.id) {
             <app-scene-part [part]="part" />
           }
 
@@ -132,17 +162,21 @@ const TOP_CAMERA: SceneCameraOptions = {
         </ng-template>
 
         <div sceneOverlay>
-          @if (rotatingParcel(); as parcel) {
+          @if (rotatingParcel()) {
             <app-card
               class="absolute top-3 left-3 w-64 max-w-[75%]"
               backdrop="blur"
               title="Mode rotation"
-              [description]="
-                parcel.name + ' · touchez la parcelle pour la faire pivoter d’un quart de tour'
-              "
+              [description]="rotateHint()"
             >
               <div card-footer class="w-full flex-row justify-end">
-                <button appButton type="button" variant="outline" size="sm" (click)="exitRotate()">
+                <button
+                  appButton
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  (click)="exitRotate(); markHintSeen()"
+                >
                   Terminer
                 </button>
               </div>
@@ -160,8 +194,7 @@ const TOP_CAMERA: SceneCameraOptions = {
             class="text-muted-foreground pointer-events-none absolute right-3 bottom-3 flex items-center gap-1.5 text-xs"
           >
             <ng-icon name="phosphorArrowsOutCardinal" class="size-3.5" />
-            <span class="hidden sm:inline">Glisser pour déplacer · clic droit pour cadrer</span>
-            <span class="sm:hidden">Glisser · deux doigts pour cadrer</span>
+            <span>Glisser pour déplacer</span>
           </div>
         </div>
       </app-scene-canvas>
@@ -182,6 +215,8 @@ export class ParcelPlacementComponent {
   readonly #colors = inject(SceneThemeService).palette(GARDEN_PALETTE);
   readonly #drag = signal<DragSession | null>(null);
   readonly #pendingMenuId = signal<string | null>(null);
+  readonly #guides = signal<readonly AlignmentGuide[]>([]);
+  readonly #hintSeen = signal(readRotateHintSeen());
 
   protected readonly hoveredId = signal<string | null>(null);
   protected readonly sceneLabel = SCENE_LABEL;
@@ -194,8 +229,6 @@ export class ParcelPlacementComponent {
     this.#viewport.isMobile() ? MOBILE_HEIGHT : DESKTOP_HEIGHT,
   );
 
-  protected readonly extent = computed(() => editorExtent(this.parcels(), this.placements()));
-
   protected readonly field = computed(() =>
     buildGardenField(
       {
@@ -203,15 +236,16 @@ export class ParcelPlacementComponent {
         parcels: this.parcels(),
         placements: this.placements(),
       },
-      this.extent(),
+      EDITOR_EXTENT,
     ),
   );
 
-  protected readonly bounds = computed<SceneBounds>(() => ({
-    width: this.field().width,
-    depth: this.field().depth,
-    height: this.field().height,
-  }));
+  /** Cadrage figé : le plateau ne se redimensionne plus sous la caméra. */
+  protected readonly bounds: SceneBounds = {
+    width: metres(EDITOR_VIEW_EXTENT.widthCm),
+    depth: metres(EDITOR_VIEW_EXTENT.depthCm),
+    height: 1.6,
+  };
 
   protected readonly overlapping = computed(() =>
     overlappingParcelIds(this.parcels(), this.placements()),
@@ -225,11 +259,24 @@ export class ParcelPlacementComponent {
 
   protected readonly plateauParts = computed(() =>
     buildPlateauGridParts(
-      this.field().width - PLATEAU_INSET,
-      this.field().depth - PLATEAU_INSET,
+      metres(EDITOR_GRID_CM),
+      metres(EDITOR_GRID_CM),
       this.#colors().fieldFurrow,
     ),
   );
+
+  protected readonly guideParts = computed(() =>
+    this.#guides().flatMap(guide =>
+      buildGuideParts(
+        guide.axis,
+        metres(guide.valueCm),
+        metres(EDITOR_GRID_CM),
+        this.#colors().highlight,
+      ),
+    ),
+  );
+
+  protected readonly rotateHint = computed(() => (this.#hintSeen() ? '' : ROTATE_HINT_TEXT));
 
   protected readonly rotatingParcel = computed<GardenParcel | null>(() => {
     const rotatingId = this.rotatingId();
@@ -249,6 +296,11 @@ export class ParcelPlacementComponent {
 
   protected exitRotate(): void {
     this.rotatingId.set(null);
+  }
+
+  protected markHintSeen(): void {
+    this.#hintSeen.set(true);
+    writeRotateHintSeen();
   }
 
   protected onParcelPressed(pointer: ParcelPointer): void {
@@ -286,12 +338,21 @@ export class ParcelPlacementComponent {
     ) {
       return;
     }
-    this.#drag.set({ ...session, moved: true });
-    this.#move(
-      session.parcelId,
-      snapToStep(session.originXCm + deltaX * CENTIMETRES_PER_METRE),
-      snapToStep(session.originZCm + deltaZ * CENTIMETRES_PER_METRE),
+    const parcel = this.parcels().find(candidate => candidate.id === session.parcelId);
+    const placement = this.placements().find(candidate => candidate.parcelId === session.parcelId);
+    if (!parcel || !placement) {
+      return;
+    }
+    const footprint = parcelFootprint(parcel, placement.rotated);
+    const snapped = snapPlacement(
+      footprint,
+      session.originXCm + deltaX * CENTIMETRES_PER_METRE,
+      session.originZCm + deltaZ * CENTIMETRES_PER_METRE,
+      neighbourRects(this.parcels(), this.placements(), session.parcelId),
     );
+    this.#drag.set({ ...session, moved: true });
+    this.#guides.set(snapped.guides);
+    this.#move(session.parcelId, snapped.xCm, snapped.zCm);
   }
 
   protected endDrag(): void {
@@ -300,6 +361,7 @@ export class ParcelPlacementComponent {
       return;
     }
     this.#drag.set(null);
+    this.#guides.set([]);
     if (session.moved || this.rotatingId() === session.parcelId) {
       return;
     }

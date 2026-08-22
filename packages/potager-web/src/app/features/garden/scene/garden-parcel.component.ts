@@ -11,9 +11,14 @@ import { SceneThemeService } from '@justin-croyable/design-system';
 import { ScenePartComponent } from '@justin-croyable/design-system/components/scene';
 import { type NgtThreeEvent } from 'angular-three';
 
-import { type GardenCell, type GardenParcel } from './garden-layout';
+import { type GardenCell, type GardenEdge, type GardenParcel } from './garden-layout';
 import { GARDEN_PALETTE } from './garden-palette';
-import { buildGridParts, buildOutlineParts, buildParcelParts } from './garden-structure-parts';
+import {
+  buildEdgeParts,
+  buildGridParts,
+  buildOutlineParts,
+  buildParcelParts,
+} from './garden-structure-parts';
 import { GardenCellComponent } from './garden-cell.component';
 
 export const PARCEL_STATE = {
@@ -57,10 +62,25 @@ export type ParcelPointer = {
           <app-garden-cell
             [cell]="cell"
             [soilTop]="parcel().soilTop"
-            [hovered]="cell.key === hoveredCellKey()"
+            [hovered]="highlightedKeys().has(cell.key) || cell.key === hoveredCellKey()"
             (picked)="cellPicked.emit($event)"
             (hoverChange)="cellHoverChange.emit($event)"
           />
+        }
+
+        @if (showEdges()) {
+          @for (edge of parcel().edges; track edge.key) {
+            <ngt-group
+              [position]="edge.position"
+              (click)="onEdgePick($event, edge)"
+              (pointerover)="onEdgeEnter($event, edge)"
+              (pointerout)="onEdgeLeave($event)"
+            >
+              @for (part of edgeParts()(edge); track part.id) {
+                <app-scene-part [part]="part" />
+              }
+            </ngt-group>
+          }
         }
       }
 
@@ -80,8 +100,11 @@ export class GardenParcelComponent {
   readonly interactiveCells = input(true);
   readonly showGrid = input(true);
   readonly hoveredCellKey = input<string | null>(null);
+  readonly hoveredEdgeKey = input<string | null>(null);
 
   readonly picked = output<string>();
+  readonly edgePicked = output<GardenEdge>();
+  readonly edgeHoverChange = output<GardenEdge | null>();
   readonly pressed = output<ParcelPointer>();
   readonly hoverChange = output<string | null>();
   readonly cellPicked = output<GardenCell>();
@@ -134,6 +157,43 @@ export class GardenParcelComponent {
       color,
     );
   });
+
+  /** Les poignées de bord n'apparaissent que sur la parcelle visée. */
+  protected readonly showEdges = computed(() => this.state() !== PARCEL_STATE.idle);
+
+  protected readonly highlightedKeys = computed(() => {
+    const hoveredEdgeKey = this.hoveredEdgeKey();
+    const edge = this.parcel().edges.find(candidate => candidate.key === hoveredEdgeKey);
+    return new Set(edge?.cellKeys ?? []);
+  });
+
+  protected readonly edgeParts = computed(() => {
+    const colors = this.#colors();
+    const top = this.parcel().soilTop;
+    const hoveredEdgeKey = this.hoveredEdgeKey();
+    return (edge: GardenEdge) =>
+      buildEdgeParts(
+        edge.width,
+        edge.depth,
+        top,
+        edge.key === hoveredEdgeKey ? colors.highlight : colors.stone,
+      );
+  });
+
+  protected onEdgePick(event: NgtThreeEvent<MouseEvent>, edge: GardenEdge): void {
+    event.stopPropagation();
+    this.edgePicked.emit(edge);
+  }
+
+  protected onEdgeEnter(event: NgtThreeEvent<PointerEvent>, edge: GardenEdge): void {
+    event.stopPropagation();
+    this.edgeHoverChange.emit(edge);
+  }
+
+  protected onEdgeLeave(event: NgtThreeEvent<PointerEvent>): void {
+    event.stopPropagation();
+    this.edgeHoverChange.emit(null);
+  }
 
   protected onPick(event: NgtThreeEvent<MouseEvent>): void {
     event.stopPropagation();

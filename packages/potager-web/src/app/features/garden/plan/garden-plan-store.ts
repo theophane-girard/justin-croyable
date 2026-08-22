@@ -90,6 +90,7 @@ function parseStored(raw: string | null): GardenPlan {
 export class GardenPlanStore {
   readonly #isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   readonly #plan = signal<GardenPlan>(this.#read());
+  readonly #undoable = signal<GardenPlan | null>(null);
 
   readonly plan = this.#plan.asReadonly();
   readonly parcels = computed(() => this.#plan().parcels);
@@ -97,6 +98,11 @@ export class GardenPlanStore {
   readonly plantings = computed(() => this.#plan().plantings);
   readonly isConfigured = computed(() => this.#plan().parcels.length > 0);
   readonly plantedCount = computed(() => this.#plan().plantings.length);
+  readonly canUndo = computed(() => this.#undoable() !== null);
+
+  readonly varietyCount = computed(
+    () => new Set(this.#plan().plantings.map(planting => planting.varietyId)).size,
+  );
 
   readonly cellCount = computed(() =>
     this.#plan().placements.reduce((total, placement) => {
@@ -120,14 +126,12 @@ export class GardenPlanStore {
 
   sow(parcelId: string, origin: CellCoordinate, mode: SowMode, varietyId: VarietyId): void {
     const variety = VARIETY_BY_ID.get(varietyId);
-    const placement = this.#placement(parcelId);
-    const parcel = this.#parcel(parcelId);
-    if (!variety || !placement || !parcel) {
+    const targets = this.#targets(parcelId, origin, mode);
+    if (!variety || targets === null) {
       return;
     }
-    const footprint = parcelFootprint(parcel, placement.rotated);
-    const targets = sowTargets(footprint, mode, origin);
     const targetKeys = new Set(targets.map(target => cellKey(target)));
+    this.#remember();
     this.#update(plan => ({
       ...plan,
       plantings: [
@@ -181,11 +185,32 @@ export class GardenPlanStore {
     }));
   }
 
-  uproot(parcelId: string, cell: CellCoordinate): void {
+  uproot(parcelId: string, origin: CellCoordinate, mode: SowMode): void {
+    const targets = this.#targets(parcelId, origin, mode);
+    if (targets === null) {
+      return;
+    }
+    const targetKeys = new Set(targets.map(cellKey));
+    this.#remember();
     this.#update(plan => ({
       ...plan,
-      plantings: plan.plantings.filter(planting => !this.#matches(planting, parcelId, cell)),
+      plantings: plan.plantings.filter(
+        planting =>
+          planting.parcelId !== parcelId ||
+          !targetKeys.has(cellKey({ column: planting.column, row: planting.row })),
+      ),
     }));
+  }
+
+  /** Revient sur la dernière plantation ou suppression. Une seule en mémoire. */
+  undo(): void {
+    const previous = this.#undoable();
+    if (previous === null) {
+      return;
+    }
+    this.#undoable.set(null);
+    this.#plan.set(previous);
+    this.#write(previous);
   }
 
   reset(): void {
@@ -198,6 +223,23 @@ export class GardenPlanStore {
 
   parcelKindOf(parcelId: string): ParcelKind | null {
     return this.#parcel(parcelId)?.kind ?? null;
+  }
+
+  #targets(
+    parcelId: string,
+    origin: CellCoordinate,
+    mode: SowMode,
+  ): readonly CellCoordinate[] | null {
+    const placement = this.#placement(parcelId);
+    const parcel = this.#parcel(parcelId);
+    if (!placement || !parcel) {
+      return null;
+    }
+    return sowTargets(parcelFootprint(parcel, placement.rotated), mode, origin);
+  }
+
+  #remember(): void {
+    this.#undoable.set(this.#plan());
   }
 
   #matches(planting: Planting, parcelId: string, cell: CellCoordinate): boolean {

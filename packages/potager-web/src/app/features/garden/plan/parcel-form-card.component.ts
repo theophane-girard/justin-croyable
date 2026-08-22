@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import {
   BadgeComponent,
   ButtonComponent,
@@ -25,6 +25,8 @@ import {
 const CENTIMETRES_PER_METRE = 100;
 
 type NumericValue = string | number | null | undefined;
+
+type ParcelField = 'lengthCm' | 'widthCm' | 'cellLengthCm' | 'cellWidthCm';
 
 function toCentimetresFromMetres(value: NumericValue): number | null {
   const parsed = Number(value);
@@ -90,26 +92,26 @@ export function isParcelValid(parcel: Parcel): boolean {
       </div>
 
       <div class="grid grid-cols-1 gap-4 px-6 sm:grid-cols-2">
-        <app-input-group label="Longueur (m)" required>
+        <app-input-group label="Longueur parcelle (m)" required>
           <input
             app-input
             type="number"
             step="0.1"
             [min]="minSideMetres"
             [max]="maxSideMetres"
-            [value]="lengthMetres()"
+            [value]="lengthField()"
             (valueChange)="onLengthChange($event)"
           />
         </app-input-group>
 
-        <app-input-group label="Largeur (m)" required>
+        <app-input-group label="Largeur parcelle (m)" required>
           <input
             app-input
             type="number"
             step="0.1"
             [min]="minSideMetres"
             [max]="maxSideMetres"
-            [value]="widthMetres()"
+            [value]="widthField()"
             (valueChange)="onWidthChange($event)"
           />
         </app-input-group>
@@ -121,7 +123,7 @@ export function isParcelValid(parcel: Parcel): boolean {
             step="1"
             [min]="minCell"
             [max]="maxCell"
-            [value]="parcel().cellLengthCm"
+            [value]="cellLengthField()"
             (valueChange)="onCellLengthChange($event)"
           />
         </app-input-group>
@@ -133,15 +135,15 @@ export function isParcelValid(parcel: Parcel): boolean {
             step="1"
             [min]="minCell"
             [max]="maxCell"
-            [value]="parcel().cellWidthCm"
+            [value]="cellWidthField()"
             (valueChange)="onCellWidthChange($event)"
           />
         </app-input-group>
       </div>
 
-      <div class="flex items-center justify-between gap-4 px-6">
+      <div class="flex items-center justify-between gap-4 px-6 pt-2">
         <div class="flex flex-col gap-0.5">
-          <span class="text-sm leading-none font-medium">C’est un bac</span>
+          <span class="text-sm leading-none font-medium">Surélever ?</span>
           <span class="text-muted-foreground text-xs">
             Caisson de planches surélevé, sinon culture à même la terre.
           </span>
@@ -173,8 +175,28 @@ export class ParcelFormCardComponent {
   protected readonly valid = computed(() => isParcelValid(this.parcel()));
   protected readonly isRaised = computed(() => this.parcel().kind === PARCEL_KIND.raised);
 
-  protected readonly lengthMetres = computed(() => metres(this.parcel().lengthCm));
-  protected readonly widthMetres = computed(() => metres(this.parcel().widthCm));
+  /**
+   * Ce que l'utilisateur a tapé, tant que cela désigne toujours la même valeur.
+   *
+   * La directive d'entrée réécrit le contenu de l'élément dès que `value`
+   * change, ce qui replace le curseur au début. Sans ce garde-fou, effacer la
+   * décimale de « 1,20 » renvoyait « 1.2 » dans le champ et déplaçait le
+   * curseur ; on garde donc la saisie brute tant qu'elle vaut le même nombre.
+   */
+  readonly #draft = signal<Partial<Record<ParcelField, string>>>({});
+
+  protected readonly lengthField = computed(() =>
+    this.#fieldValue('lengthCm', metres(this.parcel().lengthCm)),
+  );
+  protected readonly widthField = computed(() =>
+    this.#fieldValue('widthCm', metres(this.parcel().widthCm)),
+  );
+  protected readonly cellLengthField = computed(() =>
+    this.#fieldValue('cellLengthCm', this.parcel().cellLengthCm),
+  );
+  protected readonly cellWidthField = computed(() =>
+    this.#fieldValue('cellWidthCm', this.parcel().cellWidthCm),
+  );
 
   protected readonly surface = computed(
     () => `${formatMetres(this.parcel().widthCm)} × ${formatMetres(this.parcel().lengthCm)}`,
@@ -189,19 +211,19 @@ export class ParcelFormCardComponent {
   });
 
   protected onLengthChange(value: NumericValue): void {
-    this.#patch({ lengthCm: toCentimetresFromMetres(value) });
+    this.#patch('lengthCm', value, toCentimetresFromMetres(value));
   }
 
   protected onWidthChange(value: NumericValue): void {
-    this.#patch({ widthCm: toCentimetresFromMetres(value) });
+    this.#patch('widthCm', value, toCentimetresFromMetres(value));
   }
 
   protected onCellLengthChange(value: NumericValue): void {
-    this.#patch({ cellLengthCm: toCentimetres(value) });
+    this.#patch('cellLengthCm', value, toCentimetres(value));
   }
 
   protected onCellWidthChange(value: NumericValue): void {
-    this.#patch({ cellWidthCm: toCentimetres(value) });
+    this.#patch('cellWidthCm', value, toCentimetres(value));
   }
 
   protected onKindChange(raised: boolean): void {
@@ -211,11 +233,16 @@ export class ParcelFormCardComponent {
     });
   }
 
-  #patch(patch: Partial<Record<keyof Parcel, number | null>>): void {
-    const entries = Object.entries(patch).filter(([, value]) => value !== null);
-    if (entries.length === 0) {
+  #fieldValue(field: ParcelField, current: number): string | number {
+    const draft = this.#draft()[field];
+    return draft !== undefined && Number(draft) === current ? draft : current;
+  }
+
+  #patch(field: ParcelField, raw: NumericValue, centimetres: number | null): void {
+    this.#draft.update(draft => ({ ...draft, [field]: String(raw ?? '') }));
+    if (centimetres === null) {
       return;
     }
-    this.changed.emit({ ...this.parcel(), ...Object.fromEntries(entries) });
+    this.changed.emit({ ...this.parcel(), [field]: centimetres });
   }
 }

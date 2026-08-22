@@ -16,11 +16,20 @@ export const MAX_SIDE_CM = 3000;
 export const MIN_CELL_CM = 5;
 export const MAX_CELL_CM = 200;
 
-export const PLACEMENT_STEP_CM = 10;
-export const PLACEMENT_GAP_CM = 40;
-export const EDITOR_MARGIN_CM = 150;
-export const EDITOR_MIN_SIDE_CM = 600;
-export const FINAL_MARGIN_CM = 60;
+export const PLACEMENT_STEP_CM = 25;
+export const PLACEMENT_GAP_CM = 50;
+
+/**
+ * Le plateau de travail ne bouge plus pendant l'étape de positionnement : un
+ * terrain démesuré, une trame dessinée sur une portion utile et un cadrage
+ * caméra figé. C'est ce qui permet de zoomer puis de déplacer une parcelle sans
+ * voir le cadrage se réinitialiser ; le terrain est ramené à l'emprise réelle à
+ * la validation.
+ */
+export const EDITOR_TERRAIN_CM = 6000;
+export const EDITOR_GRID_CM = 2400;
+export const EDITOR_VIEW_CM = 1100;
+export const ALIGN_TOLERANCE_CM = 20;
 
 const CENTIMETRES_PER_METRE = 100;
 const HALF = 2;
@@ -219,24 +228,101 @@ export type PlanExtent = {
   readonly depthCm: number;
 };
 
+export const EDITOR_EXTENT: PlanExtent = {
+  widthCm: EDITOR_TERRAIN_CM,
+  depthCm: EDITOR_TERRAIN_CM,
+};
+
+export const EDITOR_VIEW_EXTENT: PlanExtent = {
+  widthCm: EDITOR_VIEW_CM,
+  depthCm: EDITOR_VIEW_CM,
+};
+
+export const ALIGN_AXIS = { x: 'x', z: 'z' } as const;
+
+export type AlignAxis = (typeof ALIGN_AXIS)[keyof typeof ALIGN_AXIS];
+
+export type AlignmentGuide = {
+  readonly axis: AlignAxis;
+  readonly valueCm: number;
+};
+
+export type SnappedPlacement = {
+  readonly xCm: number;
+  readonly zCm: number;
+  readonly guides: readonly AlignmentGuide[];
+};
+
+type AxisSnap = {
+  readonly value: number;
+  readonly guide: number | null;
+};
+
 /**
- * Emprise du plateau de travail de l'étape de positionnement. Toujours centrée
- * sur l'origine — la caméra et le terrain y restent donc fixes — et agrandie
- * dès qu'une parcelle s'éloigne du centre, ce qui permet de disposer les
- * parcelles perpendiculairement les unes aux autres sans jamais manquer de
- * place.
+ * Aimante un bord, le centre ou l'autre bord de la parcelle déplacée sur ceux
+ * des parcelles voisines. À défaut d'un voisin assez proche, la position
+ * retombe sur le quadrillage du plateau.
  */
-export function editorExtent(
+function snapAxis(start: number, size: number, targets: readonly number[]): AxisSnap {
+  const anchors = [start, start + size / HALF, start + size];
+  const candidates = anchors.flatMap(anchor =>
+    targets.map(target => ({ delta: target - anchor, target })),
+  );
+  const closest = candidates.reduce<{ delta: number; target: number } | null>(
+    (best, candidate) =>
+      Math.abs(candidate.delta) <= ALIGN_TOLERANCE_CM &&
+      (best === null || Math.abs(candidate.delta) < Math.abs(best.delta))
+        ? candidate
+        : best,
+    null,
+  );
+  if (closest === null) {
+    return { value: snapToStep(start), guide: null };
+  }
+  return { value: start + closest.delta, guide: closest.target };
+}
+
+function axisTargets(rects: readonly PlacedRect[], axis: AlignAxis): readonly number[] {
+  return rects.flatMap(rect => {
+    const start = axis === ALIGN_AXIS.x ? rect.xCm : rect.zCm;
+    const size = axis === ALIGN_AXIS.x ? rect.widthCm : rect.depthCm;
+    return [start, start + size / HALF, start + size];
+  });
+}
+
+export function snapPlacement(
+  moving: { readonly widthCm: number; readonly depthCm: number },
+  desiredXCm: number,
+  desiredZCm: number,
+  neighbours: readonly PlacedRect[],
+): SnappedPlacement {
+  const horizontal = snapAxis(desiredXCm, moving.widthCm, axisTargets(neighbours, ALIGN_AXIS.x));
+  const vertical = snapAxis(desiredZCm, moving.depthCm, axisTargets(neighbours, ALIGN_AXIS.z));
+  return {
+    xCm: horizontal.value,
+    zCm: vertical.value,
+    guides: [
+      ...(horizontal.guide === null
+        ? []
+        : [{ axis: ALIGN_AXIS.x, valueCm: horizontal.guide } as const]),
+      ...(vertical.guide === null
+        ? []
+        : [{ axis: ALIGN_AXIS.z, valueCm: vertical.guide } as const]),
+    ],
+  };
+}
+
+export function neighbourRects(
   parcels: readonly Parcel[],
   placements: readonly ParcelPlacement[],
-): PlanExtent {
-  const bounds = placementBounds(parcels, placements);
-  const reachX = Math.max(Math.abs(bounds.xCm), Math.abs(bounds.xCm + bounds.widthCm));
-  const reachZ = Math.max(Math.abs(bounds.zCm), Math.abs(bounds.zCm + bounds.depthCm));
-  return {
-    widthCm: Math.max(EDITOR_MIN_SIDE_CM, (reachX + EDITOR_MARGIN_CM) * HALF),
-    depthCm: Math.max(EDITOR_MIN_SIDE_CM, (reachZ + EDITOR_MARGIN_CM) * HALF),
-  };
+  excludedId: string,
+): readonly PlacedRect[] {
+  return placements
+    .filter(placement => placement.parcelId !== excludedId)
+    .flatMap(placement => {
+      const parcel = parcels.find(candidate => candidate.id === placement.parcelId);
+      return parcel ? [placementRect(parcel, placement)] : [];
+    });
 }
 
 /**
@@ -252,8 +338,8 @@ export function centrePlacements(
   const offsetZ = bounds.zCm + bounds.depthCm / HALF;
   return placements.map(placement => ({
     ...placement,
-    xCm: placement.xCm - offsetX,
-    zCm: placement.zCm - offsetZ,
+    xCm: snapToStep(placement.xCm - offsetX),
+    zCm: snapToStep(placement.zCm - offsetZ),
   }));
 }
 
@@ -267,8 +353,8 @@ export function spreadPlacements(parcels: readonly Parcel[]): readonly ParcelPla
       const footprint = parcelFootprint(parcel, false);
       accumulator.placements.push({
         parcelId: parcel.id,
-        xCm: accumulator.cursorX,
-        zCm: -footprint.depthCm / HALF,
+        xCm: snapToStep(accumulator.cursorX),
+        zCm: snapToStep(-footprint.depthCm / HALF),
         rotated: false,
       });
       return {

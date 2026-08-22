@@ -276,7 +276,7 @@ export function buildOutlineParts(
 
 const PLATEAU_PREFIX = 'plateau';
 const HANDLE_PREFIX = 'handle';
-const PLATEAU_STEP = 0.5;
+const PLATEAU_STEP = 0.25;
 const PLATEAU_LINE = 0.012;
 const PLATEAU_LIFT = 0.006;
 const HANDLE_RADIUS = 0.24;
@@ -285,7 +285,7 @@ const HANDLE_ARC_RATIO = 0.78;
 const HANDLE_ARROW = 0.09;
 const QUARTER_TURN = Math.PI / 2;
 
-/** Trame d'aide au placement, une ligne tous les cinquante centimètres. */
+/** Trame d'aide au placement, alignée sur le pas d'aimantation des parcelles. */
 export function buildPlateauGridParts(width: number, depth: number, color: string): ScenePart[] {
   const columns = Math.floor(width / PLATEAU_STEP);
   const rows = Math.floor(depth / PLATEAU_STEP);
@@ -333,6 +333,52 @@ export function buildRotateHandleParts(color: string): ScenePart[] {
       rotation: [0, 0, -QUARTER_TURN],
       color,
       roughness: 0.35,
+    },
+  ]);
+}
+
+const GUIDE_PREFIX = 'guide';
+const GUIDE_THICKNESS = 0.09;
+const GUIDE_LIFT = 0.5;
+
+/** Repère d'alignement affiché pendant un déplacement, façon règle de montage. */
+export function buildGuideParts(
+  along: 'x' | 'z',
+  value: number,
+  span: number,
+  color: string,
+): ScenePart[] {
+  const horizontal = along === 'x';
+  return sceneParts(`${GUIDE_PREFIX}-${along}`, [
+    {
+      geometry: SCENE_GEOMETRY.box,
+      args: horizontal
+        ? [GUIDE_THICKNESS, GUIDE_THICKNESS, span]
+        : [span, GUIDE_THICKNESS, GUIDE_THICKNESS],
+      position: horizontal ? [value, GUIDE_LIFT, 0] : [0, GUIDE_LIFT, value],
+      color,
+      roughness: 0.2,
+    },
+  ]);
+}
+
+const EDGE_PREFIX = 'edge';
+const EDGE_HEIGHT = 0.05;
+
+/** Poignée posée le long d'un bord de parcelle : elle cible une ligne ou une colonne. */
+export function buildEdgeParts(
+  width: number,
+  depth: number,
+  top: number,
+  color: string,
+): ScenePart[] {
+  return sceneParts(EDGE_PREFIX, [
+    {
+      geometry: SCENE_GEOMETRY.box,
+      args: [width, EDGE_HEIGHT, depth],
+      position: [0, top + EDGE_HEIGHT / HALF, 0],
+      color,
+      roughness: 0.5,
     },
   ]);
 }

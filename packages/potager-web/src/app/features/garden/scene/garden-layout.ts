@@ -55,6 +55,21 @@ export type GardenCell = {
   readonly plant: PlantSpot | null;
 };
 
+export const EDGE_AXIS = { row: 'row', column: 'column' } as const;
+
+export type EdgeAxis = (typeof EDGE_AXIS)[keyof typeof EDGE_AXIS];
+
+export type GardenEdge = {
+  readonly key: string;
+  readonly parcelId: string;
+  readonly axis: EdgeAxis;
+  readonly index: number;
+  readonly position: SceneVector;
+  readonly width: number;
+  readonly depth: number;
+  readonly cellKeys: readonly string[];
+};
+
 export type GardenParcel = {
   readonly id: string;
   readonly name: string;
@@ -66,6 +81,7 @@ export type GardenParcel = {
   readonly rows: number;
   readonly soilTop: number;
   readonly cells: readonly GardenCell[];
+  readonly edges: readonly GardenEdge[];
   readonly plantedCount: number;
 };
 
@@ -142,6 +158,53 @@ function buildCells(
   ).flat();
 }
 
+const EDGE_THICKNESS = 0.16;
+const EDGE_CLEARANCE = RAISED_PLANK;
+
+function buildEdges(
+  parcel: Parcel,
+  placement: ParcelPlacement,
+  cells: readonly GardenCell[],
+): readonly GardenEdge[] {
+  const footprint = parcelFootprint(parcel, placement.rotated);
+  const halfWidth = metres(footprint.widthCm) / HALF + EDGE_CLEARANCE + EDGE_THICKNESS / HALF;
+  const halfDepth = metres(footprint.depthCm) / HALF + EDGE_CLEARANCE + EDGE_THICKNESS / HALF;
+  const cellWidth = metres(footprint.cellWidthCm);
+  const cellDepth = metres(footprint.cellDepthCm);
+
+  const rows = Array.from({ length: footprint.rows }, (_, row) =>
+    ([halfWidth, -halfWidth] as const).map(
+      (x, side): GardenEdge => ({
+        key: `${parcel.id}:row:${row}:${side}`,
+        parcelId: parcel.id,
+        axis: EDGE_AXIS.row,
+        index: row,
+        position: [x, 0, metres(cellCentreZ(footprint, row))],
+        width: EDGE_THICKNESS,
+        depth: cellDepth,
+        cellKeys: cells.filter(cell => cell.row === row).map(cell => cell.key),
+      }),
+    ),
+  ).flat();
+
+  const columns = Array.from({ length: footprint.columns }, (_, column) =>
+    ([halfDepth, -halfDepth] as const).map(
+      (z, side): GardenEdge => ({
+        key: `${parcel.id}:column:${column}:${side}`,
+        parcelId: parcel.id,
+        axis: EDGE_AXIS.column,
+        index: column,
+        position: [metres(cellCentreX(footprint, column)), 0, z],
+        width: cellWidth,
+        depth: EDGE_THICKNESS,
+        cellKeys: cells.filter(cell => cell.column === column).map(cell => cell.key),
+      }),
+    ),
+  ).flat();
+
+  return [...rows, ...columns];
+}
+
 export function buildGardenField(plan: GardenPlan, extent?: PlanExtent): GardenField {
   const parcels = plan.placements
     .map((placement, index) => {
@@ -166,6 +229,7 @@ export function buildGardenField(plan: GardenPlan, extent?: PlanExtent): GardenF
         rows: footprint.rows,
         soilTop: soilTop(parcel.kind),
         cells,
+        edges: buildEdges(parcel, placement, cells),
         plantedCount: cells.filter(cell => cell.varietyId !== null).length,
       } satisfies GardenParcel;
     })
