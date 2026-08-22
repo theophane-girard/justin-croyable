@@ -28,8 +28,19 @@ const FALLBACK_FOV = 42;
 const HALVING = 2;
 const TARGET_HEIGHT_RATIO = 0.28;
 
-const VIEW_DIRECTION = new Vector3(0.62, 0.54, 0.78).normalize();
+const VIEW_AZIMUTH_DEGREES = 38.5;
+export const DEFAULT_ELEVATION_DEGREES = 28.5;
 const WORLD_UP = new Vector3(0, 1, 0);
+
+function viewDirection(elevationDegrees: number): Vector3 {
+  const elevation = elevationDegrees * MathUtils.DEG2RAD;
+  const azimuth = VIEW_AZIMUTH_DEGREES * MathUtils.DEG2RAD;
+  return new Vector3(
+    Math.sin(azimuth) * Math.cos(elevation),
+    Math.sin(elevation),
+    Math.cos(azimuth) * Math.cos(elevation),
+  ).normalize();
+}
 
 function projectedHalfExtent(axis: Vector3, halfExtents: Vector3): number {
   return (
@@ -39,9 +50,9 @@ function projectedHalfExtent(axis: Vector3, halfExtents: Vector3): number {
   );
 }
 
-function fitDistance(fov: number, aspect: number, bounds: SceneBounds): number {
-  const right = new Vector3().crossVectors(WORLD_UP, VIEW_DIRECTION).normalize();
-  const up = new Vector3().crossVectors(VIEW_DIRECTION, right).normalize();
+function fitDistance(fov: number, aspect: number, bounds: SceneBounds, direction: Vector3): number {
+  const right = new Vector3().crossVectors(WORLD_UP, direction).normalize();
+  const up = new Vector3().crossVectors(direction, right).normalize();
   const halfExtents = new Vector3(
     bounds.width / HALVING,
     bounds.height / HALVING,
@@ -66,6 +77,7 @@ function fitDistance(fov: number, aspect: number, bounds: SceneBounds): number {
 export class SceneOrbitControlsComponent {
   readonly bounds = input.required<SceneBounds>();
   readonly autoRotate = input(false);
+  readonly elevation = input(DEFAULT_ELEVATION_DEGREES);
   readonly enabled = input(true);
   readonly pan = input(false);
 
@@ -99,7 +111,8 @@ export class SceneOrbitControlsComponent {
       const bounds = this.bounds();
       const aspect = size.height > 0 ? size.width / size.height : FALLBACK_ASPECT;
       const fov = camera instanceof PerspectiveCamera ? camera.fov : FALLBACK_FOV;
-      const distance = fitDistance(fov, aspect, bounds);
+      const direction = viewDirection(this.elevation());
+      const distance = fitDistance(fov, aspect, bounds, direction);
       controls.minDistance = distance * MIN_DISTANCE_RATIO;
       controls.maxDistance = distance * MAX_DISTANCE_RATIO;
       if (this.#framedWidth === bounds.width && this.#framedDepth === bounds.depth) {
@@ -108,7 +121,7 @@ export class SceneOrbitControlsComponent {
       this.#framedWidth = bounds.width;
       this.#framedDepth = bounds.depth;
       controls.target.set(0, bounds.height * TARGET_HEIGHT_RATIO, 0);
-      camera.position.copy(controls.target).addScaledVector(VIEW_DIRECTION, distance);
+      camera.position.copy(controls.target).addScaledVector(direction, distance);
       controls.update();
     });
 
@@ -117,14 +130,13 @@ export class SceneOrbitControlsComponent {
     this.#recenter = () => {
       const bounds = this.bounds();
       const size = this.#store.size();
-      const aspect =
-        size.height > 0 ? size.width / size.height : FALLBACK_ASPECT;
-      const fov =
-        camera instanceof PerspectiveCamera ? camera.fov : FALLBACK_FOV;
+      const aspect = size.height > 0 ? size.width / size.height : FALLBACK_ASPECT;
+      const fov = camera instanceof PerspectiveCamera ? camera.fov : FALLBACK_FOV;
+      const direction = viewDirection(this.elevation());
       controls.target.set(0, bounds.height * TARGET_HEIGHT_RATIO, 0);
       camera.position
         .copy(controls.target)
-        .addScaledVector(VIEW_DIRECTION, fitDistance(fov, aspect, bounds));
+        .addScaledVector(direction, fitDistance(fov, aspect, bounds, direction));
       controls.update();
       this.#store.snapshot.invalidate();
     };

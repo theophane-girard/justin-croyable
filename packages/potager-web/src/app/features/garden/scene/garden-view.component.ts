@@ -12,6 +12,7 @@ import { ThemeService, ViewportService } from '@justin-croyable/design-system';
 import {
   OPEN_SKY_HAZE,
   type SceneBounds,
+  type SceneCameraOptions,
   SceneCanvasComponent,
   SceneContentDirective,
   type SceneFog,
@@ -23,12 +24,13 @@ import { GardenPlanStore } from '../plan/garden-plan-store';
 
 import { buildGardenField, type GardenCell, type GardenEdge } from './garden-layout';
 import { GardenSceneComponent } from './garden-scene.component';
-import { horizonRadius } from './garden-structure-parts';
 
 const FILL_HEIGHT = '100%';
 const SCENE_LABEL = 'Votre potager en trois dimensions, une grille de culture par parcelle';
-const HORIZON_HAZE_START_RATIO = 2.2;
-const HORIZON_HAZE_END_RATIO = 0.83;
+const HORIZON_HAZE_START_RATIO = 3;
+const HORIZON_HAZE_END_RATIO = 26;
+const GARDEN_CAMERA: SceneCameraOptions = { fov: 50 };
+const GARDEN_ELEVATION_DEGREES = 19;
 const ANIMATED_FRAMELOOP: NgtFrameloop = 'always';
 const STILL_FRAMELOOP: NgtFrameloop = 'demand';
 
@@ -39,6 +41,8 @@ const STILL_FRAMELOOP: NgtFrameloop = 'demand';
     <app-scene-canvas
       orbitPan
       sky="open"
+      [camera]="camera"
+      [orbitElevation]="elevationDegrees"
       [fog]="horizonFog()"
       [class.cursor-pointer]="pointerActive()"
       [height]="fillHeight"
@@ -99,6 +103,8 @@ export class GardenViewComponent {
 
   protected readonly activeEdge = computed(() => this.hoveredEdge() ?? this.pinnedEdge());
   protected readonly sceneLabel = SCENE_LABEL;
+  protected readonly camera = GARDEN_CAMERA;
+  protected readonly elevationDegrees = GARDEN_ELEVATION_DEGREES;
   protected readonly fillHeight = FILL_HEIGHT;
 
   protected readonly pointerActive = computed(
@@ -117,7 +123,7 @@ export class GardenViewComponent {
     return {
       color: this.#theme.isDark() ? OPEN_SKY_HAZE.dark : OPEN_SKY_HAZE.light,
       near: extent * HORIZON_HAZE_START_RATIO,
-      far: horizonRadius(extent) * HORIZON_HAZE_END_RATIO,
+      far: extent * HORIZON_HAZE_END_RATIO,
     };
   });
 

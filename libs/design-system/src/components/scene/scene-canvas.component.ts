@@ -21,7 +21,11 @@ import { ViewportService } from '../../core/services/viewport.service';
 import { SCENE_DEFAULTS } from '../../providers/tokens';
 import { mergeClasses } from '../../utils/merge-classes';
 
-import { sceneCanvasVariants, type SceneCanvasSkyVariants } from './scene-canvas.variants';
+import {
+  OPEN_SKY,
+  sceneCanvasVariants,
+  type SceneCanvasSkyVariants,
+} from './scene-canvas.variants';
 
 import {
   type SceneFog,
@@ -29,7 +33,11 @@ import {
   type SceneLighting,
   SCENE_LIGHTING,
 } from './scene-environment.component';
-import { SceneOrbitControlsComponent } from './scene-orbit-controls.component';
+import {
+  DEFAULT_ELEVATION_DEGREES,
+  SceneOrbitControlsComponent,
+} from './scene-orbit-controls.component';
+import { SceneSkyComponent } from './scene-sky.component';
 import type { SceneBounds, SceneVector } from './scene-part';
 
 /**
@@ -49,6 +57,8 @@ const DEFAULT_BOUNDS: SceneBounds = { width: 4, depth: 4, height: 2 };
 const CAMERA_OPTIONS: SceneCameraOptions = { fov: 42, near: 0.1, far: 400 };
 const GL_OPTIONS = { antialias: true, alpha: true } as const;
 const DEMAND_FRAMELOOP: NgtFrameloop = 'demand';
+const SKY_RADIUS_RATIO = 0.7;
+const FALLBACK_CAMERA_FAR = 400;
 
 /**
  * Contenu 3D d'une `app-scene-canvas`.
@@ -99,6 +109,7 @@ export class SceneContentHostDirective {
     SceneContentHostDirective,
     SceneEnvironmentComponent,
     SceneOrbitControlsComponent,
+    SceneSkyComponent,
   ],
   template: `
     <ngt-canvas
@@ -111,10 +122,14 @@ export class SceneContentHostDirective {
     >
       <ng-container *canvasContent>
         <app-scene-environment [bounds]="bounds()" [lighting]="lighting()" [fog]="fog()" />
+        @if (openSky()) {
+          <app-scene-sky [radius]="skyRadius()" />
+        }
         @if (orbit()) {
           <app-scene-orbit-controls
             [bounds]="bounds()"
             [autoRotate]="autoRotate()"
+            [elevation]="orbitElevation()"
             [pan]="orbitPan()"
           />
         }
@@ -173,6 +188,7 @@ export class SceneCanvasComponent {
   readonly fog = input<boolean | SceneFog>(true);
   readonly orbit = input(true);
   readonly orbitPan = input(false);
+  readonly orbitElevation = input(DEFAULT_ELEVATION_DEGREES);
   readonly sky = input<SceneCanvasSkyVariants>('none');
   readonly orthographic = input(false, { transform: booleanAttribute });
   readonly camera = input<SceneCameraOptions>({});
@@ -191,6 +207,12 @@ export class SceneCanvasComponent {
     ...CAMERA_OPTIONS,
     ...this.camera(),
   }));
+
+  protected readonly openSky = computed(() => this.sky() === OPEN_SKY);
+
+  protected readonly skyRadius = computed(
+    () => (this.cameraOptions().far ?? FALLBACK_CAMERA_FAR) * SKY_RADIUS_RATIO,
+  );
 
   protected readonly contentTemplate = computed(() => this.sceneContent() ?? null);
 

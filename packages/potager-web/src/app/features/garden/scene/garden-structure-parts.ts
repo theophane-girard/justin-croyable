@@ -28,9 +28,8 @@ const WOOD_ROUGHNESS = 0.95;
 const GRASS_BORDER = 0.9;
 const SOIL_INSET = GRASS_BORDER;
 const LAWN_SPREAD = 3.2;
-const HORIZON_RADIUS_RATIO = 3.6;
-const MAX_HORIZON_RADIUS = 300;
-const HORIZON_SEGMENTS = 48;
+const HORIZON_RADIUS = 240;
+const HORIZON_SEGMENTS = 64;
 const HORIZON_DROP = 0.06;
 const BLADE_COUNT = 90;
 const BLADE_HEIGHT = 0.13;
@@ -145,20 +144,16 @@ function lawnBlades(
   }).filter((blade): blade is ScenePartDraft => blade !== null);
 }
 
-export function horizonRadius(extent: number): number {
-  return Math.min(MAX_HORIZON_RADIUS, extent * HORIZON_RADIUS_RATIO);
-}
-
 /**
- * Prairie filant jusqu'à l'horizon, sous la pelouse du potager. Elle n'a pas de
- * bord visible : la brume de distance la dissout dans le ciel bien avant son
- * rebord.
+ * Prairie filant jusqu'à l'horizon, sous la pelouse du potager. Son rebord est
+ * si loin que la brume de distance l'a effacé depuis longtemps : le sol rejoint
+ * la bande de brume du ciel, et l'horizon reste droit sous tous les angles.
  */
-export function buildHorizonParts(extent: number, colors: GardenColors): ScenePart[] {
+export function buildHorizonParts(colors: GardenColors): ScenePart[] {
   return sceneParts(HORIZON_PREFIX, [
     {
       geometry: SCENE_GEOMETRY.circle,
-      args: [horizonRadius(extent), HORIZON_SEGMENTS],
+      args: [HORIZON_RADIUS, HORIZON_SEGMENTS],
       position: [0, -HORIZON_DROP, 0],
       rotation: [-Math.PI / HALF, 0, 0],
       color: colors.grass,

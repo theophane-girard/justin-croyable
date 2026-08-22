@@ -89,7 +89,7 @@ export class GardenSceneComponent {
   readonly #colors = inject(SceneThemeService).palette(GARDEN_PALETTE);
 
   protected readonly horizonParts = computed(() =>
-    this.horizon() ? buildHorizonParts(this.field().extent, this.#colors()) : [],
+    this.horizon() ? buildHorizonParts(this.#colors()) : [],
   );
 
   protected readonly terrainParts = computed(() =>
