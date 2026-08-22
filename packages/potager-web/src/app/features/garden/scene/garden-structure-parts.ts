@@ -167,6 +167,7 @@ export function buildTerrainParts(
   depth: number,
   colors: GardenColors,
   tilled = true,
+  lawn = true,
 ): ScenePart[] {
   const soilWidth = Math.max(width - SOIL_INSET, width * 0.5);
   const soilDepth = Math.max(depth - SOIL_INSET, depth * 0.5);
@@ -188,15 +189,19 @@ export function buildTerrainParts(
     };
   });
 
+  const lawnSlab = lawn
+    ? roundedSlab(
+        lawnWidth,
+        lawnDepth,
+        TERRAIN_THICKNESS * 0.9,
+        -TERRAIN_THICKNESS * 0.62,
+        colors.grass,
+        grassRadius,
+      )
+    : [];
+
   return sceneParts(TERRAIN_PREFIX, [
-    ...roundedSlab(
-      lawnWidth,
-      lawnDepth,
-      TERRAIN_THICKNESS * 0.9,
-      -TERRAIN_THICKNESS * 0.62,
-      colors.grass,
-      grassRadius,
-    ),
+    ...lawnSlab,
     ...lawnBlades(lawnWidth, lawnDepth, width, depth, colors),
     ...roundedSlab(
       soilWidth,

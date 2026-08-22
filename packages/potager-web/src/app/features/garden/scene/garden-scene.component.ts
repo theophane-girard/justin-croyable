@@ -140,7 +140,13 @@ export class GardenSceneComponent {
   );
 
   protected readonly terrainParts = computed(() =>
-    buildTerrainParts(this.field().width, this.field().depth, this.#colors(), this.tilledTerrain()),
+    buildTerrainParts(
+      this.field().width,
+      this.field().depth,
+      this.#colors(),
+      this.tilledTerrain(),
+      !this.horizon(),
+    ),
   );
 
   /**
