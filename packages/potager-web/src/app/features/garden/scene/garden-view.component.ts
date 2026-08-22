@@ -3,6 +3,7 @@ import {
   Component,
   computed,
   inject,
+  input,
   model,
   output,
   signal,
@@ -22,8 +23,13 @@ import { NgIcon } from '@ng-icons/core';
 
 import { GardenPlanStore } from '../plan/garden-plan-store';
 
-import { buildGardenField, type GardenCell, type GardenEdge } from './garden-layout';
-import { GardenSceneComponent } from './garden-scene.component';
+import {
+  buildGardenField,
+  type GardenCell,
+  type GardenEdge,
+  type GardenTree,
+} from './garden-layout';
+import { GardenSceneComponent, type GroundPoint } from './garden-scene.component';
 
 const FILL_HEIGHT = '100%';
 const SCENE_LABEL = 'Votre potager en trois dimensions, une grille de culture par parcelle';
@@ -58,12 +64,17 @@ const STILL_FRAMELOOP: NgtFrameloop = 'demand';
           [hoveredId]="hoveredId()"
           [hoveredCellKey]="hoveredCellKey()"
           [hoveredEdgeKey]="activeEdge()?.key ?? null"
+          [selectedCellKeys]="selectedCellKeys()"
           (picked)="onPicked($event)"
           (hoverChange)="hoveredId.set($event)"
           (cellPicked)="onCellPicked($event)"
+          (cellLongPressed)="cellLongPressed.emit($event)"
           (cellHoverChange)="hoveredCellKey.set($event)"
           (edgePicked)="onEdgePicked($event)"
           (edgeHoverChange)="hoveredEdge.set($event)"
+          (groundPicked)="groundPicked.emit($event)"
+          (treePicked)="treePicked.emit($event)"
+          (treeHoverChange)="hoveredTreeId.set($event)"
         />
       </ng-template>
 
@@ -85,8 +96,13 @@ const STILL_FRAMELOOP: NgtFrameloop = 'demand';
 export class GardenViewComponent {
   readonly selectedId = model<string | null>(null);
 
+  readonly selectedCellKeys = input<ReadonlySet<string>>(new Set<string>());
+
   readonly cellPicked = output<GardenCell>();
+  readonly cellLongPressed = output<GardenCell>();
   readonly edgePicked = output<GardenEdge>();
+  readonly groundPicked = output<GroundPoint>();
+  readonly treePicked = output<GardenTree>();
 
   readonly #viewport = inject(ViewportService);
   readonly #theme = inject(ThemeService);
@@ -97,6 +113,7 @@ export class GardenViewComponent {
   protected readonly hoveredId = signal<string | null>(null);
   protected readonly hoveredCellKey = signal<string | null>(null);
   protected readonly hoveredEdge = signal<GardenEdge | null>(null);
+  protected readonly hoveredTreeId = signal<string | null>(null);
 
   /** Le bord choisi reste surligné pendant que la feuille d'actions est ouverte. */
   protected readonly pinnedEdge = signal<GardenEdge | null>(null);
@@ -109,7 +126,10 @@ export class GardenViewComponent {
 
   protected readonly pointerActive = computed(
     () =>
-      this.hoveredId() !== null || this.hoveredCellKey() !== null || this.hoveredEdge() !== null,
+      this.hoveredId() !== null ||
+      this.hoveredCellKey() !== null ||
+      this.hoveredEdge() !== null ||
+      this.hoveredTreeId() !== null,
   );
 
   protected readonly frameloop = computed(() =>
@@ -128,8 +148,8 @@ export class GardenViewComponent {
   });
 
   protected readonly bounds = computed<SceneBounds>(() => ({
-    width: this.field().width,
-    depth: this.field().depth,
+    width: this.field().frameWidth,
+    depth: this.field().frameDepth,
     height: this.field().height,
   }));
 

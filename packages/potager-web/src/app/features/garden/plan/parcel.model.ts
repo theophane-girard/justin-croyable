@@ -60,16 +60,27 @@ export type Planting = {
   readonly harvestedKg: number;
 };
 
+export type Tree = {
+  readonly id: string;
+  readonly cropId: CropId;
+  readonly varietyId: VarietyId;
+  readonly xCm: number;
+  readonly zCm: number;
+  readonly harvestedKg: number;
+};
+
 export type GardenPlan = {
   readonly parcels: readonly Parcel[];
   readonly placements: readonly ParcelPlacement[];
   readonly plantings: readonly Planting[];
+  readonly trees: readonly Tree[];
 };
 
 export const EMPTY_GARDEN_PLAN: GardenPlan = {
   parcels: [],
   placements: [],
   plantings: [],
+  trees: [],
 };
 
 export type ParcelFootprint = {
@@ -91,6 +102,28 @@ export type PlacedRect = {
 export type CellCoordinate = {
   readonly column: number;
   readonly row: number;
+};
+
+export type CellTarget = CellCoordinate & {
+  readonly parcelId: string;
+};
+
+export const SOW_PATTERN = {
+  all: 'all',
+  everyOther: 'everyOther',
+  gaps: 'gaps',
+} as const;
+
+export type SowPattern = (typeof SOW_PATTERN)[keyof typeof SOW_PATTERN];
+
+export type SowOptions = {
+  readonly pattern: SowPattern;
+  readonly startSown: boolean;
+};
+
+export const DEFAULT_SOW_OPTIONS: SowOptions = {
+  pattern: SOW_PATTERN.all,
+  startSown: true,
 };
 
 export const SOW_MODE = {
@@ -407,6 +440,33 @@ export function sowTargets(
     return rows.map(row => ({ column: origin.column, row }));
   }
   return [origin];
+}
+
+const ALTERNATE_PERIOD = 2;
+
+/**
+ * Découpe une étendue en une case sur deux : le long de la ligne pour un semis
+ * de ligne, de la colonne pour une colonne, en damier pour une parcelle
+ * entière. `startSown` décide si la première case du rang est semée ou laissée
+ * libre.
+ */
+export function alternateTargets(
+  mode: SowMode,
+  targets: readonly CellCoordinate[],
+  startSown: boolean,
+): readonly CellCoordinate[] {
+  const expected = startSown ? 0 : 1;
+  return targets.filter(cell => alternateIndex(mode, cell) % ALTERNATE_PERIOD === expected);
+}
+
+function alternateIndex(mode: SowMode, cell: CellCoordinate): number {
+  if (mode === SOW_MODE.row) {
+    return cell.column;
+  }
+  if (mode === SOW_MODE.column) {
+    return cell.row;
+  }
+  return cell.column + cell.row;
 }
 
 export function findPlanting(

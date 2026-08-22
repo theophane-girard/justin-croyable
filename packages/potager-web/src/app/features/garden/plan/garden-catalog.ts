@@ -55,6 +55,20 @@ export const CATALOG_VARIETIES: readonly CatalogVariety[] = [...VARIETIES].sort(
   left.label.localeCompare(right.label, 'fr'),
 );
 
+const TREE_CROP_IDS: ReadonlySet<CropId> = new Set<CropId>([
+  'pomme',
+  'poire',
+  'prune',
+  'cerise',
+  'abricot',
+  'peche',
+]);
+
+/** Espèces que l'on plante en pleine terre, hors des parcelles cultivées. */
+export const CATALOG_TREE_VARIETIES: readonly CatalogVariety[] = CATALOG_VARIETIES.filter(variety =>
+  TREE_CROP_IDS.has(variety.cropId),
+);
+
 export const VARIETY_BY_ID: ReadonlyMap<VarietyId, CatalogVariety> = new Map(
   CATALOG_VARIETIES.map(variety => [variety.id, variety] as const),
 );

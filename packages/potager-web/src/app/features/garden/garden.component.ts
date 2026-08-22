@@ -38,18 +38,28 @@ import { SeasonStore } from '../../core/season-store';
 import { SharingStore } from '../../core/sharing-store';
 import { GARDEN_ADD_LINK, GARDEN_SETUP_LINK } from '../../app.routes';
 
-import { CATALOG_VARIETIES, varietyLabel } from './plan/garden-catalog';
+import { CATALOG_TREE_VARIETIES, CATALOG_VARIETIES, varietyLabel } from './plan/garden-catalog';
 import { GardenPlanStore } from './plan/garden-plan-store';
 import {
   type CellCoordinate,
+  type CellTarget,
   formatMetres,
   type Parcel,
   parcelFootprint,
   SOW_MODE,
+  SOW_PATTERN,
   type SowMode,
+  type SowPattern,
   sowTargets,
 } from './plan/parcel.model';
-import { EDGE_AXIS, type GardenCell, type GardenEdge } from './scene/garden-layout';
+import {
+  cellKey,
+  EDGE_AXIS,
+  type GardenCell,
+  type GardenEdge,
+  type GardenTree,
+} from './scene/garden-layout';
+import { type GroundPoint } from './scene/garden-scene.component';
 import { GardenViewComponent } from './scene/garden-view.component';
 
 const NUMBER_FORMATTER = new Intl.NumberFormat('fr-FR', {
@@ -101,34 +111,78 @@ type ParcelDetail = {
   readonly contents: readonly ParcelContent[];
 };
 
-type SowOption = {
+type SowChoice = {
+  readonly key: string;
   readonly mode: SowMode;
+  readonly pattern: SowPattern;
+  readonly startSown: boolean;
   readonly label: string;
   readonly description: string;
 };
 
-const SOW_OPTION_BY_MODE: Readonly<Record<SowMode, SowOption>> = {
-  [SOW_MODE.single]: {
-    mode: SOW_MODE.single,
-    label: 'Semer cette case',
-    description: 'Une seule case.',
-  },
-  [SOW_MODE.parcel]: {
-    mode: SOW_MODE.parcel,
-    label: 'Semer toute la parcelle',
-    description: 'Toutes les cases de la parcelle.',
-  },
-  [SOW_MODE.row]: {
-    mode: SOW_MODE.row,
-    label: 'Semer la ligne',
-    description: 'Toutes les cases de cette ligne.',
-  },
-  [SOW_MODE.column]: {
-    mode: SOW_MODE.column,
-    label: 'Semer la colonne',
-    description: 'Toutes les cases de cette colonne.',
-  },
+const SCOPE_LABEL: Readonly<Record<SowMode, string>> = {
+  [SOW_MODE.single]: 'cette case',
+  [SOW_MODE.parcel]: 'toute la parcelle',
+  [SOW_MODE.row]: 'la ligne',
+  [SOW_MODE.column]: 'la colonne',
 };
+
+function spreadChoices(scope: SowMode): readonly SowChoice[] {
+  return [
+    {
+      key: `${scope}-toutes`,
+      mode: scope,
+      pattern: SOW_PATTERN.all,
+      startSown: true,
+      label: `Semer ${SCOPE_LABEL[scope]}`,
+      description: 'Toutes les cases, même celles déjà semées.',
+    },
+    {
+      key: `${scope}-alternee-semee`,
+      mode: scope,
+      pattern: SOW_PATTERN.everyOther,
+      startSown: true,
+      label: 'Une case sur deux',
+      description: 'En commençant par une case semée.',
+    },
+    {
+      key: `${scope}-alternee-vide`,
+      mode: scope,
+      pattern: SOW_PATTERN.everyOther,
+      startSown: false,
+      label: 'Une case sur deux',
+      description: 'En commençant par une case vide.',
+    },
+    {
+      key: `${scope}-combler`,
+      mode: scope,
+      pattern: SOW_PATTERN.gaps,
+      startSown: true,
+      label: 'Combler',
+      description: 'Uniquement les cases encore libres.',
+    },
+  ];
+}
+
+const SINGLE_CHOICE: SowChoice = {
+  key: 'case',
+  mode: SOW_MODE.single,
+  pattern: SOW_PATTERN.all,
+  startSown: true,
+  label: 'Semer cette case',
+  description: 'Une seule case.',
+};
+
+function sowChoicesFor(scope: SowMode): readonly SowChoice[] {
+  if (scope !== SOW_MODE.single) {
+    return spreadChoices(scope);
+  }
+  const parcelChoices = spreadChoices(SOW_MODE.parcel);
+  return [
+    SINGLE_CHOICE,
+    ...parcelChoices.filter(choice => choice.pattern !== SOW_PATTERN.everyOther),
+  ];
+}
 
 const CLEAR_LABEL: Readonly<Record<SowMode, string>> = {
   [SOW_MODE.single]: 'Enlever ce plant',
@@ -145,6 +199,11 @@ type PendingTarget = {
 };
 
 const DEFAULT_HARVEST_KG = 1;
+const CENTIMETRES_PER_METRE = 100;
+
+function toCentimetres(value: number): number {
+  return Math.round(value * CENTIMETRES_PER_METRE);
+}
 
 type SheetConfig = {
   readonly title: string;
@@ -263,11 +322,41 @@ const INVITE_ROLE_OPTIONS: readonly {
           #view
           class="block min-h-0 flex-3"
           [(selectedId)]="selectedId"
+          [selectedCellKeys]="selectionKeys()"
           (cellPicked)="onCellPicked($event)"
+          (cellLongPressed)="onCellLongPressed($event)"
           (edgePicked)="onEdgePicked($event)"
+          (groundPicked)="onGroundPicked($event)"
+          (treePicked)="onTreePicked($event)"
         />
 
-        @if (parcelDetail(); as detail) {
+        @if (selectionCount() > 0) {
+          <app-card
+            class="min-h-0 flex-1 overflow-auto pe-20 sm:pe-0"
+            [title]="selectionTitle()"
+            description="Touchez d’autres cases pour les ajouter ou les retirer."
+          >
+            <div class="flex flex-wrap gap-2">
+              <button appButton type="button" size="sm" (click)="onSowSelection()">
+                <ng-icon name="phosphorPlant" class="size-4" />
+                Semer
+              </button>
+              <button
+                appButton
+                type="button"
+                size="sm"
+                variant="outline"
+                (click)="onUprootSelection()"
+              >
+                <ng-icon name="phosphorTrash" class="size-4" />
+                Vider
+              </button>
+              <button appButton type="button" size="sm" variant="ghost" (click)="clearSelection()">
+                Terminer
+              </button>
+            </div>
+          </app-card>
+        } @else if (parcelDetail(); as detail) {
           <app-card
             class="min-h-0 flex-1 overflow-auto pe-20 sm:pe-0"
             [title]="detail.label"
@@ -378,17 +467,17 @@ const INVITE_ROLE_OPTIONS: readonly {
 
     <ng-template #sowModeSheet>
       <div class="flex flex-col gap-2 p-4">
-        @for (option of sowOptions(); track option.mode) {
+        @for (choice of sowChoices(); track choice.key) {
           <button
             appButton
             type="button"
             variant="outline"
             full
             class="h-auto flex-col items-start gap-0.5 py-3 text-left"
-            (click)="onSowModeChosen(option.mode)"
+            (click)="onSowChoice(choice)"
           >
-            <span class="text-sm font-medium">{{ option.label }}</span>
-            <span class="text-muted-foreground text-xs font-normal">{{ option.description }}</span>
+            <span class="text-sm font-medium">{{ choice.label }}</span>
+            <span class="text-muted-foreground text-xs font-normal">{{ choice.description }}</span>
           </button>
         }
         @if (clearable()) {
@@ -424,6 +513,39 @@ const INVITE_ROLE_OPTIONS: readonly {
           }
         </app-select>
         <p class="text-muted-foreground text-sm">{{ targetLabel() }}</p>
+      </div>
+    </ng-template>
+
+    <ng-template #treeSheet>
+      <div class="flex flex-col gap-4 p-4">
+        <app-select
+          withSearch
+          label="Espèce"
+          prefixIcon="phosphorTree"
+          searchPlaceholder="Rechercher un arbre…"
+          [value]="treeVarietyId()"
+          (valueChange)="onTreeVarietyChange($event)"
+        >
+          @for (option of treeVarietyItems; track option.id) {
+            <app-select-item [value]="option.id">{{ option.label }}</app-select-item>
+          }
+        </app-select>
+        <p class="text-muted-foreground text-sm">
+          L’arbre sera planté à l’endroit touché, hors des parcelles.
+        </p>
+      </div>
+    </ng-template>
+
+    <ng-template #treeActionsSheet>
+      <div class="flex flex-col gap-2 p-4">
+        <button appButton type="button" variant="outline" full (click)="onHarvestRequested()">
+          <ng-icon name="phosphorBasket" class="size-4" />
+          Récolter
+        </button>
+        <button appButton type="button" variant="outline" full (click)="onFellTree()">
+          <ng-icon name="phosphorTrash" class="size-4" />
+          Abattre
+        </button>
       </div>
     </ng-template>
 
@@ -563,12 +685,16 @@ export class GardenComponent {
   private readonly varietySheetTemplate = viewChild.required<TemplateRef<unknown>>('varietySheet');
   private readonly plantSheetTemplate = viewChild.required<TemplateRef<unknown>>('plantSheet');
   private readonly harvestSheetTemplate = viewChild.required<TemplateRef<unknown>>('harvestSheet');
+  private readonly treeSheetTemplate = viewChild.required<TemplateRef<unknown>>('treeSheet');
+  private readonly treeActionsSheetTemplate =
+    viewChild.required<TemplateRef<unknown>>('treeActionsSheet');
   private readonly shareSheetTemplate = viewChild.required<TemplateRef<unknown>>('shareSheet');
   private readonly renameSheetTemplate = viewChild.required<TemplateRef<unknown>>('renameSheet');
 
   protected readonly addLink = GARDEN_ADD_LINK;
   protected readonly setupLink = GARDEN_SETUP_LINK;
   protected readonly varietyItems = CATALOG_VARIETIES;
+  protected readonly treeVarietyItems = CATALOG_TREE_VARIETIES;
   protected readonly seasonItems = SEASON_FILTER_ITEMS;
   protected readonly cultureOptions = CULTURE_FILTER_OPTIONS;
   protected readonly inviteRoleOptions = INVITE_ROLE_OPTIONS;
@@ -580,22 +706,36 @@ export class GardenComponent {
   protected readonly inviteError = signal<string | null>(null);
   protected readonly renameInput = signal<string>('');
   protected readonly pendingTarget = signal<PendingTarget | null>(null);
-  protected readonly pendingMode = signal<SowMode>(SOW_MODE.single);
+  protected readonly pendingChoice = signal<SowChoice>(SINGLE_CHOICE);
+  protected readonly pendingTree = signal<GardenTree | null>(null);
+  protected readonly pendingGround = signal<GroundPoint | null>(null);
   protected readonly cellVarietyId = signal<string | null>(null);
+  protected readonly treeVarietyId = signal<string | null>(null);
   protected readonly harvestQuantity = signal<number>(DEFAULT_HARVEST_KG);
+  protected readonly selection = signal<readonly CellTarget[]>([]);
 
-  protected readonly sowOptions = computed<readonly SowOption[]>(() => {
+  protected readonly selectionKeys = computed(
+    () =>
+      new Set(this.selection().map(target => cellKey(target.parcelId, target.column, target.row))),
+  );
+
+  protected readonly selectionCount = computed(() => this.selection().length);
+
+  protected readonly selectionTitle = computed(() => {
+    const count = this.selectionCount();
+    return `${count} case${count > 1 ? 's' : ''} sélectionnée${count > 1 ? 's' : ''}`;
+  });
+
+  protected readonly sowChoices = computed<readonly SowChoice[]>(() => {
     const target = this.pendingTarget();
-    if (target === null) {
-      return [];
-    }
-    if (target.scope === SOW_MODE.single) {
-      return [SOW_OPTION_BY_MODE[SOW_MODE.single], SOW_OPTION_BY_MODE[SOW_MODE.parcel]];
-    }
-    return [SOW_OPTION_BY_MODE[target.scope]];
+    return target === null ? [] : sowChoicesFor(target.scope);
   });
 
   protected readonly targetLabel = computed(() => {
+    const tree = this.pendingTree();
+    if (tree !== null) {
+      return tree.label;
+    }
     const target = this.pendingTarget();
     if (target === null) {
       return '';
@@ -663,6 +803,11 @@ export class GardenComponent {
     if (!this.canWrite()) {
       return;
     }
+    if (this.selectionCount() > 0) {
+      this.#toggleSelection(cell);
+      return;
+    }
+    this.pendingTree.set(null);
     this.selectedId.set(cell.parcelId);
     this.pendingTarget.set({
       parcelId: cell.parcelId,
@@ -684,10 +829,88 @@ export class GardenComponent {
     });
   }
 
-  protected onEdgePicked(edge: GardenEdge): void {
+  protected onCellLongPressed(cell: GardenCell): void {
     if (!this.canWrite()) {
       return;
     }
+    this.#closeSheet();
+    this.selectedId.set(cell.parcelId);
+    this.#toggleSelection(cell);
+  }
+
+  protected clearSelection(): void {
+    this.selection.set([]);
+  }
+
+  protected onSowSelection(): void {
+    this.pendingTree.set(null);
+    this.cellVarietyId.set(null);
+    this.#openSheet({
+      title: this.selectionTitle(),
+      okText: 'Semer',
+      cancelText: 'Annuler',
+      content: this.varietySheetTemplate(),
+      onOk: () => this.#sowSelection(),
+    });
+  }
+
+  protected onUprootSelection(): void {
+    this.plan.uprootCells(this.selection());
+    this.clearSelection();
+  }
+
+  protected onGroundPicked(point: GroundPoint): void {
+    if (!this.canWrite() || this.selectionCount() > 0) {
+      return;
+    }
+    this.selectedId.set(null);
+    this.pendingTree.set(null);
+    this.pendingGround.set(point);
+    this.treeVarietyId.set(null);
+    this.#openSheet({
+      title: 'Planter un arbre',
+      okText: 'Planter',
+      cancelText: 'Annuler',
+      content: this.treeSheetTemplate(),
+      onOk: () => this.#plantTree(),
+    });
+  }
+
+  protected onTreePicked(tree: GardenTree): void {
+    if (!this.canWrite()) {
+      return;
+    }
+    this.pendingTarget.set(null);
+    this.pendingTree.set(tree);
+    this.#openSheet({
+      title: tree.label,
+      description: 'Que voulez-vous faire de cet arbre ?',
+      hideFooter: true,
+      content: this.treeActionsSheetTemplate(),
+    });
+  }
+
+  protected onFellTree(): void {
+    const tree = this.pendingTree();
+    this.#closeSheet();
+    if (tree === null) {
+      return;
+    }
+    this.plan.fellTree(tree.id);
+    this.pendingTree.set(null);
+  }
+
+  protected onTreeVarietyChange(value: string | string[] | null): void {
+    if (typeof value === 'string') {
+      this.treeVarietyId.set(value);
+    }
+  }
+
+  protected onEdgePicked(edge: GardenEdge): void {
+    if (!this.canWrite() || this.selectionCount() > 0) {
+      return;
+    }
+    this.pendingTree.set(null);
     const row = edge.axis === EDGE_AXIS.row;
     this.selectedId.set(edge.parcelId);
     this.pendingTarget.set({
@@ -702,8 +925,8 @@ export class GardenComponent {
     this.#openSowModeSheet();
   }
 
-  protected onSowModeChosen(mode: SowMode): void {
-    this.pendingMode.set(mode);
+  protected onSowChoice(choice: SowChoice): void {
+    this.pendingChoice.set(choice);
     this.cellVarietyId.set(null);
     this.#closeSheet();
     this.#openSheet({
@@ -716,7 +939,7 @@ export class GardenComponent {
   }
 
   protected onReplaceRequested(): void {
-    this.pendingMode.set(SOW_MODE.single);
+    this.pendingChoice.set(SINGLE_CHOICE);
     this.#closeSheet();
     this.#openSheet({
       title: 'Changer de variété',
@@ -812,7 +1035,46 @@ export class GardenComponent {
     if (target === null || varietyId === null) {
       return;
     }
-    this.plan.sow(target.parcelId, target.origin, this.pendingMode(), varietyId);
+    const choice = this.pendingChoice();
+    this.plan.sow(target.parcelId, target.origin, choice.mode, varietyId, {
+      pattern: choice.pattern,
+      startSown: choice.startSown,
+    });
+  }
+
+  #sowSelection(): void {
+    const varietyId = this.cellVarietyId();
+    if (varietyId === null) {
+      return;
+    }
+    this.plan.sowCells(this.selection(), varietyId);
+    this.clearSelection();
+  }
+
+  #plantTree(): void {
+    const point = this.pendingGround();
+    const varietyId = this.treeVarietyId();
+    if (point === null || varietyId === null) {
+      return;
+    }
+    this.plan.plantTree(varietyId, toCentimetres(point.x), toCentimetres(point.z));
+    this.pendingGround.set(null);
+  }
+
+  #toggleSelection(cell: GardenCell): void {
+    const key = cellKey(cell.parcelId, cell.column, cell.row);
+    const current = this.selection();
+    const without = current.filter(
+      target => cellKey(target.parcelId, target.column, target.row) !== key,
+    );
+    if (without.length !== current.length) {
+      this.selection.set(without);
+      return;
+    }
+    this.selection.set([
+      ...current,
+      { parcelId: cell.parcelId, column: cell.column, row: cell.row },
+    ]);
   }
 
   #replaceVariety(): void {
@@ -825,9 +1087,17 @@ export class GardenComponent {
   }
 
   #harvest(): void {
-    const target = this.pendingTarget();
     const quantity = this.harvestQuantity();
-    if (target === null || quantity <= 0) {
+    if (quantity <= 0) {
+      return;
+    }
+    const tree = this.pendingTree();
+    if (tree !== null) {
+      this.plan.harvestTree(tree.id, quantity);
+      return;
+    }
+    const target = this.pendingTarget();
+    if (target === null) {
       return;
     }
     this.plan.harvest(target.parcelId, target.origin, quantity);

@@ -153,12 +153,44 @@ function flatLeaves(
     geometry: SCENE_GEOMETRY.sphere,
     args: sphereArgs(radius * sceneNoiseRange(seed + index * 2.3, 0.82, 1.15)),
     position,
-    rotation: [sceneNoiseRange(seed + index, -0.16, 0.16), 0, sceneNoiseRange(seed + index * 1.7, -0.2, 0.2)],
+    rotation: [
+      sceneNoiseRange(seed + index, -0.16, 0.16),
+      0,
+      sceneNoiseRange(seed + index * 1.7, -0.2, 0.2),
+    ],
     scale: [1, 0.2, 1],
     color,
     roughness: FOLIAGE_ROUGHNESS,
     flatShading: true,
   }));
+}
+
+/**
+ * Feuillage bombé : les feuilles s'inclinent vers le haut au lieu de reposer à
+ * plat sur la terre, ce qui donne du volume aux espèces étalées.
+ */
+function domedLeaves(
+  count: number,
+  radius: number,
+  spread: number,
+  height: number,
+  tilt: number,
+  color: string,
+  seed: number,
+): ScenePartDraft[] {
+  return ringPositions(count, spread, height, seed).map((position, index) => {
+    const angle = seed + (index / count) * FULL_TURN;
+    return {
+      geometry: SCENE_GEOMETRY.sphere,
+      args: sphereArgs(radius * sceneNoiseRange(seed + index * 2.3, 0.82, 1.15)),
+      position,
+      rotation: [Math.sin(angle) * tilt, angle, Math.cos(angle) * tilt],
+      scale: [1, 0.34, 1],
+      color,
+      roughness: FOLIAGE_ROUGHNESS,
+      flatShading: true,
+    };
+  });
 }
 
 function leafBlades(
@@ -170,26 +202,24 @@ function leafBlades(
   color: string,
   seed: number,
 ): ScenePartDraft[] {
-  return ringPositions(count, spread, baseHeight + bladeHeight / 2, seed).map((position, index) => ({
-    geometry: SCENE_GEOMETRY.cone,
-    args: [radius, bladeHeight * sceneNoiseRange(seed + index * 1.3, 0.78, 1.2), CONE_SEGMENTS],
-    position,
-    rotation: [
-      sceneNoiseRange(seed + index * 2.1, -0.34, 0.34),
-      0,
-      sceneNoiseRange(seed + index * 3.1, -0.34, 0.34),
-    ],
-    color,
-    roughness: FOLIAGE_ROUGHNESS,
-    flatShading: true,
-  }));
+  return ringPositions(count, spread, baseHeight + bladeHeight / 2, seed).map(
+    (position, index) => ({
+      geometry: SCENE_GEOMETRY.cone,
+      args: [radius, bladeHeight * sceneNoiseRange(seed + index * 1.3, 0.78, 1.2), CONE_SEGMENTS],
+      position,
+      rotation: [
+        sceneNoiseRange(seed + index * 2.1, -0.34, 0.34),
+        0,
+        sceneNoiseRange(seed + index * 3.1, -0.34, 0.34),
+      ],
+      color,
+      roughness: FOLIAGE_ROUGHNESS,
+      flatShading: true,
+    }),
+  );
 }
 
-function stakedVine(
-  model: PlantModel,
-  colors: GardenColors,
-  seed: number,
-): ScenePartDraft[] {
+function stakedVine(model: PlantModel, colors: GardenColors, seed: number): ScenePartDraft[] {
   const { height, spread } = model;
   return [
     {
@@ -249,17 +279,35 @@ function sprawler(model: PlantModel, colors: GardenColors, seed: number): SceneP
   return [
     {
       geometry: SCENE_GEOMETRY.cylinder,
-      args: [0.05, 0.07, height * 0.4, CYLINDER_SEGMENTS],
-      position: [0, height * 0.2, 0],
+      args: [0.05, 0.08, height * 0.52, CYLINDER_SEGMENTS],
+      position: [0, height * 0.26, 0],
       color: colors[model.stem],
       roughness: FOLIAGE_ROUGHNESS,
     },
-    ...flatLeaves(6, spread * 0.52, spread * 0.68, height * 0.26, colors[model.foliage], seed),
-    ...flatLeaves(
-      3,
+    {
+      geometry: SCENE_GEOMETRY.sphere,
+      args: sphereArgs(spread * 0.34),
+      position: [0, height * 0.46, 0],
+      scale: [1, 0.66, 1],
+      color: colors[model.foliage],
+      roughness: FOLIAGE_ROUGHNESS,
+      flatShading: true,
+    },
+    ...domedLeaves(
+      6,
+      spread * 0.5,
+      spread * 0.66,
+      height * 0.34,
+      0.45,
+      colors[model.foliage],
+      seed,
+    ),
+    ...domedLeaves(
+      4,
       spread * 0.38,
-      spread * 0.3,
-      height * 0.78,
+      spread * 0.34,
+      height * 0.72,
+      0.32,
       colors[model.foliageAccent],
       seed + 2.6,
     ),
@@ -278,14 +326,7 @@ function rosette(model: PlantModel, colors: GardenColors, seed: number): ScenePa
   const { height, spread } = model;
   return [
     ...flatLeaves(7, spread * 0.52, spread * 0.62, height * 0.16, colors[model.foliage], seed),
-    ...flatLeaves(
-      6,
-      spread * 0.44,
-      spread * 0.4,
-      height * 0.44,
-      colors[model.foliage],
-      seed + 1.9,
-    ),
+    ...flatLeaves(6, spread * 0.44, spread * 0.4, height * 0.44, colors[model.foliage], seed + 1.9),
     ...flatLeaves(
       4,
       spread * 0.34,
@@ -306,11 +347,7 @@ function rosette(model: PlantModel, colors: GardenColors, seed: number): ScenePa
   ];
 }
 
-type RootBuilder = (
-  model: PlantModel,
-  colors: GardenColors,
-  seed: number,
-) => ScenePartDraft[];
+type RootBuilder = (model: PlantModel, colors: GardenColors, seed: number) => ScenePartDraft[];
 
 const ROOT_BUILDERS: Readonly<Record<RootShape, RootBuilder>> = {
   [ROOT_SHAPE.taproot]: (model, colors) => [
@@ -502,11 +539,7 @@ function stalk(model: PlantModel, colors: GardenColors, seed: number): ScenePart
   ];
 }
 
-type PlantBuilder = (
-  model: PlantModel,
-  colors: GardenColors,
-  seed: number,
-) => ScenePartDraft[];
+type PlantBuilder = (model: PlantModel, colors: GardenColors, seed: number) => ScenePartDraft[];
 
 const PLANT_BUILDERS: Readonly<Record<PlantArchetype, PlantBuilder>> = {
   [PLANT_ARCHETYPE.stakedVine]: stakedVine,
@@ -519,11 +552,7 @@ const PLANT_BUILDERS: Readonly<Record<PlantArchetype, PlantBuilder>> = {
   [PLANT_ARCHETYPE.stalk]: stalk,
 };
 
-export function buildPlantParts(
-  cropId: CropId,
-  colors: GardenColors,
-  seed: number,
-): ScenePart[] {
+export function buildPlantParts(cropId: CropId, colors: GardenColors, seed: number): ScenePart[] {
   const model = PLANT_MODEL_BY_CROP[cropId];
   return sceneParts(cropId, PLANT_BUILDERS[model.archetype](model, colors, seed));
 }

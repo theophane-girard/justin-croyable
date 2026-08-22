@@ -65,21 +65,28 @@ export class GardenPlantComponent {
       if (!group) {
         return;
       }
-      const fit = this.spot().scale;
+      const spot = this.spot();
       const sway = this.#sway();
       if (sway === NO_SWAY) {
         group.rotation.z = NO_SWAY;
         group.rotation.x = NO_SWAY;
-        group.scale.setScalar(fit);
+        group.scale.set(spot.spreadScale, spot.heightScale, spot.spreadScale);
         return;
       }
       const elapsed = clock.elapsedTime;
-      const phase = this.spot().phase;
+      const phase = spot.phase;
       group.rotation.z = Math.sin(elapsed * SWAY_SPEED + phase) * sway;
       group.rotation.x =
         Math.cos(elapsed * SWAY_SPEED * CROSS_SWAY_RATIO + phase) * sway * CROSS_SWAY_AMPLITUDE;
-      const growth = Math.min(FULL_SCALE, elapsed * GROWTH_SPEED - phase * GROWTH_STAGGER);
-      group.scale.setScalar(Math.max(MIN_GROWTH_SCALE, growth) * fit);
+      const growth = Math.max(
+        MIN_GROWTH_SCALE,
+        Math.min(FULL_SCALE, elapsed * GROWTH_SPEED - phase * GROWTH_STAGGER),
+      );
+      group.scale.set(
+        spot.spreadScale * growth,
+        spot.heightScale * growth,
+        spot.spreadScale * growth,
+      );
     });
   }
 }

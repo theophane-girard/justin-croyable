@@ -63,7 +63,9 @@ export type ParcelPointer = {
             [cell]="cell"
             [soilTop]="parcel().soilTop"
             [hovered]="highlightedKeys().has(cell.key) || cell.key === hoveredCellKey()"
+            [selected]="selectedCellKeys().has(cell.key)"
             (picked)="cellPicked.emit($event)"
+            (longPressed)="cellLongPressed.emit($event)"
             (hoverChange)="cellHoverChange.emit($event)"
           />
         }
@@ -100,6 +102,7 @@ export class GardenParcelComponent {
   readonly interactiveCells = input(true);
   readonly showGrid = input(true);
   readonly hoveredCellKey = input<string | null>(null);
+  readonly selectedCellKeys = input<ReadonlySet<string>>(new Set<string>());
   readonly hoveredEdgeKey = input<string | null>(null);
 
   readonly picked = output<string>();
@@ -108,6 +111,7 @@ export class GardenParcelComponent {
   readonly pressed = output<ParcelPointer>();
   readonly hoverChange = output<string | null>();
   readonly cellPicked = output<GardenCell>();
+  readonly cellLongPressed = output<GardenCell>();
   readonly cellHoverChange = output<string | null>();
 
   readonly #colors = inject(SceneThemeService).palette(GARDEN_PALETTE);

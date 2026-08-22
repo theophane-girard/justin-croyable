@@ -15,6 +15,7 @@ import {
   type PlanExtent,
   placementBounds,
   type Planting,
+  type Tree,
 } from '../plan/parcel.model';
 
 import { PLANT_MODEL_BY_CROP } from './plant-models';
@@ -27,8 +28,13 @@ export const TERRAIN_MARGIN = 1.2;
 
 const FULL_TURN = Math.PI * 2;
 const MIN_EXTENT = 4;
-const CELL_FILL_RATIO = 0.88;
+const CELL_FILL_RATIO = 1.15;
+const MIN_SPREAD_SCALE = 0.45;
+const MIN_HEIGHT_SCALE = 0.7;
+const FULL_SCALE = 1;
 const SCENE_HEIGHT = 1.6;
+const TREE_SCALE = 1.8;
+const TREE_MARGIN = 1.6;
 const HALF = 2;
 const KEY_SEPARATOR = ':';
 
@@ -37,7 +43,8 @@ export type PlantSpot = {
   readonly rotation: SceneVector;
   readonly seed: number;
   readonly phase: number;
-  readonly scale: number;
+  readonly spreadScale: number;
+  readonly heightScale: number;
 };
 
 export type GardenCell = {
@@ -85,10 +92,22 @@ export type GardenParcel = {
   readonly plantedCount: number;
 };
 
+export type GardenTree = {
+  readonly id: string;
+  readonly cropId: CropId;
+  readonly varietyId: VarietyId;
+  readonly label: string;
+  readonly position: SceneVector;
+  readonly spot: PlantSpot;
+};
+
 export type GardenField = {
   readonly parcels: readonly GardenParcel[];
+  readonly trees: readonly GardenTree[];
   readonly width: number;
   readonly depth: number;
+  readonly frameWidth: number;
+  readonly frameDepth: number;
   readonly height: number;
   readonly extent: number;
 };
@@ -101,13 +120,28 @@ export function soilTop(kind: ParcelKind): number {
   return kind === PARCEL_KIND.raised ? RAISED_HEIGHT : GROUND_SOIL_HEIGHT;
 }
 
-function cellFitScale(cropId: CropId, cellSide: number): number {
+function clamp(value: number, minimum: number): number {
+  return Math.min(FULL_SCALE, Math.max(minimum, value));
+}
+
+/**
+ * Une case étroite resserre le plant sans le miniaturiser : l'emprise se réduit
+ * jusqu'à un plancher — un pied de courge déborde sur ses voisines comme au
+ * potager — et la hauteur se tasse bien moins que l'emprise, sinon les espèces
+ * étalées finissent écrasées au ras du sol.
+ */
+function cellFit(cropId: CropId, cellSide: number): { spread: number; height: number } {
   const spread = PLANT_MODEL_BY_CROP[cropId].spread;
-  return Math.min(1, (cellSide * CELL_FILL_RATIO) / (spread * HALF));
+  const ratio = (cellSide * CELL_FILL_RATIO) / (spread * HALF);
+  return {
+    spread: clamp(ratio, MIN_SPREAD_SCALE),
+    height: clamp(Math.sqrt(ratio), MIN_HEIGHT_SCALE),
+  };
 }
 
 function plantSpot(seed: number, cropId: CropId, top: number, cellSide: number): PlantSpot {
   const jitter = cellSide * 0.08;
+  const fit = cellFit(cropId, cellSide);
   return {
     position: [
       sceneNoiseRange(seed, -jitter, jitter),
@@ -117,8 +151,43 @@ function plantSpot(seed: number, cropId: CropId, top: number, cellSide: number):
     rotation: [0, sceneNoiseRange(seed + 2.9, 0, FULL_TURN), 0],
     seed,
     phase: sceneNoiseRange(seed + 5.1, 0, FULL_TURN),
-    scale: cellFitScale(cropId, cellSide),
+    spreadScale: fit.spread,
+    heightScale: fit.height,
   };
+}
+
+function buildTrees(trees: readonly Tree[]): readonly GardenTree[] {
+  return trees.map((tree, index): GardenTree => {
+    const seed = index * 13.7 + 4.2;
+    return {
+      id: tree.id,
+      cropId: tree.cropId,
+      varietyId: tree.varietyId,
+      label: varietyLabel(tree.varietyId),
+      position: [metres(tree.xCm), 0, metres(tree.zCm)],
+      spot: {
+        position: [0, 0, 0],
+        rotation: [0, sceneNoiseRange(seed, 0, FULL_TURN), 0],
+        seed,
+        phase: sceneNoiseRange(seed + 3.3, 0, FULL_TURN),
+        spreadScale: TREE_SCALE,
+        heightScale: TREE_SCALE,
+      },
+    };
+  });
+}
+
+/** Le cadrage doit englober les arbres plantés hors des parcelles. */
+function treeReach(trees: readonly GardenTree[]): number {
+  return trees.reduce(
+    (reach, tree) =>
+      Math.max(
+        reach,
+        Math.abs(tree.position[0]) + TREE_MARGIN,
+        Math.abs(tree.position[2]) + TREE_MARGIN,
+      ),
+    0,
+  );
 }
 
 function buildCells(
@@ -235,16 +304,23 @@ export function buildGardenField(plan: GardenPlan, extent?: PlanExtent): GardenF
     })
     .filter((parcel): parcel is GardenParcel => parcel !== null);
 
+  const trees = buildTrees(plan.trees);
   const bounds = extent ?? placementBounds(plan.parcels, plan.placements);
   const margin = extent ? 0 : TERRAIN_MARGIN;
+  const reach = extent ? 0 : treeReach(trees) * HALF;
   const width = Math.max(MIN_EXTENT, metres(bounds.widthCm) + margin);
   const depth = Math.max(MIN_EXTENT, metres(bounds.depthCm) + margin);
+  const frameWidth = Math.max(width, reach);
+  const frameDepth = Math.max(depth, reach);
 
   return {
     parcels,
+    trees,
     width,
     depth,
+    frameWidth,
+    frameDepth,
     height: SCENE_HEIGHT,
-    extent: Math.max(width, depth),
+    extent: Math.max(frameWidth, frameDepth),
   };
 }

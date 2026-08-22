@@ -83,7 +83,7 @@ export const PLANT_MODEL_BY_CROP: Readonly<Record<CropId, PlantModel>> = {
   }),
   courgette: plantModel({
     archetype: PLANT_ARCHETYPE.sprawler,
-    height: 0.38,
+    height: 0.52,
     spread: 0.62,
     foliage: GARDEN_COLOR.leafDeep,
     foliageAccent: GARDEN_COLOR.leaf,
@@ -161,7 +161,7 @@ export const PLANT_MODEL_BY_CROP: Readonly<Record<CropId, PlantModel>> = {
   }),
   concombre: plantModel({
     archetype: PLANT_ARCHETYPE.sprawler,
-    height: 0.34,
+    height: 0.46,
     spread: 0.55,
     foliage: GARDEN_COLOR.leaf,
     fruit: GARDEN_COLOR.limeDeep,
@@ -216,7 +216,7 @@ export const PLANT_MODEL_BY_CROP: Readonly<Record<CropId, PlantModel>> = {
   }),
   courge: plantModel({
     archetype: PLANT_ARCHETYPE.sprawler,
-    height: 0.4,
+    height: 0.58,
     spread: 0.7,
     foliage: GARDEN_COLOR.leafDeep,
     foliageAccent: GARDEN_COLOR.leaf,
