@@ -93,7 +93,7 @@ const STILL_FRAMELOOP: NgtFrameloop = 'demand';
           <span class="hidden sm:inline">
             Glisser pour déplacer · clic droit pour pivoter · molette pour zoomer
           </span>
-          <span class="sm:hidden">Un doigt pour déplacer · deux pour pivoter et zoomer</span>
+          <span class="sm:hidden"> Un doigt déplace · deux pincent, tournent ou inclinent </span>
         </div>
       </div>
     </app-scene-canvas>

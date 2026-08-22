@@ -2,22 +2,24 @@ import { type Camera, MathUtils, Spherical, Vector3 } from 'three';
 import { type OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 const FULL_TURN = Math.PI * 2;
+const HALF_TURN = Math.PI;
 const TWO_FINGERS = 2;
 const LOCK_THRESHOLD_PX = 12;
 
 /**
- * Deux doigts qui glissent ensemble ne gardent jamais un écart parfaitement
- * constant : c'est le mouvement dominant qui décide, et le pincement doit
- * nettement l'emporter pour être lu comme un zoom plutôt qu'une rotation.
+ * Deux doigts ne gardent jamais un écart parfaitement constant : le pincement
+ * doit nettement l'emporter sur les autres mesures pour être lu comme un zoom,
+ * sinon la moindre respiration des doigts changerait d'échelle.
  */
 const ZOOM_DOMINANCE = 1.5;
-const ROTATE_SPEED = 0.9;
+const TILT_SPEED = 0.9;
 const TOUCH_POINTER = 'touch';
 
 const GESTURE = {
   undecided: 'undecided',
   zoom: 'zoom',
-  rotate: 'rotate',
+  turn: 'turn',
+  tilt: 'tilt',
 } as const;
 
 type Gesture = (typeof GESTURE)[keyof typeof GESTURE];
@@ -38,11 +40,22 @@ function centre(points: readonly Point[]): Point {
   };
 }
 
+function bearing(points: readonly Point[]): number {
+  return Math.atan2(points[1].y - points[0].y, points[1].x - points[0].x);
+}
+
+/** Ramène un écart d'angle dans [-π, π] pour ignorer les tours complets. */
+function shortestTurn(delta: number): number {
+  const wrapped = (delta + HALF_TURN) % FULL_TURN;
+  return (wrapped < 0 ? wrapped + FULL_TURN : wrapped) - HALF_TURN;
+}
+
 /**
- * Gestes à deux doigts exclusifs : le premier mouvement décide s'il s'agit d'un
- * pincement ou d'une rotation, et le geste s'y tient jusqu'au relâchement.
- * `DOLLY_ROTATE` d'`OrbitControls` mêle les deux, et la moindre rotation
- * emportait un zoom — d'où des pivots qui sautaient d'échelle.
+ * Gestes à deux doigts exclusifs, calqués sur un plan : pincer zoome, tourner
+ * les doigts fait pivoter la scène, glisser vers le haut couche la caméra vers
+ * l'horizon et glisser vers le bas la redresse à la verticale. Le premier
+ * mouvement décide et le geste s'y tient jusqu'au relâchement — `DOLLY_ROTATE`
+ * d'`OrbitControls` mêlait zoom et rotation, et ne connaissait pas la torsion.
  */
 export function bindMapGestures(
   element: HTMLElement,
@@ -57,15 +70,20 @@ export function bindMapGestures(
   let gesture: Gesture = GESTURE.undecided;
   let startSpan = 0;
   let startCentre: Point = { x: 0, y: 0 };
+  let startBearing = 0;
   let lastSpan = 0;
   let lastCentre: Point = { x: 0, y: 0 };
+  let lastBearing = 0;
 
-  function rotate(deltaX: number, deltaY: number): void {
+  function orbit(deltaTheta: number, deltaPhi: number): void {
     offset.copy(camera.position).sub(controls.target);
     spherical.setFromVector3(offset);
-    spherical.theta -= (FULL_TURN * deltaX * ROTATE_SPEED) / element.clientHeight;
-    spherical.phi -= (FULL_TURN * deltaY * ROTATE_SPEED) / element.clientHeight;
-    spherical.phi = MathUtils.clamp(spherical.phi, controls.minPolarAngle, controls.maxPolarAngle);
+    spherical.theta += deltaTheta;
+    spherical.phi = MathUtils.clamp(
+      spherical.phi + deltaPhi,
+      controls.minPolarAngle,
+      controls.maxPolarAngle,
+    );
     spherical.makeSafe();
     camera.position.copy(controls.target).add(offset.setFromSpherical(spherical));
   }
@@ -96,18 +114,47 @@ export function bindMapGestures(
     gesture = GESTURE.undecided;
     startSpan = span(points);
     startCentre = centre(points);
+    startBearing = bearing(points);
     lastSpan = startSpan;
     lastCentre = startCentre;
+    lastBearing = startBearing;
   }
 
+  /**
+   * Les trois mesures sont ramenées à des pixels — l'arc parcouru par un doigt
+   * pour la torsion — afin d'être comparables entre elles.
+   */
   function decide(points: readonly Point[]): void {
     const pinched = Math.abs(span(points) - startSpan);
-    const moved = centre(points);
-    const slid = Math.hypot(moved.x - startCentre.x, moved.y - startCentre.y);
-    if (Math.max(pinched, slid) < LOCK_THRESHOLD_PX) {
+    const turned =
+      Math.abs(shortestTurn(bearing(points) - startBearing)) * (startSpan / TWO_FINGERS);
+    const tilted = Math.abs(centre(points).y - startCentre.y);
+    if (Math.max(pinched, turned, tilted) < LOCK_THRESHOLD_PX) {
       return;
     }
-    gesture = pinched > slid * ZOOM_DOMINANCE ? GESTURE.zoom : GESTURE.rotate;
+    if (pinched > Math.max(turned, tilted) * ZOOM_DOMINANCE) {
+      gesture = GESTURE.zoom;
+      return;
+    }
+    gesture = turned > tilted ? GESTURE.turn : GESTURE.tilt;
+  }
+
+  function apply(points: readonly Point[]): void {
+    const currentSpan = span(points);
+    const currentCentre = centre(points);
+    const currentBearing = bearing(points);
+    if (gesture === GESTURE.zoom && currentSpan > 0) {
+      zoom(lastSpan / currentSpan);
+    }
+    if (gesture === GESTURE.turn) {
+      orbit(shortestTurn(currentBearing - lastBearing), 0);
+    }
+    if (gesture === GESTURE.tilt) {
+      orbit(0, ((lastCentre.y - currentCentre.y) * FULL_TURN * TILT_SPEED) / element.clientHeight);
+    }
+    lastSpan = currentSpan;
+    lastCentre = currentCentre;
+    lastBearing = currentBearing;
   }
 
   function onMove(event: PointerEvent): void {
@@ -122,16 +169,7 @@ export function bindMapGestures(
     if (gesture === GESTURE.undecided) {
       decide(points);
     }
-    const currentSpan = span(points);
-    const currentCentre = centre(points);
-    if (gesture === GESTURE.zoom && currentSpan > 0) {
-      zoom(lastSpan / currentSpan);
-    }
-    if (gesture === GESTURE.rotate) {
-      rotate(currentCentre.x - lastCentre.x, currentCentre.y - lastCentre.y);
-    }
-    lastSpan = currentSpan;
-    lastCentre = currentCentre;
+    apply(points);
     if (gesture !== GESTURE.undecided) {
       controls.update();
       invalidate();

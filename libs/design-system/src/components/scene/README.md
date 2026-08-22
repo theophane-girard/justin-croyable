@@ -79,8 +79,9 @@ s'y dissolve sans couture.
 
 `orbit` par défaut : le glissement fait tourner la scène, comme une maquette que
 l'on retourne. `map` la fait défiler comme un plan — glisser (ou un doigt)
-déplace, le clic droit (ou deux doigts) pivote et abaisse la caméra, la molette
-(ou le pincement) zoome. `orbitAzimuth` et `orbitElevation` donnent en degrés
+déplace, le clic droit pivote la caméra et la molette zoome. À deux doigts, le
+geste est exclusif : pincer zoome, tourner les doigts fait pivoter, glisser
+verticalement incline. `orbitAzimuth` et `orbitElevation` donnent en degrés
 l'angle de la vue au premier cadrage et au recentrage, et `orbitTargetLift`
 relève le point visé — la scène descend dans le cadre et le ciel entre par le
 haut, sans coucher la caméra.
