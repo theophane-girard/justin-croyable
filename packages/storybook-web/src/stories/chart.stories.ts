@@ -1,11 +1,14 @@
 import {
+  ButtonComponent,
   CardComponent,
   ChartComponent,
   podiumLabel,
   ThemePaletteService,
   type ChartSkeletonType,
 } from '@justin-croyable/design-system';
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { map, switchMap, take, timer } from 'rxjs';
 import type { EChartsCoreOption } from 'echarts/core';
 import type { Meta, StoryObj } from '@storybook/angular-vite';
 import { expect, waitFor } from 'storybook/test';
@@ -460,22 +463,108 @@ const podium: EChartsCoreOption = {
   ],
 };
 
+const RECOLTES: readonly (readonly number[])[] = [
+  [0.4, 0.6, 0.5, 0.3],
+  [1.1, 0.9, 1.4, 0.6],
+  [1.9, 2.2, 2.0, 0.9],
+  [3.2, 2.8, 2.6, 1.1],
+  [4.8, 3.1, 2.4, 1.2],
+];
+
+const DERNIER_PAS = RECOLTES.length - 1;
+
+@Component({
+  selector: 'app-course-demo',
+  imports: [ButtonComponent, CardComponent, ChartComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <app-card title="Course dans le temps">
+      <app-chart [options]="options()" height="18rem" />
+      <div card-footer class="w-full flex-row justify-start">
+        <button appButton variant="outline" size="sm" (click)="rejouer()">Rejouer</button>
+      </div>
+    </app-card>
+  `,
+})
+class CourseDemo {
+  protected readonly lecture = signal(0);
+
+  private readonly pas = toSignal(
+    toObservable(this.lecture).pipe(
+      switchMap(() => timer(0, CLASSEMENT_RACE_STEP_MS).pipe(take(RECOLTES.length))),
+      map(index => Math.min(index, DERNIER_PAS)),
+    ),
+    { initialValue: 0 },
+  );
+
+  protected readonly options = computed<EChartsCoreOption>(() => {
+    const pas = this.pas();
+    const valeurs = RECOLTES[pas];
+    const termine = pas === DERNIER_PAS;
+    const classement = [...valeurs]
+      .map((valeur, index) => ({ valeur, index }))
+      .sort((gauche, droite) => droite.valeur - gauche.valeur)
+      .map(entree => entree.index);
+    return {
+      ...course,
+      yAxis: {
+        type: 'category',
+        data: jardins.map((jardin, index) =>
+          termine ? podiumLabel(jardin, classement.indexOf(index)) : jardin,
+        ),
+        inverse: true,
+        animationDuration: 300,
+        animationDurationUpdate: 300,
+      },
+      series: [
+        {
+          type: 'bar',
+          realtimeSort: true,
+          data: [...valeurs],
+          label: {
+            show: true,
+            position: 'right',
+            valueAnimation: true,
+            formatter: (params: { value: number }) => `${params.value} kg`,
+          },
+        },
+      ],
+    };
+  });
+
+  protected rejouer(): void {
+    this.lecture.update(lecture => lecture + 1);
+  }
+}
+
 export const BarRace: Story = {
-  args: { options: course, height: '18rem' },
-  render: args => ({
-    props: args,
-    moduleMetadata: { imports: [CardComponent] },
-    template: `
-      <app-card title="Course dans le temps">
-        <app-chart [options]="options" [height]="height" />
-      </app-card>
-    `,
+  render: () => ({
+    moduleMetadata: { imports: [CourseDemo] },
+    template: '<app-course-demo />',
   }),
+  play: async ({ canvasElement }) => {
+    const attendreLeGraphique = () =>
+      waitFor(
+        () => {
+          const trouve = canvasElement.querySelector('canvas');
+          expect(trouve).toBeTruthy();
+          return trouve as HTMLCanvasElement;
+        },
+        { timeout: 15_000 },
+      );
+
+    await attendreLeGraphique();
+    const rejouer = canvasElement.querySelector('button');
+    expect(rejouer?.textContent?.trim()).toBe('Rejouer');
+    rejouer?.click();
+    const graphique = await attendreLeGraphique();
+    expect(graphique.width).toBeGreaterThan(0);
+  },
   parameters: {
     docs: {
       description: {
         story:
-          "Barres classées en continu (`realtimeSort`) : la même forme animée, où les barres se réordonnent à chaque nouvelle valeur. L'appelant pilote les étapes en repassant des options, la durée d'animation étant calée sur son pas de temps.",
+          "Barres classées en continu (`realtimeSort`) : la même forme animée, où les barres se réordonnent à chaque nouvelle valeur. L'appelant pilote les étapes en repassant des options, la durée d'animation étant calée sur son pas de temps — ici un minuteur que le bouton « Rejouer » relance. À la dernière étape, `podiumLabel` marque les trois premiers.",
       },
     },
   },
