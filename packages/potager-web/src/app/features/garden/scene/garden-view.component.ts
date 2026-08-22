@@ -27,7 +27,6 @@ import {
   buildGardenField,
   CROP_FILTER,
   type CropFilter,
-  filterPlan,
   type GardenCell,
   type GardenEdge,
   type GardenTree,
@@ -72,6 +71,7 @@ const STILL_FRAMELOOP: NgtFrameloop = 'demand';
           [hoveredCellKey]="hoveredCellKey()"
           [hoveredEdgeKey]="activeEdge()?.key ?? null"
           [selectedCellKeys]="selectedCellKeys()"
+          [cropFilter]="cropFilter()"
           (picked)="onPicked($event)"
           (hoverChange)="hoveredId.set($event)"
           (cellPicked)="onCellPicked($event)"
@@ -146,9 +146,7 @@ export class GardenViewComponent {
     this.#viewport.prefersReducedMotion() ? STILL_FRAMELOOP : ANIMATED_FRAMELOOP,
   );
 
-  protected readonly field = computed(() =>
-    buildGardenField(filterPlan(this.#plan.plan(), this.cropFilter())),
-  );
+  protected readonly field = computed(() => buildGardenField(this.#plan.plan()));
 
   protected readonly horizonFog = computed<SceneFog>(() => {
     const extent = this.field().extent;

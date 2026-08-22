@@ -11,7 +11,13 @@ import { SceneThemeService } from '@justin-croyable/design-system';
 import { ScenePartComponent } from '@justin-croyable/design-system/components/scene';
 import { type NgtThreeEvent } from 'angular-three';
 
-import { type GardenCell, type GardenEdge, type GardenParcel } from './garden-layout';
+import {
+  CROP_FILTER,
+  type CropFilter,
+  type GardenCell,
+  type GardenEdge,
+  type GardenParcel,
+} from './garden-layout';
 import { GARDEN_PALETTE } from './garden-palette';
 import {
   buildEdgeParts,
@@ -64,6 +70,7 @@ export type ParcelPointer = {
             [soilTop]="parcel().soilTop"
             [hovered]="highlightedKeys().has(cell.key) || cell.key === hoveredCellKey()"
             [selected]="selectedCellKeys().has(cell.key)"
+            [cropFilter]="cropFilter()"
             (picked)="cellPicked.emit($event)"
             (longPressed)="cellLongPressed.emit($event)"
             (hoverChange)="cellHoverChange.emit($event)"
@@ -103,6 +110,7 @@ export class GardenParcelComponent {
   readonly showGrid = input(true);
   readonly hoveredCellKey = input<string | null>(null);
   readonly selectedCellKeys = input<ReadonlySet<string>>(new Set<string>());
+  readonly cropFilter = input<CropFilter>(CROP_FILTER.all);
   readonly hoveredEdgeKey = input<string | null>(null);
 
   readonly picked = output<string>();

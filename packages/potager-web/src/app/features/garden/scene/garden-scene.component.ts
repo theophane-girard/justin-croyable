@@ -3,6 +3,7 @@ import {
   Component,
   computed,
   CUSTOM_ELEMENTS_SCHEMA,
+  DestroyRef,
   inject,
   input,
   output,
@@ -10,14 +11,17 @@ import {
 } from '@angular/core';
 import { SceneThemeService } from '@justin-croyable/design-system';
 import { ScenePartComponent } from '@justin-croyable/design-system/components/scene';
-import { type NgtThreeEvent } from 'angular-three';
+import { injectStore, type NgtThreeEvent } from 'angular-three';
 
 import {
+  CROP_FILTER,
+  type CropFilter,
   type GardenCell,
   type GardenEdge,
   type GardenField,
   type GardenParcel,
   type GardenTree,
+  matchesCropFilter,
 } from './garden-layout';
 import { GARDEN_PALETTE } from './garden-palette';
 import { buildHorizonParts, buildTerrainParts } from './garden-structure-parts';
@@ -30,7 +34,12 @@ import {
 } from './garden-parcel.component';
 
 const KEY_SEPARATOR = ':';
-const DRAG_TOLERANCE_PX = 6;
+
+/**
+ * Au-delà de ce déplacement, le geste manipule la caméra : le clic qui le clôt
+ * ne doit rien sélectionner, même si le doigt s'arrête au-dessus d'une case.
+ */
+const DRAG_TOLERANCE_PX = 8;
 
 export type GroundPoint = {
   readonly x: number;
@@ -45,7 +54,7 @@ function ownerParcelId(key: string | null): string | null {
   selector: 'app-garden-scene',
   imports: [ScenePartComponent, GardenParcelComponent, GardenTreeComponent],
   template: `
-    <ngt-group (pointerdown)="onGroundDown($event)" (click)="onGroundPick($event)">
+    <ngt-group (click)="onGroundPick($event)">
       @for (part of horizonParts(); track part.id) {
         <app-scene-part [part]="part" />
       }
@@ -55,10 +64,10 @@ function ownerParcelId(key: string | null): string | null {
       }
     </ngt-group>
 
-    @for (tree of field().trees; track tree.id) {
+    @for (tree of visibleTrees(); track tree.id) {
       <app-garden-tree
         [tree]="tree"
-        (picked)="treePicked.emit($event)"
+        (picked)="onTreePick($event)"
         (hoverChange)="treeHoverChange.emit($event)"
       />
     }
@@ -72,13 +81,14 @@ function ownerParcelId(key: string | null): string | null {
         [hoveredCellKey]="hoveredCellKey()"
         [hoveredEdgeKey]="hoveredEdgeKey()"
         [selectedCellKeys]="selectedCellKeys()"
-        (picked)="picked.emit($event)"
+        [cropFilter]="cropFilter()"
+        (picked)="onParcelPick($event)"
         (pressed)="pressed.emit($event)"
         (hoverChange)="hoverChange.emit($event)"
-        (cellPicked)="cellPicked.emit($event)"
+        (cellPicked)="onCellPick($event)"
         (cellLongPressed)="cellLongPressed.emit($event)"
         (cellHoverChange)="cellHoverChange.emit($event)"
-        (edgePicked)="edgePicked.emit($event)"
+        (edgePicked)="onEdgePick($event)"
         (edgeHoverChange)="edgeHoverChange.emit($event)"
       />
     }
@@ -95,6 +105,7 @@ export class GardenSceneComponent {
   readonly hoveredCellKey = input<string | null>(null);
   readonly hoveredEdgeKey = input<string | null>(null);
   readonly selectedCellKeys = input<ReadonlySet<string>>(new Set<string>());
+  readonly cropFilter = input<CropFilter>(CROP_FILTER.all);
   readonly interactiveCells = input(true);
   readonly showGrid = input(true);
   readonly tilledTerrain = input(true);
@@ -113,27 +124,67 @@ export class GardenSceneComponent {
   readonly edgeHoverChange = output<GardenEdge | null>();
 
   readonly #colors = inject(SceneThemeService).palette(GARDEN_PALETTE);
+  readonly #store = injectStore();
 
   #pressX = 0;
   #pressY = 0;
+  #dragged = false;
 
-  protected onGroundDown(event: NgtThreeEvent<PointerEvent>): void {
-    this.#pressX = event.nativeEvent.clientX;
-    this.#pressY = event.nativeEvent.clientY;
+  constructor() {
+    const element = this.#store.gl().domElement;
+    const onPress = (event: PointerEvent): void => {
+      this.#pressX = event.clientX;
+      this.#pressY = event.clientY;
+      this.#dragged = false;
+    };
+    const onDrag = (event: PointerEvent): void => {
+      this.#dragged =
+        this.#dragged ||
+        Math.hypot(event.clientX - this.#pressX, event.clientY - this.#pressY) > DRAG_TOLERANCE_PX;
+    };
+    element.addEventListener('pointerdown', onPress);
+    element.addEventListener('pointermove', onDrag);
+    inject(DestroyRef).onDestroy(() => {
+      element.removeEventListener('pointerdown', onPress);
+      element.removeEventListener('pointermove', onDrag);
+    });
   }
 
-  /** Une rotation de caméra se termine aussi par un clic : on l'ignore. */
   protected onGroundPick(event: NgtThreeEvent<MouseEvent>): void {
     event.stopPropagation();
-    const travel = Math.hypot(
-      event.nativeEvent.clientX - this.#pressX,
-      event.nativeEvent.clientY - this.#pressY,
-    );
-    if (travel > DRAG_TOLERANCE_PX) {
+    if (this.#dragged) {
       return;
     }
     this.groundPicked.emit({ x: event.point.x, z: event.point.z });
   }
+
+  protected onCellPick(cell: GardenCell): void {
+    if (!this.#dragged) {
+      this.cellPicked.emit(cell);
+    }
+  }
+
+  protected onEdgePick(edge: GardenEdge): void {
+    if (!this.#dragged) {
+      this.edgePicked.emit(edge);
+    }
+  }
+
+  protected onParcelPick(parcelId: string): void {
+    if (!this.#dragged) {
+      this.picked.emit(parcelId);
+    }
+  }
+
+  protected onTreePick(tree: GardenTree): void {
+    if (!this.#dragged) {
+      this.treePicked.emit(tree);
+    }
+  }
+
+  protected readonly visibleTrees = computed(() =>
+    this.field().trees.filter(tree => matchesCropFilter(tree.cropId, this.cropFilter())),
+  );
 
   protected readonly horizonParts = computed(() =>
     this.horizon() ? buildHorizonParts(this.#colors()) : [],

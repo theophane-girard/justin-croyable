@@ -1,11 +1,6 @@
 import { sceneNoiseRange, type SceneVector } from '@justin-croyable/design-system/components/scene';
 
-import {
-  type CategoryId,
-  CROP_BY_ID,
-  type CropId,
-  type VarietyId,
-} from '../../../core/potager.model';
+import { CROP_BY_ID, type CropId, type VarietyId } from '../../../core/potager.model';
 import { varietyLabel } from '../plan/garden-catalog';
 import {
   cellCentreX,
@@ -125,20 +120,13 @@ export const CROP_FILTER = {
 
 export type CropFilter = (typeof CROP_FILTER)[keyof typeof CROP_FILTER];
 
-function matches(cropId: CropId, category: CategoryId): boolean {
-  return CROP_BY_ID[cropId].category === category;
-}
-
-/** Ne garde à l'écran que les cultures d'une catégorie ; les cases restent semables. */
-export function filterPlan(plan: GardenPlan, filter: CropFilter): GardenPlan {
-  if (filter === CROP_FILTER.all) {
-    return plan;
-  }
-  return {
-    ...plan,
-    plantings: plan.plantings.filter(planting => matches(planting.cropId, filter)),
-    trees: plan.trees.filter(tree => matches(tree.cropId, filter)),
-  };
+/**
+ * Le filtre ne masque que les plants : le terrain, les cases et le cadrage de la
+ * caméra restent ceux du potager entier, sinon changer de filtre reconstruirait
+ * la scène et recadrerait la vue.
+ */
+export function matchesCropFilter(cropId: CropId, filter: CropFilter): boolean {
+  return filter === CROP_FILTER.all || CROP_BY_ID[cropId].category === filter;
 }
 
 export function cellKey(parcelId: string, column: number, row: number): string {

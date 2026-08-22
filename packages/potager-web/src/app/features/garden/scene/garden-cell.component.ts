@@ -13,7 +13,7 @@ import { ScenePartComponent } from '@justin-croyable/design-system/components/sc
 import { type NgtThreeEvent } from 'angular-three';
 import { map, Subject, switchMap, takeUntil, tap, timer } from 'rxjs';
 
-import { type GardenCell } from './garden-layout';
+import { CROP_FILTER, type CropFilter, type GardenCell, matchesCropFilter } from './garden-layout';
 import { type GardenColors, GARDEN_PALETTE } from './garden-palette';
 import { buildCellParts } from './garden-structure-parts';
 import { GardenPlantComponent } from './garden-plant.component';
@@ -37,7 +37,7 @@ const DRAG_TOLERANCE_PX = 6;
       @for (part of parts(); track part.id) {
         <app-scene-part [part]="part" />
       }
-      @if (cell().cropId; as cropId) {
+      @if (visibleCrop(); as cropId) {
         @if (cell().plant; as plant) {
           <app-garden-plant [cropId]="cropId" [spot]="plant" />
         }
@@ -52,6 +52,7 @@ export class GardenCellComponent {
   readonly soilTop = input.required<number>();
   readonly hovered = input(false);
   readonly selected = input(false);
+  readonly cropFilter = input<CropFilter>(CROP_FILTER.all);
 
   readonly picked = output<GardenCell>();
   readonly hoverChange = output<string | null>();
@@ -81,6 +82,14 @@ export class GardenCellComponent {
   #pressX = 0;
   #pressY = 0;
 
+  protected readonly visibleCrop = computed(() => {
+    const cropId = this.cell().cropId;
+    if (cropId === null || !matchesCropFilter(cropId, this.cropFilter())) {
+      return null;
+    }
+    return cropId;
+  });
+
   protected readonly parts = computed(() => {
     const colors = this.#colors();
     const cell = this.cell();
@@ -101,7 +110,7 @@ export class GardenCellComponent {
 
   protected onPick(event: NgtThreeEvent<MouseEvent>): void {
     event.stopPropagation();
-    if (this.#pressHandled || this.#travel(event.nativeEvent) > DRAG_TOLERANCE_PX) {
+    if (this.#pressHandled) {
       this.#pressHandled = false;
       return;
     }
