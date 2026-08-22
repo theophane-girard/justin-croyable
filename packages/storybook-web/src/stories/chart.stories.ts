@@ -1,6 +1,7 @@
 import {
   CardComponent,
   ChartComponent,
+  podiumLabel,
   ThemePaletteService,
   type ChartSkeletonType,
 } from '@justin-croyable/design-system';
@@ -57,7 +58,15 @@ const courbe: EChartsCoreOption = {
   tooltip: { trigger: 'axis' },
   xAxis: { type: 'category', boundaryGap: false, data: mois },
   yAxis: { type: 'value' },
-  series: [{ name: 'Sessions', type: 'line', smooth: true, areaStyle: {}, data: [220, 332, 301, 434, 390, 530] }],
+  series: [
+    {
+      name: 'Sessions',
+      type: 'line',
+      smooth: true,
+      areaStyle: {},
+      data: [220, 332, 301, 434, 390, 530],
+    },
+  ],
 };
 
 const camembert: EChartsCoreOption = {
@@ -171,7 +180,13 @@ export const Line: Story = {
       xAxis: { type: 'category', boundaryGap: false, data: mois },
       yAxis: { type: 'value' },
       series: [
-        { name: 'Sessions', type: 'line', smooth: true, areaStyle: {}, data: [220, 332, 301, 434, 390, 530] },
+        {
+          name: 'Sessions',
+          type: 'line',
+          smooth: true,
+          areaStyle: {},
+          data: [220, 332, 301, 434, 390, 530],
+        },
       ],
     },
   },
@@ -201,16 +216,18 @@ export const Pie: Story = {
   },
 };
 
-const expectSkeleton = (type: ChartSkeletonType) => async ({ canvasElement }: { canvasElement: HTMLElement }) => {
-  const skeleton = await waitFor(() => {
-    const found = canvasElement.querySelector('[data-slot="chart-skeleton"]');
-    expect(found).toBeTruthy();
-    return found as HTMLElement;
-  });
+const expectSkeleton =
+  (type: ChartSkeletonType) =>
+  async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+    const skeleton = await waitFor(() => {
+      const found = canvasElement.querySelector('[data-slot="chart-skeleton"]');
+      expect(found).toBeTruthy();
+      return found as HTMLElement;
+    });
 
-  expect(skeleton.getAttribute('aria-busy')).toBe('true');
-  expect(skeleton.getAttribute('data-skeleton-type')).toBe(type);
-};
+    expect(skeleton.getAttribute('aria-busy')).toBe('true');
+    expect(skeleton.getAttribute('data-skeleton-type')).toBe(type);
+  };
 
 export const LoadingBar: Story = {
   args: { loading: true, skeletonType: 'bar' },
@@ -422,6 +439,27 @@ export const HorizontalRanking: Story = {
   },
 };
 
+const podium: EChartsCoreOption = {
+  ...course,
+  yAxis: {
+    type: 'category',
+    data: [...jardins].reverse().map((jardin, rang) => podiumLabel(jardin, rang)),
+    inverse: true,
+  },
+  series: [
+    {
+      type: 'bar',
+      realtimeSort: true,
+      data: [4.8, 3.1, 2.4, 1.2],
+      label: {
+        show: true,
+        position: 'right',
+        formatter: (params: { value: number }) => `${params.value} kg`,
+      },
+    },
+  ],
+};
+
 export const BarRace: Story = {
   args: { options: course, height: '18rem' },
   render: args => ({
@@ -438,6 +476,27 @@ export const BarRace: Story = {
       description: {
         story:
           "Barres classées en continu (`realtimeSort`) : la même forme animée, où les barres se réordonnent à chaque nouvelle valeur. L'appelant pilote les étapes en repassant des options, la durée d'animation étant calée sur son pas de temps.",
+      },
+    },
+  },
+};
+
+export const BarRaceTerminee: Story = {
+  args: { options: podium, height: '18rem' },
+  render: args => ({
+    props: args,
+    moduleMetadata: { imports: [CardComponent] },
+    template: `
+      <app-card title="Course terminée">
+        <app-chart [options]="options" [height]="height" />
+      </app-card>
+    `,
+  }),
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Fin de course : `podiumLabel` préfixe les trois premiers libellés d'une couronne puis des médailles d'argent et de bronze. Des emoji, car un graphique se dessine sur un canevas où le libellé d'axe n'accepte que du texte.",
       },
     },
   },

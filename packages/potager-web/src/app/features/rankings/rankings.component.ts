@@ -7,6 +7,7 @@ import {
   CardComponent,
   ChartComponent,
   EmptyComponent,
+  podiumLabel,
   SegmentComponent,
   type SegmentItem,
   SelectImports,
@@ -34,6 +35,7 @@ import { CatalogStore } from '../../core/catalog-store';
 import { RankingStore } from '../../core/ranking-store';
 
 type RankRow = { readonly gardenId: string; readonly label: string; readonly value: number };
+
 type CultureOption = { readonly value: string; readonly label: string };
 
 const CULTURE_ALL = 'all';
@@ -45,13 +47,28 @@ const SEASON_ITEMS: SegmentItem[] = [
 ];
 
 const YEAR_ALL_OPTION = { value: YEAR_ALL, label: 'Toutes années' };
+const OFF_PODIUM = -1;
+
+/**
+ * En fin de course, les barres sont classées par valeur : on distingue le
+ * podium sur les libellés, comme sur les classements figés.
+ */
+function racePodium(rows: readonly RankRow[]): readonly RankRow[] {
+  const ranks = new Map(
+    [...rows]
+      .sort((left, right) => right.value - left.value)
+      .map((row, rank) => [row.gardenId, rank] as const),
+  );
+  return rows.map(row => ({
+    ...row,
+    label: withPodiumPrefix(row.label, ranks.get(row.gardenId) ?? OFF_PODIUM, row.value),
+  }));
+}
 const RACE_STEP_MS = 900;
 
-const PODIUM_PREFIXES: readonly string[] = ['👑', '🥈', '🥉'];
-
+/** Un jardin sans récolte ne monte pas sur le podium, même s'il ouvre la liste. */
 function withPodiumPrefix(label: string, rank: number, value: number): string {
-  const prefix = value > 0 ? PODIUM_PREFIXES[rank] : undefined;
-  return prefix ? `${prefix} ${label}` : label;
+  return value > 0 ? podiumLabel(label, rank) : label;
 }
 
 function podiumRanked(rows: readonly RankRow[]): RankRow[] {
@@ -92,7 +109,9 @@ function round(value: number): number {
           <div class="flex flex-col gap-4">
             <div class="flex flex-wrap items-end justify-between gap-3">
               <div class="flex flex-col">
-                <h3 class="text-foreground text-base font-semibold">Meilleur rendement par plant</h3>
+                <h3 class="text-foreground text-base font-semibold">
+                  Meilleur rendement par plant
+                </h3>
                 <p class="text-muted-foreground text-sm">Récolté par plant, par jardin.</p>
               </div>
               <div class="flex flex-wrap items-center gap-2">
@@ -106,7 +125,12 @@ function round(value: number): number {
                     <app-select-item [value]="option.value">{{ option.label }}</app-select-item>
                   }
                 </app-select>
-                <app-select class="w-36" prefixIcon="phosphorCalendarBlank" [value]="yearValue()" (valueChange)="onYearChange($event)">
+                <app-select
+                  class="w-36"
+                  prefixIcon="phosphorCalendarBlank"
+                  [value]="yearValue()"
+                  (valueChange)="onYearChange($event)"
+                >
                   @for (option of yearOptions(); track option.value) {
                     <app-select-item [value]="option.value">{{ option.label }}</app-select-item>
                   }
@@ -131,7 +155,10 @@ function round(value: number): number {
 
             <div class="flex items-center gap-2">
               <button appButton variant="outline" size="sm" (click)="toggleRace()">
-                <ng-icon [name]="raceOpen() ? 'phosphorChartBar' : 'phosphorFilmSlate'" class="size-4" />
+                <ng-icon
+                  [name]="raceOpen() ? 'phosphorChartBar' : 'phosphorFilmSlate'"
+                  class="size-4"
+                />
                 {{ raceOpen() ? 'Vue classement' : 'Course dans le temps' }}
               </button>
               @if (raceOpen()) {
@@ -147,7 +174,9 @@ function round(value: number): number {
         <app-card>
           <div class="flex flex-col gap-4">
             <div class="flex flex-col">
-              <h3 class="text-foreground text-base font-semibold">Le plus de variétés différentes</h3>
+              <h3 class="text-foreground text-base font-semibold">
+                Le plus de variétés différentes
+              </h3>
               <p class="text-muted-foreground text-sm">Nombre de variétés cultivées par jardin.</p>
             </div>
             <app-chart [options]="varietyChartOptions()" skeletonType="bar" height="18rem" />
@@ -178,14 +207,12 @@ export class RankingsComponent {
 
   protected readonly cultureOptions = computed<CultureOption[]>(() => {
     const present = new Set<CropId>();
-    this.ranking
-      .entries()
-      .forEach(entry =>
-        entry.plants.forEach(plant => {
-          if (isCropId(plant.cropId)) {
-            present.add(plant.cropId);
-          }
-        }),
+    this.ranking.entries().forEach(entry =>
+      entry.plants.forEach(plant => {
+        if (isCropId(plant.cropId)) {
+          present.add(plant.cropId);
+        }
+      }),
     );
     const crops = Array.from(present)
       .map(cropId => ({ value: cropId as string, label: CROP_BY_ID[cropId].label }))
@@ -209,7 +236,10 @@ export class RankingsComponent {
         entry.harvests.forEach(harvest => years.add(new Date(harvest.harvestedOn).getFullYear())),
       );
     const sorted = Array.from(years).sort((a, b) => b - a);
-    return [YEAR_ALL_OPTION, ...sorted.map(value => ({ value: String(value), label: String(value) }))];
+    return [
+      YEAR_ALL_OPTION,
+      ...sorted.map(value => ({ value: String(value), label: String(value) })),
+    ];
   });
 
   protected readonly yearValue = computed(() => {
@@ -260,11 +290,13 @@ export class RankingsComponent {
   protected readonly raceSteps = computed<number[]>(() => {
     const culture = this.activeCulture();
     const timestamps = new Set<number>();
-    this.ranking.entries().forEach(entry =>
-      this.#cultureHarvests(entry.gardenId, culture).forEach(timestamp =>
-        timestamps.add(timestamp.at),
-      ),
-    );
+    this.ranking
+      .entries()
+      .forEach(entry =>
+        this.#cultureHarvests(entry.gardenId, culture).forEach(timestamp =>
+          timestamps.add(timestamp.at),
+        ),
+      );
     return Array.from(timestamps).sort((a, b) => a - b);
   });
 
@@ -283,6 +315,12 @@ export class RankingsComponent {
     { initialValue: -1 },
   );
 
+  /** La course est finie quand le pas de temps a atteint la dernière récolte. */
+  protected readonly raceFinished = computed(() => {
+    const total = this.raceSteps().length;
+    return total > 0 && this.#raceIndex() >= total - 1;
+  });
+
   protected readonly raceCaption = computed(() => {
     const steps = this.raceSteps();
     if (steps.length === 0) {
@@ -300,14 +338,12 @@ export class RankingsComponent {
     }
     const index = Math.min(Math.max(this.#raceIndex(), 0), steps.length - 1);
     const cutoff = steps[index];
-    const rows = this.ranking
-      .entries()
-      .map(entry => ({
-        gardenId: entry.gardenId,
-        label: entry.gardenName,
-        value: this.#yieldPerPlant(entry.gardenId, culture, cutoff),
-      }));
-    return this.#raceBar(rows, this.yieldUnitSuffix());
+    const rows = this.ranking.entries().map(entry => ({
+      gardenId: entry.gardenId,
+      label: entry.gardenName,
+      value: this.#yieldPerPlant(entry.gardenId, culture, cutoff),
+    }));
+    return this.#raceBar(this.raceFinished() ? racePodium(rows) : rows, this.yieldUnitSuffix());
   });
 
   protected onCultureChange(value: string | string[] | null): void {
