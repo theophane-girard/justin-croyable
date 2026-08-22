@@ -16,7 +16,9 @@ import { mergeClasses } from '../../utils/merge-classes';
   template: `
     <main [class]="bodyClasses">
       <ng-content />
-      <div [class]="spacerClasses" aria-hidden="true"></div>
+      @if (spacer()) {
+        <div [class]="spacerClasses" aria-hidden="true"></div>
+      }
     </main>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -27,6 +29,9 @@ import { mergeClasses } from '../../utils/merge-classes';
 })
 export class ContentComponent {
   readonly class = input<ClassValue>('');
+
+  /** Une page qui occupe exactement la hauteur disponible coupe la cale de fin. */
+  readonly spacer = input(true);
 
   protected readonly bodyClasses = contentBodyVariants();
   protected readonly spacerClasses = contentSpacerVariants();

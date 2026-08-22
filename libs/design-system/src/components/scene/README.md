@@ -25,7 +25,7 @@ racine : three.js reste ainsi hors du bundle initial.
 export const ROUTES: Route[] = [
   {
     path: '',
-    loadComponent: () => import('./atelier.component').then(m => m.AtelierComponent),
+    loadComponent: () => import('./atelier.component').then((m) => m.AtelierComponent),
     providers: [provideJustinCroyableDS(withThree())],
   },
 ];
@@ -42,7 +42,7 @@ export const ROUTES: Route[] = [
 >
   <ng-template sceneContent>
     @for (part of parts(); track part.id) {
-      <app-scene-part [part]="part" />
+    <app-scene-part [part]="part" />
     }
   </ng-template>
 
@@ -67,6 +67,31 @@ position des lumières. Une scène dont les dimensions changent est recadrée.
 l'utilisateur manipule la caméra. Une scène animée en continu doit passer
 `frameloop="always"`.
 
+### `sky`
+
+`none` par défaut : dégradé neutre suivant le thème. `open` peint un ciel
+ouvert, bleu clair en thème clair et semé d'étoiles en thème sombre. Les teintes
+de brume qui ferment le bas de ce ciel sont exportées via `OPEN_SKY_HAZE` : une
+scène qui veut un horizon donne cette couleur à son brouillard pour que le sol
+s'y dissolve sans couture.
+
+### `orbitNavigation`
+
+`orbit` par défaut : le glissement fait tourner la scène, comme une maquette que
+l'on retourne. `map` la fait défiler comme un plan — glisser (ou un doigt)
+déplace, le clic droit pivote la caméra et la molette zoome. À deux doigts, le
+geste est exclusif : pincer zoome, tourner les doigts fait pivoter, glisser
+verticalement incline. `orbitAzimuth` et `orbitElevation` donnent en degrés
+l'angle de la vue au premier cadrage et au recentrage, et `orbitTargetLift`
+relève le point visé — la scène descend dans le cadre et le ciel entre par le
+haut, sans coucher la caméra.
+
+### `fog`
+
+`true` par défaut : brouillard déduit des `bounds`. `false` le supprime.
+Un objet `SceneFog` (`{ color, near, far }`) impose ses propres distances, par
+exemple pour dissoudre un sol lointain dans le ciel plutôt que la scène elle-même.
+
 ## Géométrie déclarative
 
 `app-scene-part` rend un maillage décrit par un objet `ScenePart` — géométrie,
@@ -76,7 +101,12 @@ décrit donc en TypeScript testable plutôt qu'en gabarits dupliqués :
 ```ts
 const parts = sceneParts('socle', [
   { geometry: SCENE_GEOMETRY.box, args: [2, 0.2, 2], color: colors().ground },
-  { geometry: SCENE_GEOMETRY.sphere, args: [0.4, 16, 12], position: [0, 0.6, 0], color: colors().accent },
+  {
+    geometry: SCENE_GEOMETRY.sphere,
+    args: [0.4, 16, 12],
+    position: [0, 0.6, 0],
+    color: colors().accent,
+  },
 ]);
 ```
 

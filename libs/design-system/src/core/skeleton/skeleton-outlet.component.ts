@@ -19,7 +19,7 @@ import { RouteSkeletonStore } from './route-skeleton.store';
         <ng-container *ngComponentOutlet="component()" />
       </div>
     }
-    <div [class.invisible]="visible()" [attr.aria-busy]="visible()">
+    <div class="h-full" [class.invisible]="visible()" [attr.aria-busy]="visible()">
       <ng-content />
     </div>
   `,

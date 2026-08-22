@@ -10,6 +10,7 @@ export const APP_PATHS = {
   prices: 'prix',
   rankings: 'classement',
   add: 'ajouter',
+  new: 'nouveau',
 } as const;
 
 export type AppPath = (typeof APP_PATHS)[keyof typeof APP_PATHS];
@@ -21,6 +22,7 @@ export const EXPENSES_LINK = `/${APP_PATHS.expenses}`;
 export const EXPENSE_ADD_LINK = `/${APP_PATHS.expenses}/${APP_PATHS.add}`;
 export const GARDEN_LINK = `/${APP_PATHS.garden}`;
 export const GARDEN_ADD_LINK = `/${APP_PATHS.garden}/${APP_PATHS.add}`;
+export const GARDEN_SETUP_LINK = `/${APP_PATHS.garden}/${APP_PATHS.new}`;
 export const PRICES_LINK = `/${APP_PATHS.prices}`;
 export const RANKINGS_LINK = `/${APP_PATHS.rankings}`;
 
@@ -75,22 +77,8 @@ export const APP_ROUTES: Route[] = [
   {
     path: APP_PATHS.garden,
     data: { breadcrumb: 'Mon jardin' },
-    children: [
-      {
-        path: '',
-        loadComponent: () =>
-          import('./features/garden/garden.component').then(m => m.GardenComponent),
-        title: 'Mon jardin — Potager',
-        data: { skeleton: SKELETON_KIND.list },
-      },
-      {
-        path: APP_PATHS.add,
-        loadComponent: () =>
-          import('./features/garden/add-plant.component').then(m => m.AddPlantComponent),
-        title: 'Ajouter un plant — Potager',
-        data: { skeleton: SKELETON_KIND.form, breadcrumb: 'Ajouter un plant' },
-      },
-    ],
+    loadChildren: () =>
+      import('./features/garden/garden.routes').then(m => m.GARDEN_ROUTES),
   },
   {
     path: APP_PATHS.prices,

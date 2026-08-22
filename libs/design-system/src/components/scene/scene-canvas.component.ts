@@ -1,5 +1,6 @@
 import { NgTemplateOutlet } from '@angular/common';
 import {
+  booleanAttribute,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -9,6 +10,7 @@ import {
   Injector,
   input,
   TemplateRef,
+  viewChild,
   ViewEncapsulation,
 } from '@angular/core';
 import { NgtCanvas } from 'angular-three/dom';
@@ -19,16 +21,47 @@ import { ViewportService } from '../../core/services/viewport.service';
 import { SCENE_DEFAULTS } from '../../providers/tokens';
 import { mergeClasses } from '../../utils/merge-classes';
 
-import { sceneCanvasVariants } from './scene-canvas.variants';
+import {
+  OPEN_SKY,
+  sceneCanvasVariants,
+  type SceneCanvasSkyVariants,
+} from './scene-canvas.variants';
 
-import { SceneEnvironmentComponent, type SceneLighting, SCENE_LIGHTING } from './scene-environment.component';
-import { SceneOrbitControlsComponent } from './scene-orbit-controls.component';
-import type { SceneBounds } from './scene-part';
+import {
+  type SceneFog,
+  SceneEnvironmentComponent,
+  type SceneLighting,
+  SCENE_LIGHTING,
+} from './scene-environment.component';
+import {
+  DEFAULT_AZIMUTH_DEGREES,
+  DEFAULT_ELEVATION_DEGREES,
+  type SceneNavigation,
+  SCENE_NAVIGATION,
+  SceneOrbitControlsComponent,
+} from './scene-orbit-controls.component';
+import { SceneSkyComponent } from './scene-sky.component';
+import type { SceneBounds, SceneVector } from './scene-part';
+
+/**
+ * Réglages de caméra transmis à `ngt-canvas`. `zoom` ne vaut que pour une caméra
+ * orthographique — c'est le nombre de pixels par unité monde — et `fov` que pour
+ * une perspective.
+ */
+export type SceneCameraOptions = {
+  readonly position?: SceneVector;
+  readonly zoom?: number;
+  readonly fov?: number;
+  readonly near?: number;
+  readonly far?: number;
+};
 
 const DEFAULT_BOUNDS: SceneBounds = { width: 4, depth: 4, height: 2 };
-const CAMERA_OPTIONS = { fov: 42, near: 0.1, far: 400 } as const;
+const CAMERA_OPTIONS: SceneCameraOptions = { fov: 42, near: 0.1, far: 400 };
 const GL_OPTIONS = { antialias: true, alpha: true } as const;
 const DEMAND_FRAMELOOP: NgtFrameloop = 'demand';
+const SKY_RADIUS_RATIO = 0.7;
+const FALLBACK_CAMERA_FAR = 400;
 
 /**
  * Contenu 3D d'une `app-scene-canvas`.
@@ -79,19 +112,31 @@ export class SceneContentHostDirective {
     SceneContentHostDirective,
     SceneEnvironmentComponent,
     SceneOrbitControlsComponent,
+    SceneSkyComponent,
   ],
   template: `
     <ngt-canvas
       class="block size-full"
       [gl]="glOptions"
-      [camera]="cameraOptions"
+      [camera]="cameraOptions()"
+      [orthographic]="orthographic()"
       [dpr]="dpr()"
       [frameloop]="frameloop()"
     >
       <ng-container *canvasContent>
         <app-scene-environment [bounds]="bounds()" [lighting]="lighting()" [fog]="fog()" />
+        @if (openSky()) {
+          <app-scene-sky [radius]="skyRadius()" />
+        }
         @if (orbit()) {
-          <app-scene-orbit-controls [bounds]="bounds()" [autoRotate]="autoRotate()" />
+          <app-scene-orbit-controls
+            [bounds]="bounds()"
+            [autoRotate]="autoRotate()"
+            [elevation]="orbitElevation()"
+            [azimuth]="orbitAzimuth()"
+            [targetLift]="orbitTargetLift()"
+            [navigation]="orbitNavigation()"
+          />
         }
         <ng-container sceneContentHost #contentHost="sceneContentHost" />
         <ng-container
@@ -108,8 +153,17 @@ export class SceneContentHostDirective {
         aria-busy="true"
         class="bg-background absolute inset-0 flex items-center justify-center"
       >
-        <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" class="text-accent h-2/5 animate-skeleton">
-          <path d="M50 12 L86 32 L86 68 L50 88 L14 68 L14 32 Z" stroke-width="6" stroke-linejoin="round" />
+        <svg
+          viewBox="0 0 100 100"
+          fill="none"
+          stroke="currentColor"
+          class="text-accent h-2/5 animate-skeleton"
+        >
+          <path
+            d="M50 12 L86 32 L86 68 L50 88 L14 68 L14 32 Z"
+            stroke-width="6"
+            stroke-linejoin="round"
+          />
           <path d="M50 12 L50 50 M50 50 L86 32 M50 50 L14 32" stroke-width="4" />
         </svg>
       </div>
@@ -136,8 +190,15 @@ export class SceneCanvasComponent {
   readonly bounds = input<SceneBounds>(DEFAULT_BOUNDS);
   readonly lighting = input<SceneLighting>(SCENE_LIGHTING.auto);
   readonly frameloop = input<NgtFrameloop>(DEMAND_FRAMELOOP);
-  readonly fog = input(true);
+  readonly fog = input<boolean | SceneFog>(true);
   readonly orbit = input(true);
+  readonly orbitNavigation = input<SceneNavigation>(SCENE_NAVIGATION.orbit);
+  readonly orbitAzimuth = input(DEFAULT_AZIMUTH_DEGREES);
+  readonly orbitTargetLift = input(0);
+  readonly orbitElevation = input(DEFAULT_ELEVATION_DEGREES);
+  readonly sky = input<SceneCanvasSkyVariants>('none');
+  readonly orthographic = input(false, { transform: booleanAttribute });
+  readonly camera = input<SceneCameraOptions>({});
   readonly autoRotate = input(false);
   readonly loading = input(false);
   readonly label = input.required<string>();
@@ -145,9 +206,20 @@ export class SceneCanvasComponent {
   readonly class = input<ClassValue>('');
 
   private readonly sceneContent = contentChild(SceneContentDirective, { read: TemplateRef });
+  private readonly orbitControls = viewChild(SceneOrbitControlsComponent);
 
-  protected readonly cameraOptions = CAMERA_OPTIONS;
   protected readonly glOptions = GL_OPTIONS;
+
+  protected readonly cameraOptions = computed<SceneCameraOptions>(() => ({
+    ...CAMERA_OPTIONS,
+    ...this.camera(),
+  }));
+
+  protected readonly openSky = computed(() => this.sky() === OPEN_SKY);
+
+  protected readonly skyRadius = computed(
+    () => (this.cameraOptions().far ?? FALLBACK_CAMERA_FAR) * SKY_RADIUS_RATIO,
+  );
 
   protected readonly contentTemplate = computed(() => this.sceneContent() ?? null);
 
@@ -155,5 +227,12 @@ export class SceneCanvasComponent {
     this.#viewport.isMobile() ? this.#defaults.mobileDpr : this.#defaults.dpr,
   );
 
-  protected readonly classes = computed(() => mergeClasses(sceneCanvasVariants(), this.class()));
+  protected readonly classes = computed(() =>
+    mergeClasses(sceneCanvasVariants({ sky: this.sky() }), this.class()),
+  );
+
+  /** Ramène la caméra sur son cadrage d'origine. Sans effet hors mode orbite. */
+  recenter(): void {
+    this.orbitControls()?.recenter();
+  }
 }

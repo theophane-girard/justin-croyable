@@ -22,6 +22,17 @@ export const SCENE_LIGHTING = {
 
 export type SceneLighting = (typeof SCENE_LIGHTING)[keyof typeof SCENE_LIGHTING];
 
+/** Brume de distance imposée à la place de celle déduite des dimensions. */
+export type SceneFog = {
+  readonly color: string;
+  readonly near: number;
+  readonly far: number;
+};
+
+function isSceneFog(fog: boolean | SceneFog): fog is SceneFog {
+  return fog !== true && fog !== false;
+}
+
 type LightingPreset = {
   readonly ambient: number;
   readonly hemisphere: number;
@@ -46,7 +57,7 @@ function scaledDirection(direction: SceneVector, distance: number): SceneVector 
   selector: 'app-scene-environment',
   imports: [NgtArgs],
   template: `
-    @if (fog()) {
+    @if (fogEnabled()) {
       <ngt-fog attach="fog" *args="fogArgs()" />
     }
     <ngt-ambient-light [intensity]="preset().ambient" />
@@ -70,7 +81,7 @@ function scaledDirection(direction: SceneVector, distance: number): SceneVector 
 export class SceneEnvironmentComponent {
   readonly bounds = input.required<SceneBounds>();
   readonly lighting = input<SceneLighting>(SCENE_LIGHTING.auto);
-  readonly fog = input(true);
+  readonly fog = input<boolean | SceneFog>(true);
 
   readonly #sceneTheme = inject(SceneThemeService);
   readonly #theme = inject(ThemeService);
@@ -97,7 +108,13 @@ export class SceneEnvironmentComponent {
     scaledDirection(FILL_DIRECTION, this.#extent() * LIGHT_DISTANCE_RATIO),
   );
 
+  protected readonly fogEnabled = computed(() => this.fog() !== false);
+
   protected readonly fogArgs = computed(() => {
+    const fog = this.fog();
+    if (isSceneFog(fog)) {
+      return [fog.color, fog.near, fog.far];
+    }
     const extent = this.#extent();
     return [this.colors().sky, extent * FOG_NEAR_RATIO, extent * FOG_FAR_RATIO];
   });

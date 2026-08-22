@@ -5,5 +5,6 @@ export * from './scene-environment.component';
 export * from './scene-orbit-controls.component';
 export * from './scene-part';
 export * from './scene-part.component';
+export * from './scene-top-controls.component';
 export * from './scene.imports';
 export * from './three-catalogue';
