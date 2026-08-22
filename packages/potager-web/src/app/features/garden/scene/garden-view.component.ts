@@ -22,8 +22,7 @@ import { GardenPlanStore } from '../plan/garden-plan-store';
 import { buildGardenField, type GardenCell, type GardenEdge } from './garden-layout';
 import { GardenSceneComponent } from './garden-scene.component';
 
-const MOBILE_HEIGHT = '60vh';
-const DESKTOP_HEIGHT = '75vh';
+const FILL_HEIGHT = '100%';
 const SCENE_LABEL = 'Votre potager en trois dimensions, une grille de culture par parcelle';
 const ANIMATED_FRAMELOOP: NgtFrameloop = 'always';
 const STILL_FRAMELOOP: NgtFrameloop = 'demand';
@@ -34,9 +33,10 @@ const STILL_FRAMELOOP: NgtFrameloop = 'demand';
   template: `
     <app-scene-canvas
       orbitPan
+      sky="open"
       [fog]="false"
       [class.cursor-pointer]="pointerActive()"
-      [height]="height()"
+      [height]="fillHeight"
       [label]="sceneLabel"
       [bounds]="bounds()"
       [frameloop]="frameloop()"
@@ -92,14 +92,11 @@ export class GardenViewComponent {
 
   protected readonly activeEdge = computed(() => this.hoveredEdge() ?? this.pinnedEdge());
   protected readonly sceneLabel = SCENE_LABEL;
+  protected readonly fillHeight = FILL_HEIGHT;
 
   protected readonly pointerActive = computed(
     () =>
       this.hoveredId() !== null || this.hoveredCellKey() !== null || this.hoveredEdge() !== null,
-  );
-
-  protected readonly height = computed(() =>
-    this.#viewport.isMobile() ? MOBILE_HEIGHT : DESKTOP_HEIGHT,
   );
 
   protected readonly frameloop = computed(() =>

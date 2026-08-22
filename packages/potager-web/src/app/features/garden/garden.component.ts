@@ -183,13 +183,8 @@ const INVITE_ROLE_OPTIONS: readonly {
     ...SelectImports,
   ],
   template: `
-    <div class="flex flex-col gap-4 pb-24 sm:pb-4">
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <div class="flex flex-col">
-          <p class="text-muted-foreground text-sm">
-            Touchez une case pour semer, un plant pour le récolter.
-          </p>
-        </div>
+    <div class="flex h-[calc(100dvh-9.5rem)] flex-col gap-4">
+      <div class="flex shrink-0 flex-wrap items-center justify-end gap-3">
         <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
           @if (showYearSelector()) {
             <app-select
@@ -266,14 +261,18 @@ const INVITE_ROLE_OPTIONS: readonly {
       } @else {
         <app-garden-view
           #view
-          class="block"
+          class="block min-h-0 flex-3"
           [(selectedId)]="selectedId"
           (cellPicked)="onCellPicked($event)"
           (edgePicked)="onEdgePicked($event)"
         />
 
         @if (parcelDetail(); as detail) {
-          <app-card [title]="detail.label" [description]="detail.surface">
+          <app-card
+            class="min-h-0 flex-1 overflow-auto pe-20 sm:pe-0"
+            [title]="detail.label"
+            [description]="detail.surface"
+          >
             @if (detail.contents.length === 0) {
               <p class="text-muted-foreground text-sm">
                 Touchez une case pour semer, un bord pour toute une ligne ou une colonne.
@@ -292,7 +291,11 @@ const INVITE_ROLE_OPTIONS: readonly {
             }
           </app-card>
         } @else {
-          <app-card title="Votre potager" [description]="planSummary()">
+          <app-card
+            class="min-h-0 flex-1 overflow-auto pe-20 sm:pe-0"
+            title="Votre potager"
+            [description]="planSummary()"
+          >
             <p class="text-muted-foreground text-sm">
               Touchez une parcelle pour voir ce qui y pousse, une case pour semer.
             </p>

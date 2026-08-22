@@ -26,6 +26,11 @@ const SOIL_ROUGHNESS = 1;
 const WOOD_ROUGHNESS = 0.95;
 const GRASS_BORDER = 0.9;
 const SOIL_INSET = GRASS_BORDER;
+const LAWN_SPREAD = 3.2;
+const BLADE_COUNT = 90;
+const BLADE_HEIGHT = 0.13;
+const BLADE_WIDTH = 0.022;
+const BLADE_SEGMENTS = 4;
 const FURROW_SPACING = 0.62;
 const FURROW_WIDTH = 0.1;
 const FURROW_HEIGHT = 0.02;
@@ -103,6 +108,38 @@ function roundedSlab(
   ];
 }
 
+/**
+ * Touffes d'herbe semées sur la pelouse, en dehors de la terre travaillée. Le
+ * bruit déterministe de la scène leur donne des positions et des tailles
+ * stables d'un rendu à l'autre.
+ */
+function lawnBlades(
+  lawnWidth: number,
+  lawnDepth: number,
+  width: number,
+  depth: number,
+  colors: GardenColors,
+): readonly ScenePartDraft[] {
+  return Array.from({ length: BLADE_COUNT }, (_, index): ScenePartDraft | null => {
+    const seed = index * 4.13 + 1;
+    const x = sceneNoiseRange(seed, -lawnWidth / HALF, lawnWidth / HALF);
+    const z = sceneNoiseRange(seed + 2.7, -lawnDepth / HALF, lawnDepth / HALF);
+    if (Math.abs(x) < width / HALF && Math.abs(z) < depth / HALF) {
+      return null;
+    }
+    const height = BLADE_HEIGHT * sceneNoiseRange(seed + 5.3, 0.6, 1.4);
+    return {
+      geometry: SCENE_GEOMETRY.cone,
+      args: [BLADE_WIDTH, height, BLADE_SEGMENTS],
+      position: [x, height / HALF, z],
+      rotation: [0, sceneNoiseRange(seed + 7.9, 0, Math.PI), 0],
+      color: sceneNoiseRange(seed + 9.1, 0, 1) > 0.5 ? colors.leafBright : colors.leaf,
+      roughness: SOIL_ROUGHNESS,
+      flatShading: true,
+    };
+  }).filter((blade): blade is ScenePartDraft => blade !== null);
+}
+
 export function buildTerrainParts(
   width: number,
   depth: number,
@@ -111,7 +148,9 @@ export function buildTerrainParts(
 ): ScenePart[] {
   const soilWidth = Math.max(width - SOIL_INSET, width * 0.5);
   const soilDepth = Math.max(depth - SOIL_INSET, depth * 0.5);
-  const grassRadius = cornerRadius(width, depth);
+  const lawnWidth = width * LAWN_SPREAD;
+  const lawnDepth = depth * LAWN_SPREAD;
+  const grassRadius = cornerRadius(lawnWidth, lawnDepth);
   const soilRadius = cornerRadius(soilWidth, soilDepth);
   const furrowSpan = Math.max(soilWidth - soilRadius * HALF, soilWidth * 0.5);
   const furrowCount = tilled ? Math.max(1, Math.floor(soilDepth / FURROW_SPACING)) : 0;
@@ -129,13 +168,14 @@ export function buildTerrainParts(
 
   return sceneParts(TERRAIN_PREFIX, [
     ...roundedSlab(
-      width,
-      depth,
+      lawnWidth,
+      lawnDepth,
       TERRAIN_THICKNESS * 0.9,
       -TERRAIN_THICKNESS * 0.62,
       colors.grass,
       grassRadius,
     ),
+    ...lawnBlades(lawnWidth, lawnDepth, width, depth, colors),
     ...roundedSlab(
       soilWidth,
       soilDepth,
