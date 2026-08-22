@@ -24,6 +24,7 @@ import { mergeClasses } from '../../utils/merge-classes';
 import { sceneCanvasVariants, type SceneCanvasSkyVariants } from './scene-canvas.variants';
 
 import {
+  type SceneFog,
   SceneEnvironmentComponent,
   type SceneLighting,
   SCENE_LIGHTING,
@@ -169,7 +170,7 @@ export class SceneCanvasComponent {
   readonly bounds = input<SceneBounds>(DEFAULT_BOUNDS);
   readonly lighting = input<SceneLighting>(SCENE_LIGHTING.auto);
   readonly frameloop = input<NgtFrameloop>(DEMAND_FRAMELOOP);
-  readonly fog = input(true);
+  readonly fog = input<boolean | SceneFog>(true);
   readonly orbit = input(true);
   readonly orbitPan = input(false);
   readonly sky = input<SceneCanvasSkyVariants>('none');

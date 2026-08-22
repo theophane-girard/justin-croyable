@@ -14,6 +14,7 @@ import { provideJustinCroyableDS, SceneThemeService } from '@justin-croyable/des
 import {
   SCENE_GEOMETRY,
   type SceneBounds,
+  type SceneCanvasSkyVariants,
   SceneImports,
   type SceneLighting,
   type ScenePart,
@@ -22,7 +23,12 @@ import {
   sceneParts,
   withThree,
 } from '@justin-croyable/design-system/components/scene';
-import { applicationConfig, moduleMetadata, type Meta, type StoryObj } from '@storybook/angular-vite';
+import {
+  applicationConfig,
+  moduleMetadata,
+  type Meta,
+  type StoryObj,
+} from '@storybook/angular-vite';
 import { beforeRender, type NgtFrameloop } from 'angular-three';
 import type { Group } from 'three';
 import { expect, waitFor } from 'storybook/test';
@@ -112,6 +118,7 @@ class SceneSpinnerComponent {
       [orbit]="orbit()"
       [autoRotate]="autoRotate()"
       [fog]="fog()"
+      [sky]="sky()"
       [loading]="loading()"
       [frameloop]="frameloop()"
     >
@@ -143,6 +150,7 @@ class SceneShowcaseComponent {
   readonly orbit = input(true);
   readonly autoRotate = input(false);
   readonly fog = input(true);
+  readonly sky = input<SceneCanvasSkyVariants>('none');
   readonly loading = input(false);
 
   readonly #sceneTheme = inject(SceneThemeService);
@@ -229,6 +237,7 @@ type SceneArgs = {
   orbit: boolean;
   autoRotate: boolean;
   fog: boolean;
+  sky: SceneCanvasSkyVariants;
   loading: boolean;
 };
 
@@ -255,6 +264,7 @@ const meta: Meta<SceneArgs> = {
     orbit: { control: 'boolean' },
     autoRotate: { control: 'boolean' },
     fog: { control: 'boolean' },
+    sky: { control: 'inline-radio', options: ['none', 'open'] },
     loading: { control: 'boolean' },
   },
   args: {
@@ -265,6 +275,7 @@ const meta: Meta<SceneArgs> = {
     orbit: true,
     autoRotate: false,
     fog: true,
+    sky: 'none',
     loading: false,
   },
   render: args => ({
@@ -278,6 +289,7 @@ const meta: Meta<SceneArgs> = {
         [orbit]="orbit"
         [autoRotate]="autoRotate"
         [fog]="fog"
+        [sky]="sky"
         [loading]="loading"
       />
     `,
