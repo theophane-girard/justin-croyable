@@ -65,7 +65,7 @@ function ownerParcelId(key: string | null): string | null {
       }
     </ngt-group>
 
-    @for (tree of visibleTrees(); track tree.id) {
+    @for (tree of visibleTrees(); track tree.key) {
       <app-garden-tree
         [tree]="tree"
         (picked)="onTreePick($event)"

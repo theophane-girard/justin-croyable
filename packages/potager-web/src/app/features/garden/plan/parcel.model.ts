@@ -60,12 +60,18 @@ export type Planting = {
   readonly harvestedKg: number;
 };
 
+export const MIN_ORCHARD_TREES = 2;
+export const MAX_ORCHARD_TREES = 200;
+export const DEFAULT_ORCHARD_TREES = 6;
+export const SINGLE_TREE = 1;
+
 export type Tree = {
   readonly id: string;
   readonly cropId: CropId;
   readonly varietyId: VarietyId;
   readonly xCm: number;
   readonly zCm: number;
+  readonly count: number;
   readonly harvestedKg: number;
 };
 

@@ -21,6 +21,7 @@ import {
   InputGroupComponent,
   SegmentComponent,
   type SegmentItem,
+  SwitchComponent,
   SelectImports,
   SheetService,
 } from '@justin-croyable/design-system';
@@ -43,9 +44,13 @@ import { GardenPlanStore } from './plan/garden-plan-store';
 import {
   type CellCoordinate,
   type CellTarget,
+  DEFAULT_ORCHARD_TREES,
   formatMetres,
+  MAX_ORCHARD_TREES,
+  MIN_ORCHARD_TREES,
   type Parcel,
   parcelFootprint,
+  SINGLE_TREE,
   SOW_MODE,
   SOW_PATTERN,
   type SowMode,
@@ -55,6 +60,7 @@ import {
 import {
   cellKey,
   CROP_FILTER,
+  SHOWN_TREES_MAX,
   type CropFilter,
   EDGE_AXIS,
   type GardenCell,
@@ -239,6 +245,7 @@ const INVITE_ROLE_OPTIONS: readonly {
     CardComponent,
     DividerComponent,
     SegmentComponent,
+    SwitchComponent,
     FabButtonComponent,
     FabContainerComponent,
     FabListComponent,
@@ -538,9 +545,31 @@ const INVITE_ROLE_OPTIONS: readonly {
             <app-select-item [value]="option.id">{{ option.label }}</app-select-item>
           }
         </app-select>
-        <p class="text-muted-foreground text-sm">
-          L’arbre sera planté à l’endroit touché, hors des parcelles.
-        </p>
+        <div class="flex items-center justify-between gap-4">
+          <div class="flex flex-col gap-0.5">
+            <span class="text-sm leading-none font-medium">Verger ?</span>
+            <span class="text-muted-foreground text-xs">
+              Plusieurs sujets de la même espèce au même endroit.
+            </span>
+          </div>
+          <app-switch [checked]="orchard()" (checkedChange)="onOrchardChange($event)" />
+        </div>
+
+        @if (orchard()) {
+          <app-input-group label="Nombre d’arbres" [required]="true">
+            <input
+              app-input
+              type="number"
+              step="1"
+              [min]="minOrchardTrees"
+              [max]="maxOrchardTrees"
+              [value]="orchardCount()"
+              (valueChange)="onOrchardCountChange($event)"
+            />
+          </app-input-group>
+        }
+
+        <p class="text-muted-foreground text-sm">{{ treeHint() }}</p>
       </div>
     </ng-template>
 
@@ -707,6 +736,8 @@ export class GardenComponent {
   protected readonly varietyItems = CATALOG_VARIETIES;
   protected readonly treeVarietyItems = CATALOG_TREE_VARIETIES;
   protected readonly cropFilterItems = CROP_FILTER_ITEMS;
+  protected readonly minOrchardTrees = MIN_ORCHARD_TREES;
+  protected readonly maxOrchardTrees = MAX_ORCHARD_TREES;
   protected readonly cultureOptions = CULTURE_FILTER_OPTIONS;
   protected readonly inviteRoleOptions = INVITE_ROLE_OPTIONS;
   protected readonly canManage = this.sharing.canManage;
@@ -723,6 +754,8 @@ export class GardenComponent {
   protected readonly pendingGround = signal<GroundPoint | null>(null);
   protected readonly cellVarietyId = signal<string | null>(null);
   protected readonly treeVarietyId = signal<string | null>(null);
+  protected readonly orchard = signal(false);
+  protected readonly orchardCount = signal<number>(DEFAULT_ORCHARD_TREES);
   protected readonly harvestQuantity = signal<number>(DEFAULT_HARVEST_KG);
   protected readonly selection = signal<readonly CellTarget[]>([]);
 
@@ -733,6 +766,15 @@ export class GardenComponent {
 
   protected readonly selectionCount = computed(() => this.selection().length);
 
+  /** Un verger compte ses sujets, un arbre isolé vaut pour un. */
+  protected readonly plantedTrees = computed(() => {
+    if (!this.orchard()) {
+      return SINGLE_TREE;
+    }
+    const count = Math.round(this.orchardCount());
+    return Math.min(MAX_ORCHARD_TREES, Math.max(MIN_ORCHARD_TREES, count));
+  });
+
   protected readonly selectionTitle = computed(() => {
     const count = this.selectionCount();
     return `${count} case${count > 1 ? 's' : ''} sélectionnée${count > 1 ? 's' : ''}`;
@@ -741,6 +783,15 @@ export class GardenComponent {
   protected readonly sowChoices = computed<readonly SowChoice[]>(() => {
     const target = this.pendingTarget();
     return target === null ? [] : sowChoicesFor(target.scope);
+  });
+
+  protected readonly treeHint = computed(() => {
+    if (!this.orchard()) {
+      return 'L’arbre sera planté à l’endroit touché, hors des parcelles.';
+    }
+    const count = this.plantedTrees();
+    const shown = Math.min(count, SHOWN_TREES_MAX);
+    return `${count} arbres comptés ; ${shown} sont dessinés à l’endroit touché.`;
   });
 
   protected readonly targetLabel = computed(() => {
@@ -879,6 +930,8 @@ export class GardenComponent {
     this.pendingTree.set(null);
     this.pendingGround.set(point);
     this.treeVarietyId.set(null);
+    this.orchard.set(false);
+    this.orchardCount.set(DEFAULT_ORCHARD_TREES);
     this.#openSheet({
       title: 'Planter un arbre',
       okText: 'Planter',
@@ -895,8 +948,11 @@ export class GardenComponent {
     this.pendingTarget.set(null);
     this.pendingTree.set(tree);
     this.#openSheet({
-      title: tree.label,
-      description: 'Que voulez-vous faire de cet arbre ?',
+      title: tree.count > SINGLE_TREE ? `${tree.label} · ${tree.count} arbres` : tree.label,
+      description:
+        tree.count > SINGLE_TREE
+          ? 'Que voulez-vous faire de ce verger ?'
+          : 'Que voulez-vous faire de cet arbre ?',
       hideFooter: true,
       content: this.treeActionsSheetTemplate(),
     });
@@ -916,6 +972,15 @@ export class GardenComponent {
     if (typeof value === 'string') {
       this.treeVarietyId.set(value);
     }
+  }
+
+  protected onOrchardChange(checked: boolean): void {
+    this.orchard.set(checked);
+  }
+
+  protected onOrchardCountChange(value: string | number | null | undefined): void {
+    const parsed = Number(value);
+    this.orchardCount.set(Number.isFinite(parsed) ? parsed : DEFAULT_ORCHARD_TREES);
   }
 
   protected onEdgePicked(edge: GardenEdge): void {
@@ -1069,7 +1134,12 @@ export class GardenComponent {
     if (point === null || varietyId === null) {
       return;
     }
-    this.plan.plantTree(varietyId, toCentimetres(point.x), toCentimetres(point.z));
+    this.plan.plantTree(
+      varietyId,
+      toCentimetres(point.x),
+      toCentimetres(point.z),
+      this.plantedTrees(),
+    );
     this.pendingGround.set(null);
   }
 

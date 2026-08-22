@@ -17,7 +17,9 @@ import {
   type ParcelKind,
   type ParcelPlacement,
   parcelFootprint,
+  MAX_ORCHARD_TREES,
   type Planting,
+  SINGLE_TREE,
   type SowMode,
   type SowOptions,
   SOW_PATTERN,
@@ -73,6 +75,7 @@ function isTree(value: unknown): value is Tree {
     typeof tree.varietyId === 'string' &&
     typeof tree.xCm === 'number' &&
     typeof tree.zCm === 'number' &&
+    typeof tree.count === 'number' &&
     typeof tree.harvestedKg === 'number'
   );
 }
@@ -228,11 +231,12 @@ export class GardenPlanStore {
     }));
   }
 
-  plantTree(varietyId: VarietyId, xCm: number, zCm: number): void {
+  plantTree(varietyId: VarietyId, xCm: number, zCm: number, count = SINGLE_TREE): void {
     const variety = VARIETY_BY_ID.get(varietyId);
     if (!variety) {
       return;
     }
+    const planted = Math.min(MAX_ORCHARD_TREES, Math.max(SINGLE_TREE, Math.round(count)));
     this.#remember();
     this.#update(plan => ({
       ...plan,
@@ -244,6 +248,7 @@ export class GardenPlanStore {
           varietyId,
           xCm,
           zCm,
+          count: planted,
           harvestedKg: 0,
         },
       ],

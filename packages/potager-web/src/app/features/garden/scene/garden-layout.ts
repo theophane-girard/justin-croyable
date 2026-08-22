@@ -35,6 +35,11 @@ const FULL_SCALE = 1;
 const SCENE_HEIGHT = 1.6;
 const TREE_SCALE = 1.8;
 const TREE_MARGIN = 1.6;
+
+/** Un verger se signale par un bosquet ; au-delà, la scène se chargerait pour rien. */
+export const SHOWN_TREES_MAX = 4;
+const ORCHARD_SPACING = 1.7;
+const SINGLE_TREE = 1;
 const HALF = 2;
 const KEY_SEPARATOR = ':';
 
@@ -93,10 +98,12 @@ export type GardenParcel = {
 };
 
 export type GardenTree = {
+  readonly key: string;
   readonly id: string;
   readonly cropId: CropId;
   readonly varietyId: VarietyId;
   readonly label: string;
+  readonly count: number;
   readonly position: SceneVector;
   readonly spot: PlantSpot;
 };
@@ -174,17 +181,31 @@ function plantSpot(seed: number, cropId: CropId, top: number, cellSide: number):
 }
 
 function buildTrees(trees: readonly Tree[]): readonly GardenTree[] {
-  return trees.map((tree, index): GardenTree => {
-    const seed = index * 13.7 + 4.2;
+  return trees.flatMap((tree, index) => orchard(tree, index));
+}
+
+function orchard(tree: Tree, index: number): readonly GardenTree[] {
+  const shown = Math.min(SHOWN_TREES_MAX, Math.max(SINGLE_TREE, tree.count));
+  const spacing = shown === SINGLE_TREE ? 0 : ORCHARD_SPACING;
+  const label = varietyLabel(tree.varietyId);
+  return Array.from({ length: shown }, (_, position): GardenTree => {
+    const seed = index * 13.7 + position * 5.3 + 4.2;
+    const angle = (position / shown) * FULL_TURN + sceneNoiseRange(seed, 0, FULL_TURN / shown);
     return {
+      key: `${tree.id}${KEY_SEPARATOR}${position}`,
       id: tree.id,
       cropId: tree.cropId,
       varietyId: tree.varietyId,
-      label: varietyLabel(tree.varietyId),
-      position: [metres(tree.xCm), 0, metres(tree.zCm)],
+      label,
+      count: tree.count,
+      position: [
+        metres(tree.xCm) + Math.cos(angle) * spacing,
+        0,
+        metres(tree.zCm) + Math.sin(angle) * spacing,
+      ],
       spot: {
         position: [0, 0, 0],
-        rotation: [0, sceneNoiseRange(seed, 0, FULL_TURN), 0],
+        rotation: [0, sceneNoiseRange(seed + 1.9, 0, FULL_TURN), 0],
         seed,
         phase: sceneNoiseRange(seed + 3.3, 0, FULL_TURN),
         spreadScale: TREE_SCALE,
