@@ -30,6 +30,8 @@ import {
 
 import { type IconName, NgIcon, provideIcons } from '@ng-icons/core';
 import {
+  phosphorCaretLeft,
+  phosphorCaretRight,
   phosphorCheck,
   phosphorWarning,
 } from '@ng-icons/phosphor-icons/regular';
@@ -38,6 +40,7 @@ import type { ClassValue } from 'clsx';
 import { ViewportService } from '../../core/services/viewport.service';
 import { mergeClasses } from '../../utils/merge-classes';
 import { ButtonComponent } from '../button';
+import { FabButtonComponent } from '../fab-button';
 import { ProgressComponent } from '../progress';
 
 import {
@@ -127,6 +130,7 @@ export class StepComponent extends CdkStep {
     NgTemplateOutlet,
     NgIcon,
     ButtonComponent,
+    FabButtonComponent,
     ProgressComponent,
     CdkStepHeader,
     CdkStepperNext,
@@ -235,13 +239,13 @@ export class StepComponent extends CdkStep {
         }
       </div>
 
-      @if (navigation() || hasActions()) {
+      @if (inlineNavigation() || hasActions()) {
         <div data-slot="stepper-footer" [class]="footerClasses()">
           <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
             <ng-content select="[appStepperActions]" />
           </div>
 
-          @if (navigation()) {
+          @if (inlineNavigation()) {
             <div
               class="flex flex-col-reverse gap-2 sm:flex-row sm:items-center"
             >
@@ -282,9 +286,54 @@ export class StepComponent extends CdkStep {
         </div>
       }
     </div>
+
+    @if (floatingNavigation()) {
+      <button
+        appFabButton
+        cdkStepperPrevious
+        type="button"
+        variant="secondary"
+        position="bottom-left"
+        [fabDisabled]="isFirst()"
+        [attr.aria-label]="previousLabel()"
+      >
+        <ng-icon name="phosphorCaretLeft" />
+      </button>
+
+      @if (isLast()) {
+        <button
+          appFabButton
+          type="button"
+          position="bottom-right"
+          [fabDisabled]="!canLeaveCurrent()"
+          [attr.aria-label]="finishLabel()"
+          (click)="finish.emit()"
+        >
+          <ng-icon name="phosphorCheck" />
+        </button>
+      } @else {
+        <button
+          appFabButton
+          cdkStepperNext
+          type="button"
+          position="bottom-right"
+          [fabDisabled]="!canLeaveCurrent()"
+          [attr.aria-label]="nextLabel()"
+        >
+          <ng-icon name="phosphorCaretRight" />
+        </button>
+      }
+    }
   `,
   providers: [{ provide: CdkStepper, useExisting: StepperComponent }],
-  viewProviders: [provideIcons({ phosphorCheck, phosphorWarning })],
+  viewProviders: [
+    provideIcons({
+      phosphorCaretLeft,
+      phosphorCaretRight,
+      phosphorCheck,
+      phosphorWarning,
+    }),
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
   exportAs: 'appStepper',
@@ -332,10 +381,22 @@ export class StepperComponent extends CdkStepper {
 
   override _stateChanged(): void {
     super._stateChanged();
-    this.#stateRevision.update((revision) => revision + 1);
+    this.#stateRevision.update(revision => revision + 1);
   }
 
   protected readonly hasActions = computed(() => !!this.actions());
+
+  /**
+   * Sur mobile, avancer et reculer passent en boutons flottants aux deux coins
+   * bas : ils restent sous le pouce quel que soit le défilement de l'étape.
+   */
+  protected readonly floatingNavigation = computed(
+    () => this.navigation() && this.#viewport.isMobile(),
+  );
+
+  protected readonly inlineNavigation = computed(
+    () => this.navigation() && !this.floatingNavigation(),
+  );
 
   protected readonly resolvedHeader = computed<StepperHeaderVariants>(() => {
     const requested = this.header();
@@ -389,7 +450,7 @@ export class StepperComponent extends CdkStepper {
 
   protected readonly activeIndex = computed(() =>
     Math.max(
-      this.stepViews().findIndex((view) => view.selected),
+      this.stepViews().findIndex(view => view.selected),
       0,
     ),
   );

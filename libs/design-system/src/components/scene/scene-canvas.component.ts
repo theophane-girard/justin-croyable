@@ -21,7 +21,7 @@ import { ViewportService } from '../../core/services/viewport.service';
 import { SCENE_DEFAULTS } from '../../providers/tokens';
 import { mergeClasses } from '../../utils/merge-classes';
 
-import { sceneCanvasVariants } from './scene-canvas.variants';
+import { sceneCanvasVariants, type SceneCanvasSkyVariants } from './scene-canvas.variants';
 
 import {
   SceneEnvironmentComponent,
@@ -172,6 +172,7 @@ export class SceneCanvasComponent {
   readonly fog = input(true);
   readonly orbit = input(true);
   readonly orbitPan = input(false);
+  readonly sky = input<SceneCanvasSkyVariants>('none');
   readonly orthographic = input(false, { transform: booleanAttribute });
   readonly camera = input<SceneCameraOptions>({});
   readonly autoRotate = input(false);
@@ -196,7 +197,9 @@ export class SceneCanvasComponent {
     this.#viewport.isMobile() ? this.#defaults.mobileDpr : this.#defaults.dpr,
   );
 
-  protected readonly classes = computed(() => mergeClasses(sceneCanvasVariants(), this.class()));
+  protected readonly classes = computed(() =>
+    mergeClasses(sceneCanvasVariants({ sky: this.sky() }), this.class()),
+  );
 
   /** Ramène la caméra sur son cadrage d'origine. Sans effet hors mode orbite. */
   recenter(): void {
